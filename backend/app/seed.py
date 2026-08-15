@@ -15,6 +15,7 @@ from database.seeds.problems import PROBLEMS, TAGS  # noqa: E402
 
 from app.common.database import SessionLocal  # noqa: E402
 from app.common.models import Problem, ProblemTag, Tag, TestCase  # noqa: E402
+from app.learn.seed import seed_learning  # noqa: E402
 
 
 def seed() -> None:
@@ -68,8 +69,10 @@ def seed() -> None:
                     )
                 )
 
+        categories, topics, lessons = seed_learning(db)
         db.commit()
         print(f"Seeded {len(PROBLEMS)} problems and {len(TAGS)} tags.")
+        print(f"Seeded {categories} learning categories, {topics} topics, {lessons} lessons.")
     finally:
         db.close()
 

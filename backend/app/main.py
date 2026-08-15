@@ -7,6 +7,7 @@ from app.common.config import get_settings
 from app.common.errors import register_exception_handlers
 from app.common.logging import configure_logging
 from app.interviews.router import router as interviews_router
+from app.learn.router import router as learn_router
 from app.problems.router import router as problems_router
 from app.progress.router import router as progress_router
 from app.submissions.router import router as submissions_router
@@ -30,6 +31,7 @@ app.include_router(problems_router)
 app.include_router(submissions_router)
 app.include_router(progress_router)
 app.include_router(interviews_router)
+app.include_router(learn_router)
 
 
 @app.get("/health")

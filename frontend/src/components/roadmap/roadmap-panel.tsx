@@ -1,8 +1,14 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
 import { Meter } from "@/components/dashboard/meter";
 import { Button } from "@/components/ui/button";
 import { SectionTitle } from "@/components/ui/section";
+import { api } from "@/lib/api";
+import type { RoadmapLearnLink } from "@/lib/learn";
+import { queryKeys } from "@/lib/queries";
 import type { RoadmapTopic } from "@/lib/roadmap";
 
 export function RoadmapPanel({
@@ -18,6 +24,14 @@ export function RoadmapPanel({
   const prereqs = topic.prerequisites.map((id) => byId.get(id)).filter((item): item is RoadmapTopic => Boolean(item));
   const next = topic.next.map((id) => byId.get(id)).filter((item): item is RoadmapTopic => Boolean(item));
   const practiceHref = `/problems?tag=${topic.filterTag}`;
+  const learn = useQuery({
+    queryKey: queryKeys.learnRoadmap(topic.id),
+    queryFn: () => api.get<RoadmapLearnLink>(`/api/v1/learn/roadmap/${topic.id}`),
+  });
+  const learnTopic = learn.data?.topic;
+  const mockHref = learn.data?.mock_problem_slug
+    ? `/problems/${learn.data.mock_problem_slug}`
+    : practiceHref;
 
   return (
     <aside
@@ -29,7 +43,7 @@ export function RoadmapPanel({
       <div className="flex items-start justify-between gap-3">
         <div>
           <SectionTitle>Topic</SectionTitle>
-          <h2 id="roadmap-topic-title" className="mt-2 text-xl font-semibold tracking-tight">
+          <h2 id="roadmap-topic-title" className="mt-2 text-lg font-semibold tracking-tight">
             {topic.title}
           </h2>
         </div>
@@ -37,7 +51,7 @@ export function RoadmapPanel({
           Close
         </button>
       </div>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">{topic.description}</p>
+      <p className="mt-2 text-[13px] leading-6 text-muted-foreground">{topic.description}</p>
       <div className="mt-6">
         <div className="flex items-baseline justify-between text-sm">
           <span className="tabular-nums">
@@ -63,15 +77,25 @@ export function RoadmapPanel({
           <dd className="mt-1">{next.length ? next.map((item) => item.title).join(", ") : "Path complete"}</dd>
         </div>
       </dl>
-      {topic.total === 0 ? (
-        <Button className="mt-8" disabled>
-          No problems yet
+      <div className="mt-8 flex flex-col gap-2">
+        {learnTopic ? (
+          <Button asChild>
+            <Link href={learnTopic.href}>Learn Topic</Link>
+          </Button>
+        ) : null}
+        {topic.total === 0 ? (
+          <Button variant="secondary" disabled>
+            No problems yet
+          </Button>
+        ) : (
+          <Button asChild variant={learnTopic ? "secondary" : "default"}>
+            <Link href={practiceHref}>Practice Problems</Link>
+          </Button>
+        )}
+        <Button asChild variant="outline">
+          <Link href={mockHref}>Mock Interview</Link>
         </Button>
-      ) : (
-        <Button asChild className="mt-8">
-          <Link href={practiceHref}>Practice Topic</Link>
-        </Button>
-      )}
+      </div>
     </aside>
   );
 }

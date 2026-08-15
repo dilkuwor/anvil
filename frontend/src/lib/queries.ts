@@ -12,6 +12,13 @@ export const queryKeys = {
   activity: (days: number) => ["activity", days] as const,
   interview: (id: string) => ["interview", id] as const,
   activeInterview: (problemId: string) => ["interview-active", problemId] as const,
+  learnCategories: ["learn", "categories"] as const,
+  learnCategory: (slug: string) => ["learn", "category", slug] as const,
+  learnTopic: (slug: string) => ["learn", "topic", slug] as const,
+  learnLesson: (slug: string) => ["learn", "lesson", slug] as const,
+  learnSearch: (q: string) => ["learn", "search", q] as const,
+  learnProgress: ["learn", "progress"] as const,
+  learnRoadmap: (key: string) => ["learn", "roadmap", key] as const,
 };
 
 export const fetchers = {

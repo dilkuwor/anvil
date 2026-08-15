@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,11 +49,8 @@ function ProfileEditor({ user }: { user: User }) {
   });
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">Update how you appear on InterviewAnvil.</p>
-      </div>
+    <div className="mx-auto w-full max-w-xl space-y-4">
+      <PageHeader title="Settings" description="Update how you appear on InterviewAnvil." />
       <SectionCard>
         <SectionTitle>Profile</SectionTitle>
         <form

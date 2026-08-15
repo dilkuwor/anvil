@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
+import { PageHeader } from "@/components/layout/page-header";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { StatusPip } from "@/components/problems/status-pip";
 import { Button } from "@/components/ui/button";
@@ -60,13 +61,11 @@ export function ProblemList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Problems</h1>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">Java catalog by difficulty, topic, and status.</p>
-        </div>
-        <p className="text-[13px] tabular-nums text-muted-foreground">{problems.data?.total ?? 0} problems</p>
-      </div>
+      <PageHeader
+        title="Problems"
+        description="Java catalog by difficulty, topic, and status."
+        meta={`${problems.data?.total ?? 0} problems`}
+      />
 
       <SectionCard className="p-0">
         <div className="grid gap-2 border-b border-steel-800 p-3 md:grid-cols-2 xl:grid-cols-5">

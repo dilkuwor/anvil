@@ -16,6 +16,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/problems", label: "Problems" },
   { href: "/roadmap", label: "Roadmap" },
+  { href: "/learn", label: "Learn" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -70,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/dashboard" className="shrink-0 text-sm">
               <BrandMark compact />
             </Link>
-            <nav className="flex items-center gap-0.5" aria-label="Primary">
+            <nav className="flex items-center gap-0.5 overflow-x-auto" aria-label="Primary">
               {NAV.map((item) => {
                 const active = pathname.startsWith(item.href);
                 return (

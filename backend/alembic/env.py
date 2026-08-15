@@ -6,6 +6,13 @@ from sqlalchemy import engine_from_config, pool
 from app.common.config import get_settings
 from app.common.database import Base
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession  # noqa: F401
+from app.learn.models import (  # noqa: F401
+    LearningCategory,
+    LearningLesson,
+    LearningLessonProblem,
+    LearningTopic,
+    UserLearningProgress,
+)
 from app.progress.models import Activity, UserProblemProgress  # noqa: F401
 from app.problems.models import Problem, ProblemTag, Tag, TestCase  # noqa: F401
 from app.submissions.models import Submission, SubmissionTestResult  # noqa: F401
