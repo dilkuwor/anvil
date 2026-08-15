@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 const MARKS: Record<string, { mark: string; label: string; className: string }> = {
   SOLVED: { mark: "✓", label: "Solved", className: "text-success" },
   ATTEMPTED: { mark: "◐", label: "Attempted", className: "text-accent-light" },
-  NOT_STARTED: { mark: "○", label: "Not Started", className: "text-zinc-500" },
+  NOT_STARTED: { mark: "○", label: "Not Started", className: "text-muted-foreground" },
 };
 
 export function StatusPip({ status, compact = false }: { status: string; compact?: boolean }) {

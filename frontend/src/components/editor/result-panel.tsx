@@ -3,7 +3,7 @@ import { formatMemory, formatRuntime, statusLabel } from "@/lib/utils";
 
 export function ResultPanel({ result }: { result: ExecutionResult | null }) {
   if (!result) {
-    return <p className="text-sm text-zinc-500">Run sample tests or submit a solution to see results here.</p>;
+    return <p className="text-sm text-muted-foreground">Run sample tests or submit a solution to see results here.</p>;
   }
 
   const accepted = result.status === "ACCEPTED";
@@ -16,9 +16,9 @@ export function ResultPanel({ result }: { result: ExecutionResult | null }) {
           {accepted ? "✓ Accepted" : `✕ ${statusLabel(result.status)}`}
         </h3>
         {accepted ? (
-          <p className="mt-1 text-sm text-zinc-400">All test cases passed</p>
+          <p className="mt-1 text-sm text-muted-foreground">All test cases passed</p>
         ) : result.total > 0 ? (
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             Passed {result.passed} / {result.total}
           </p>
         ) : null}
@@ -49,7 +49,7 @@ export function ResultPanel({ result }: { result: ExecutionResult | null }) {
       {!accepted && failed && !failed.hidden ? <FailedCase test={failed} /> : null}
 
       {!accepted && failed?.hidden ? (
-        <p className="text-sm text-zinc-500">A hidden test failed. Hidden case details are not shown.</p>
+        <p className="text-sm text-muted-foreground">A hidden test failed. Hidden case details are not shown.</p>
       ) : null}
 
       {!accepted && !failed && result.test_results.length > 0 ? (
@@ -71,8 +71,8 @@ export function ResultPanel({ result }: { result: ExecutionResult | null }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-steel-800 bg-steel-950/50 px-3 py-2">
-      <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className="mt-0.5 font-medium tabular-nums text-zinc-100">{value}</dd>
+      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium tabular-nums text-foreground">{value}</dd>
     </div>
   );
 }
@@ -92,8 +92,8 @@ function FailedCase({ test }: { test: TestResult }) {
 function Block({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</div>
-      <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-zinc-200">{value ?? "—"}</pre>
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-foreground">{value ?? "—"}</pre>
     </div>
   );
 }

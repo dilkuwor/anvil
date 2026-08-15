@@ -61,7 +61,7 @@ export function ProblemList() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Problems</h1>
-        <p className="mt-1 text-sm text-zinc-500">Browse the Java set by difficulty, topic, and your status.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Browse the Java set by difficulty, topic, and your status.</p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -121,7 +121,7 @@ export function ProblemList() {
         </select>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-zinc-500">
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>{problems.data?.total ?? 0} problems</span>
       </div>
 
@@ -137,7 +137,7 @@ export function ProblemList() {
         <>
           <div className="hidden overflow-hidden rounded-xl border border-steel-800 md:block">
             <table className="w-full text-left text-sm">
-              <thead className="bg-steel-900 text-zinc-500">
+              <thead className="bg-steel-900 text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium">Problem</th>
                   <th className="px-4 py-3 font-medium">Difficulty</th>
@@ -151,7 +151,7 @@ export function ProblemList() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/problems/${item.slug}`}
-                        className="font-medium text-zinc-100 underline-offset-4 hover:text-accent-light hover:underline"
+                        className="font-medium text-foreground underline-offset-4 hover:text-accent-light hover:underline"
                       >
                         {item.title}
                       </Link>
@@ -159,7 +159,7 @@ export function ProblemList() {
                     <td className="px-4 py-3">
                       <DifficultyBadge difficulty={item.difficulty} />
                     </td>
-                    <td className="px-4 py-3 text-zinc-400">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {item.tags.map((tagItem) => tagItem.name).join(" · ") || "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -184,7 +184,7 @@ export function ProblemList() {
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => update({ page: String(page - 1) })}>
             Previous
           </Button>
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-muted-foreground">
             {page} / {totalPages}
           </span>
           <Button
@@ -208,10 +208,10 @@ function ProblemCard({ item }: { item: ProblemListItem }) {
       className="block rounded-xl border border-steel-800 bg-steel-900/50 p-4 hover:border-steel-600"
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 className="font-medium text-zinc-100 underline-offset-4">{item.title}</h2>
+        <h2 className="font-medium text-foreground underline-offset-4">{item.title}</h2>
         <DifficultyBadge difficulty={item.difficulty} />
       </div>
-      <div className="mt-2 text-xs text-zinc-500">{item.tags.map((tag) => tag.name).join(" · ") || "—"}</div>
+      <div className="mt-2 text-xs text-muted-foreground">{item.tags.map((tag) => tag.name).join(" · ") || "—"}</div>
       <div className="mt-3">
         <StatusPip status={item.status} />
       </div>

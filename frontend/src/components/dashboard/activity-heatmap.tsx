@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const LEVELS = ["bg-[#1a1a1e]", "bg-[#3d2818]", "bg-[#7a4314]", "bg-[#c25d12]", "bg-accent"];
+const LEVELS = ["bg-heat-0", "bg-heat-1", "bg-heat-2", "bg-heat-3", "bg-heat-4"];
 
 function intensity(day: ActivityDay | undefined): number {
   if (!day) return 0;
@@ -53,7 +53,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
   if (days.length === 0) {
     return (
       <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Practice Activity</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Practice Activity</h2>
         <div className="mt-4">
           <EmptyState title="No activity yet." body="Solve your first problem to start building your practice history." />
         </div>
@@ -64,8 +64,8 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
   return (
     <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Practice Activity</h2>
-        <label className="flex items-center gap-2 text-sm text-zinc-400">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Practice Activity</h2>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="sr-only">Year</span>
           <select
             className="select-field w-auto"
@@ -83,7 +83,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
 
       <div className="mt-4 overflow-x-auto">
         <div className="min-w-[680px]">
-          <div className="mb-1 ml-8 grid grid-cols-[repeat(53,minmax(0,1fr))] text-[10px] text-zinc-600">
+          <div className="mb-1 ml-8 grid grid-cols-[repeat(53,minmax(0,1fr))] text-[10px] text-muted-foreground">
             {grid.monthMarks.map((mark) => (
               <span key={mark.week} style={{ gridColumnStart: mark.week + 1 }}>
                 {mark.label}
@@ -91,7 +91,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
             ))}
           </div>
           <div className="flex gap-1">
-            <div className="flex w-7 flex-col justify-between py-0.5 text-[10px] text-zinc-600">
+            <div className="flex w-7 flex-col justify-between py-0.5 text-[10px] text-muted-foreground">
               {WEEKDAYS.map((label, index) => (
                 <span key={label} className={index % 2 === 1 ? "invisible" : undefined}>
                   {label}
@@ -109,7 +109,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
               ))}
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-zinc-500">
+          <div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
             <span>Less</span>
             {LEVELS.map((tone) => (
               <span key={tone} className={cn("h-2.5 w-2.5 rounded-[2px]", tone)} />
@@ -131,8 +131,8 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className="mt-0.5 font-medium tabular-nums text-zinc-200">{value}</dd>
+      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium tabular-nums text-foreground">{value}</dd>
     </div>
   );
 }

@@ -1,8 +1,46 @@
 @import "tailwindcss";
 
 :root {
+  --background: #f7f7f8;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
+  --primary: #f97316;
+  --primary-foreground: #18181b;
+  --steel-950: #f7f7f8;
+  --steel-900: #ffffff;
+  --steel-800: #e4e4e7;
+  --steel-700: #d4d4d8;
+  --steel-600: #a1a1aa;
+  --accent: #f97316;
+  --accent-light: #c2410c;
+  --teal: #0f766e;
+  --teal-dim: #ccfbf1;
+  --coral: #e11d48;
+  --coral-dim: #ffe4e6;
+  --success: #059669;
+  --chart-track: #e4e4e7;
+  --editor-surface: #ffffff;
+  --heat-0: #e4e4e7;
+  --heat-1: #fed7aa;
+  --heat-2: #fdba74;
+  --heat-3: #fb923c;
+  --heat-4: #f97316;
+}
+
+.dark {
   --background: #0a0a0b;
   --foreground: #ececee;
+  --card: #141416;
+  --card-foreground: #ececee;
+  --muted: #1c1c20;
+  --muted-foreground: #a1a1aa;
+  --border: #2a2a30;
+  --primary: #f97316;
+  --primary-foreground: #18181b;
   --steel-950: #0a0a0b;
   --steel-900: #141416;
   --steel-800: #1c1c20;
@@ -15,11 +53,25 @@
   --coral: #fb7185;
   --coral-dim: #4c0519;
   --success: #34d399;
+  --chart-track: #2a2a30;
+  --editor-surface: #0d0f14;
+  --heat-0: #1a1a1e;
+  --heat-1: #3d2818;
+  --heat-2: #7a4314;
+  --heat-3: #c25d12;
+  --heat-4: #f97316;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   --color-steel-950: var(--steel-950);
   --color-steel-900: var(--steel-900);
   --color-steel-800: var(--steel-800);
@@ -34,6 +86,13 @@
   --color-coral: var(--coral);
   --color-coral-dim: var(--coral-dim);
   --color-success: var(--success);
+  --color-chart-track: var(--chart-track);
+  --color-editor-surface: var(--editor-surface);
+  --color-heat-0: var(--heat-0);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

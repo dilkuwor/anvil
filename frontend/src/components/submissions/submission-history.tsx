@@ -25,8 +25,8 @@ export function SubmissionHistory({
     enabled: Boolean(openId),
   });
 
-  if (list.isLoading) return <p className="text-zinc-500">Loading submissions…</p>;
-  if (!list.data?.items.length) return <p className="text-zinc-500">No submissions yet.</p>;
+  if (list.isLoading) return <p className="text-muted-foreground">Loading submissions…</p>;
+  if (!list.data?.items.length) return <p className="text-muted-foreground">No submissions yet.</p>;
 
   return (
     <div className="space-y-3">
@@ -37,10 +37,10 @@ export function SubmissionHistory({
             className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-steel-800/60"
             onClick={() => setOpenId(item.id === openId ? null : item.id)}
           >
-            <span className={item.status === "ACCEPTED" ? "text-emerald-400" : "text-zinc-200"}>
+            <span className={item.status === "ACCEPTED" ? "text-success" : "text-foreground"}>
               {statusLabel(item.status)}
             </span>
-            <span className="text-zinc-400">
+            <span className="text-muted-foreground">
               Java · {formatRuntime(item.runtime_ms)} · {formatTimestamp(item.created_at)}
             </span>
           </button>
@@ -53,7 +53,7 @@ export function SubmissionHistory({
               >
                 Load into editor
               </button>
-              <pre className="max-h-80 overflow-auto rounded-md bg-black/40 p-3 font-mono text-xs text-zinc-200">
+              <pre className="max-h-80 overflow-auto rounded-md bg-muted p-3 font-mono text-xs text-foreground">
                 {detail.data.source_code}
               </pre>
             </div>

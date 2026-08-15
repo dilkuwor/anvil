@@ -3,7 +3,7 @@ import type { ProgressSummary } from "@/lib/api";
 const EASY = "#2dd4bf";
 const MEDIUM = "#f97316";
 const HARD = "#fb7185";
-const TRACK = "#2a2a30";
+const TRACK = "var(--chart-track)";
 
 type Segment = { value: number; color: string; label: string };
 
@@ -26,7 +26,7 @@ function arcPath(cx: number, cy: number, r: number, start: number, end: number) 
   return `M ${from.x} ${from.y} A ${r} ${r} 0 ${large} 1 ${to.x} ${to.y}`;
 }
 
-export function ProgressRing({ data }: { data: ProgressSummary }) {
+export function ProgressRing({ data, compact = false }: { data: ProgressSummary; compact?: boolean }) {
   const total = Math.max(data.total_problems ?? 0, 0);
   const segments: Segment[] = [
     { value: data.easy_solved ?? 0, color: EASY, label: "Easy" },
@@ -54,7 +54,7 @@ export function ProgressRing({ data }: { data: ProgressSummary }) {
   const description = `${solved} of ${total} problems solved. ${attempting} attempting. Easy ${data.easy_solved}, Medium ${data.medium_solved}, Hard ${data.hard_solved}.`;
 
   return (
-    <div className="relative mx-auto h-56 w-56 sm:h-64 sm:w-64">
+    <div className={compact ? "relative mx-auto h-44 w-44" : "relative mx-auto h-56 w-56 sm:h-64 sm:w-64"}>
       <svg viewBox="0 0 240 240" className="h-full w-full" role="img" aria-label={description}>
         <title>{description}</title>
         <circle cx={cx} cy={cy} r={r} fill="none" stroke={TRACK} strokeWidth="16" />
@@ -70,11 +70,11 @@ export function ProgressRing({ data }: { data: ProgressSummary }) {
         ))}
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-        <div className="text-3xl font-semibold tabular-nums sm:text-4xl">
+        <div className={`font-semibold tabular-nums ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>
           {solved}/{total}
         </div>
         <div className="mt-1 text-sm text-success">✓ Solved</div>
-        <div className="text-xs text-zinc-500">{attempting} Attempting</div>
+        <div className="text-xs text-muted-foreground">{attempting} Attempting</div>
       </div>
     </div>
   );

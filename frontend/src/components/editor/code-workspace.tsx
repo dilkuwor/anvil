@@ -13,6 +13,7 @@ import { StatusPip } from "@/components/problems/status-pip";
 import { SubmissionHistory } from "@/components/submissions/submission-history";
 import { Button } from "@/components/ui/button";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
+import { useTheme } from "@/components/theme/theme-provider";
 import { api, type ExecutionResult, type ProblemDetail } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 
@@ -45,6 +46,7 @@ export function CodeWorkspace({ slug }: { slug: string }) {
 
 function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   const queryClient = useQueryClient();
+  const { theme } = useTheme();
   const [code, setCode] = useState(() => {
     if (typeof window === "undefined") return problem.starter_code;
     return localStorage.getItem(storageKey(problem.slug)) || problem.starter_code;
@@ -98,7 +100,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   const prompt = (
     <section className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-xl border border-steel-800 bg-steel-900/60 xl:min-h-0">
       <div className="border-b border-steel-800 px-5 py-4">
-        <Link href="/problems" className="text-xs text-zinc-500 hover:text-accent-light">
+        <Link href="/problems" className="text-xs text-muted-foreground hover:text-accent-light">
           ← Problems
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -106,7 +108,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
           <DifficultyBadge difficulty={problem.difficulty} />
           <StatusPip status={problem.status} />
         </div>
-        <div className="mt-2 text-xs text-zinc-500">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
+        <div className="mt-2 text-xs text-muted-foreground">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
       </div>
       <div className="flex gap-1 overflow-x-auto border-b border-steel-800 px-3" role="tablist">
         {tabs.map((item) => (
@@ -115,14 +117,14 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
             type="button"
             role="tab"
             aria-selected={tab === item.id}
-            className={`shrink-0 px-3 py-2 text-sm ${tab === item.id ? "border-b-2 border-accent text-zinc-100" : "text-zinc-500 hover:text-zinc-300"}`}
+            className={`shrink-0 px-3 py-2 text-sm ${tab === item.id ? "border-b-2 border-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setTab(item.id)}
           >
             {item.label}
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-5 py-4 text-sm leading-7 text-zinc-300">
+      <div className="min-h-0 flex-1 overflow-auto px-5 py-4 text-sm leading-7 text-foreground">
         {tab === "problem" ? <ProblemBody problem={problem} /> : null}
         {tab === "examples" ? <ExamplesBody problem={problem} /> : null}
         {tab === "constraints" ? <ConstraintsBody problem={problem} /> : null}
@@ -141,11 +143,11 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   );
 
   const editor = (
-    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-xl border border-steel-800 bg-[#0d0f14] xl:min-h-0">
+    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-xl border border-steel-800 bg-editor-surface xl:min-h-0">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-800 px-4 py-2">
         <div>
-          <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">Java · Solution</div>
-          <div className="text-[11px] text-zinc-600">Used JDK types are imported for you.</div>
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Java · Solution</div>
+          <div className="text-[11px] text-muted-foreground">Used JDK types are imported for you.</div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -167,7 +169,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       <div className="min-h-[18rem] flex-1">
         <Monaco
           language="java"
-          theme="vs-dark"
+          theme={theme === "dark" ? "vs-dark" : "vs"}
           value={code}
           onChange={(value) => setCode(value ?? "")}
           options={{
@@ -199,7 +201,7 @@ function ProblemBody({ problem }: { problem: ProblemDetail }) {
   return (
     <div className="space-y-4">
       <MarkdownLike text={problem.description} />
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Target {problem.time_complexity} time, {problem.space_complexity} extra space. Limit {problem.time_limit_ms}ms.
       </p>
     </div>
@@ -208,16 +210,16 @@ function ProblemBody({ problem }: { problem: ProblemDetail }) {
 
 function ExamplesBody({ problem }: { problem: ProblemDetail }) {
   if (!problem.examples.length) {
-    return <p className="text-zinc-500">No examples for this problem.</p>;
+    return <p className="text-muted-foreground">No examples for this problem.</p>;
   }
   return (
     <div className="space-y-3">
       {problem.examples.map((example, index) => (
         <div key={index} className="rounded-lg border border-steel-800 bg-steel-950/70 p-3">
-          <div className="text-xs uppercase text-zinc-500">Example {index + 1}</div>
-          <pre className="mt-2 whitespace-pre-wrap font-mono text-xs text-zinc-200">Input: {example.input}</pre>
-          <pre className="whitespace-pre-wrap font-mono text-xs text-zinc-200">Output: {example.output}</pre>
-          {example.explanation ? <p className="mt-1 text-zinc-400">{example.explanation}</p> : null}
+          <div className="text-xs uppercase text-muted-foreground">Example {index + 1}</div>
+          <pre className="mt-2 whitespace-pre-wrap font-mono text-xs text-foreground">Input: {example.input}</pre>
+          <pre className="whitespace-pre-wrap font-mono text-xs text-foreground">Output: {example.output}</pre>
+          {example.explanation ? <p className="mt-1 text-muted-foreground">{example.explanation}</p> : null}
         </div>
       ))}
     </div>
@@ -227,14 +229,14 @@ function ExamplesBody({ problem }: { problem: ProblemDetail }) {
 function ConstraintsBody({ problem }: { problem: ProblemDetail }) {
   return (
     <div className="space-y-4">
-      <pre className="whitespace-pre-wrap font-mono text-xs text-zinc-300">{problem.constraints}</pre>
+      <pre className="whitespace-pre-wrap font-mono text-xs text-foreground">{problem.constraints}</pre>
       <div>
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Input format</h2>
-        <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-zinc-300">{problem.input_format}</pre>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Input format</h2>
+        <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-foreground">{problem.input_format}</pre>
       </div>
       <div>
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Output format</h2>
-        <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-zinc-300">{problem.output_format}</pre>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Output format</h2>
+        <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-foreground">{problem.output_format}</pre>
       </div>
     </div>
   );
@@ -242,10 +244,10 @@ function ConstraintsBody({ problem }: { problem: ProblemDetail }) {
 
 function HintsBody({ problem }: { problem: ProblemDetail }) {
   if (!problem.hints.length) {
-    return <p className="text-zinc-500">No hints for this problem.</p>;
+    return <p className="text-muted-foreground">No hints for this problem.</p>;
   }
   return (
-    <ol className="list-decimal space-y-2 pl-5 text-zinc-400">
+    <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
       {problem.hints.map((hint) => (
         <li key={hint}>{hint}</li>
       ))}

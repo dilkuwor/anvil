@@ -38,7 +38,7 @@ export function difficultyClass(difficulty: string): string {
     case "HARD":
       return "text-coral";
     default:
-      return "text-zinc-400";
+      return "text-muted-foreground";
   }
 }
 

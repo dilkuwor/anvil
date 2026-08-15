@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, type User } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
@@ -37,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (me.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-zinc-500" aria-busy="true">
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground" aria-busy="true">
         Loading workspace…
       </div>
     );
@@ -73,8 +74,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-sm text-zinc-400 hover:bg-steel-800 hover:text-zinc-100",
-                    pathname.startsWith(item.href) && "bg-steel-800 text-zinc-100",
+                    "rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-steel-800 hover:text-foreground",
+                    pathname.startsWith(item.href) && "bg-steel-800 text-foreground",
                   )}
                 >
                   {item.label}
@@ -82,7 +83,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3 text-sm text-zinc-400">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground sm:gap-3">
+            <ThemeToggle />
             <span className="hidden sm:inline">{me.data?.username}</span>
             <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
               Log out

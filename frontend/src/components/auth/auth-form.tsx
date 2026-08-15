@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,7 +41,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen flex-col">
+      <header className="flex items-center justify-end px-4 py-3">
+        <ThemeToggle />
+      </header>
+      <div className="flex flex-1 items-center justify-center px-4 pb-12">
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="mb-2 flex items-center gap-2 font-semibold">
@@ -95,7 +100,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
               {mutation.isPending ? "Working…" : mode === "login" ? "Log in" : "Create account"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-zinc-400">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
               <>
                 New here? <Link className="text-copper-light hover:underline" href="/register">Create an account</Link>
@@ -108,6 +113,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           </p>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
