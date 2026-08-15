@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0b;
+  --foreground: #ececee;
+  --steel-950: #0a0a0b;
+  --steel-900: #141416;
+  --steel-800: #1c1c20;
+  --steel-700: #2a2a30;
+  --steel-600: #3a3a42;
+  --accent: #f97316;
+  --accent-light: #fb923c;
+  --teal: #2dd4bf;
+  --teal-dim: #134e4a;
+  --coral: #fb7185;
+  --coral-dim: #4c0519;
+  --success: #34d399;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-steel-950: var(--steel-950);
+  --color-steel-900: var(--steel-900);
+  --color-steel-800: var(--steel-800);
+  --color-steel-700: var(--steel-700);
+  --color-steel-600: var(--steel-600);
+  --color-copper: var(--accent);
+  --color-copper-light: var(--accent-light);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-teal: var(--teal);
+  --color-teal-dim: var(--teal-dim);
+  --color-coral: var(--coral);
+  --color-coral-dim: var(--coral-dim);
+  --color-success: var(--success);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+code,
+pre {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+select.select-field {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--steel-600);
+  background: var(--steel-900);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+select.select-field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

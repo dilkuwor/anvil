@@ -1,0 +1,1 @@
+"""Problem catalog domain."""

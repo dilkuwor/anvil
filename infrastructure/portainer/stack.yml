@@ -1,0 +1,33 @@
+# Portainer stack sketch. Point image tags at Docker Hub SHA builds.
+# PostgreSQL is the existing external server — do not add a database service.
+
+version: "3.8"
+
+services:
+  api:
+    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-api:${IMAGE_TAG:-latest}
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-interview_anvil}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      CODE_RUNNER_IMAGE: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-java-runner:${IMAGE_TAG:-latest}
+      COOKIE_SECURE: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-frontend:${IMAGE_TAG:-latest}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped

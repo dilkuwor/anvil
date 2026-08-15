@@ -1,0 +1,41 @@
+from enum import StrEnum
+
+
+class UserRole(StrEnum):
+    USER = "USER"
+    ADMIN = "ADMIN"
+
+
+class Difficulty(StrEnum):
+    EASY = "EASY"
+    MEDIUM = "MEDIUM"
+    HARD = "HARD"
+
+
+class SubmissionStatus(StrEnum):
+    ACCEPTED = "ACCEPTED"
+    WRONG_ANSWER = "WRONG_ANSWER"
+    COMPILATION_ERROR = "COMPILATION_ERROR"
+    RUNTIME_ERROR = "RUNTIME_ERROR"
+    TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED"
+    MEMORY_LIMIT_EXCEEDED = "MEMORY_LIMIT_EXCEEDED"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+    PENDING = "PENDING"
+
+
+class TestResultStatus(StrEnum):
+    PASSED = "PASSED"
+    WRONG_ANSWER = "WRONG_ANSWER"
+    RUNTIME_ERROR = "RUNTIME_ERROR"
+    TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED"
+    MEMORY_LIMIT_EXCEEDED = "MEMORY_LIMIT_EXCEEDED"
+
+
+class ProgressStatus(StrEnum):
+    NOT_STARTED = "NOT_STARTED"
+    ATTEMPTED = "ATTEMPTED"
+    SOLVED = "SOLVED"
+
+
+class Language(StrEnum):
+    JAVA = "JAVA"

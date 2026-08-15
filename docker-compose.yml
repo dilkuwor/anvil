@@ -1,0 +1,40 @@
+# Deployment-oriented compose. PostgreSQL is an existing external server.
+# Local development should run Next.js and FastAPI on the host instead of this file.
+
+services:
+  api:
+    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-api:${IMAGE_TAG:-local}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-interview_anvil}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_URL: ${DATABASE_URL:-}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      CODE_RUNNER_IMAGE: ${CODE_RUNNER_IMAGE:-yourdockerhub/interview-anvil-java-runner:local}
+      CODE_RUNNER_URL: ${CODE_RUNNER_URL:-}
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  frontend:
+    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-frontend:${IMAGE_TAG:-local}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
