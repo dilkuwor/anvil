@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { UserAvatar } from "@/components/settings/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
@@ -98,11 +99,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/settings"
               className={cn(
-                "max-w-[8rem] truncate hover:text-foreground",
+                "inline-flex max-w-[10rem] items-center gap-2 truncate hover:text-foreground",
                 pathname.startsWith("/settings") && "font-medium text-foreground",
               )}
             >
-              {me.data?.username}
+              {me.data ? <UserAvatar user={me.data} size="sm" /> : null}
+              <span className="truncate">{me.data?.display_name || me.data?.username}</span>
             </Link>
             <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
               Log out

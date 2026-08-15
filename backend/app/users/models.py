@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, Uuid, func
+from sqlalchemy import Boolean, DateTime, LargeBinary, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.common.database import Base
@@ -21,6 +21,9 @@ class User(Base):
     github_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     country: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    avatar_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    avatar_content_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -29,3 +32,7 @@ class User(Base):
     submissions = relationship("Submission", back_populates="user")
     progress = relationship("UserProblemProgress", back_populates="user")
     activity = relationship("Activity", back_populates="user")
+
+    @property
+    def has_avatar(self) -> bool:
+        return self.avatar_bytes is not None

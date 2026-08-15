@@ -13,7 +13,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) {
+  if (init.body && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   const response = await fetch(`${API_BASE}${path}`, {
@@ -41,6 +41,12 @@ export const api = {
     request<T>(path, { method: "POST", body: body == null ? undefined : JSON.stringify(body) }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body == null ? undefined : JSON.stringify(body) }),
+  putFile: <T>(path: string, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return request<T>(path, { method: "PUT", body });
+  },
+  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
 export type User = {
@@ -54,10 +60,13 @@ export type User = {
   github_url?: string | null;
   website_url?: string | null;
   country?: string | null;
+  display_name?: string | null;
+  has_avatar?: boolean;
 };
 
 export type UpdateProfileRequest = {
   username: string;
+  display_name: string;
   linkedin_url: string;
   github_url: string;
   website_url: string;

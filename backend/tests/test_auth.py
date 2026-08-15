@@ -57,6 +57,7 @@ def test_update_profile(auth_client):
         "/api/v1/auth/me",
         json={
             "username": "forger2",
+            "display_name": "Forger Two",
             "linkedin_url": "https://www.linkedin.com/in/forger",
             "github_url": "https://github.com/forger",
             "website_url": "https://forger.dev",
@@ -66,6 +67,8 @@ def test_update_profile(auth_client):
     assert updated.status_code == 200
     body = updated.json()
     assert body["username"] == "forger2"
+    assert body["display_name"] == "Forger Two"
+    assert body["has_avatar"] is False
     assert body["linkedin_url"] == "https://www.linkedin.com/in/forger"
     assert body["country"] == "Portugal"
     assert auth_client.get("/api/v1/auth/me").json()["github_url"] == "https://github.com/forger"
@@ -75,3 +78,34 @@ def test_update_profile(auth_client):
         json={"username": "forger2", "linkedin_url": "linkedin.com/in/forger"},
     )
     assert invalid.status_code == 422
+
+
+def test_upload_and_delete_avatar(auth_client):
+    png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc``\x00\x00\x00\x04\x00\x01"
+        b"\xf6\x178U\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    uploaded = auth_client.put(
+        "/api/v1/auth/me/avatar",
+        files={"file": ("avatar.png", png, "image/png")},
+    )
+    assert uploaded.status_code == 200
+    assert uploaded.json()["has_avatar"] is True
+    assert "avatar_bytes" not in uploaded.json()
+
+    image = auth_client.get("/api/v1/auth/me/avatar")
+    assert image.status_code == 200
+    assert image.headers["content-type"] == "image/png"
+    assert image.content == png
+
+    rejected = auth_client.put(
+        "/api/v1/auth/me/avatar",
+        files={"file": ("notes.txt", b"hello", "text/plain")},
+    )
+    assert rejected.status_code == 422
+
+    removed = auth_client.delete("/api/v1/auth/me/avatar")
+    assert removed.status_code == 200
+    assert removed.json()["has_avatar"] is False
+    assert auth_client.get("/api/v1/auth/me/avatar").status_code == 404

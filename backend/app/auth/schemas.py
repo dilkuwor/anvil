@@ -28,16 +28,19 @@ class UserOut(BaseModel):
     github_url: str | None = None
     website_url: str | None = None
     country: str | None = None
+    display_name: str | None = None
+    has_avatar: bool = False
 
 
 class UpdateProfileRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_]+$")
+    display_name: str | None = Field(default=None, max_length=80)
     linkedin_url: str | None = Field(default=None, max_length=500)
     github_url: str | None = Field(default=None, max_length=500)
     website_url: str | None = Field(default=None, max_length=500)
     country: str | None = Field(default=None, max_length=80)
 
-    @field_validator("linkedin_url", "github_url", "website_url", "country", mode="before")
+    @field_validator("linkedin_url", "github_url", "website_url", "country", "display_name", mode="before")
     @classmethod
     def empty_to_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
