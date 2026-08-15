@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/problems", label: "Problems" },
+  { href: "/roadmap", label: "Roadmap" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const editor = pathname.startsWith("/problems/") && pathname !== "/problems";
+  const wide = editor || pathname.startsWith("/roadmap");
   const me = useQuery<User>({
     queryKey: queryKeys.me,
     queryFn: () => api.get<User>("/api/v1/auth/me"),
@@ -98,7 +100,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={cn(
           "mx-auto flex w-full flex-1 flex-col px-4",
-          editor ? "max-w-[1600px] py-3" : "max-w-6xl py-5",
+          pathname.startsWith("/roadmap")
+            ? "h-[calc(100dvh-3rem)] max-w-none px-0 py-0 min-h-0 overflow-hidden"
+            : wide
+              ? "max-w-[1600px] py-3"
+              : "max-w-6xl py-5",
         )}
       >
         {children}
