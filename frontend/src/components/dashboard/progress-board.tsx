@@ -10,6 +10,7 @@ import { PracticeOverview } from "@/components/dashboard/practice-overview";
 import { RecommendedPractice } from "@/components/dashboard/recommended-practice";
 import { TopicProgress } from "@/components/dashboard/topic-progress";
 import { Button } from "@/components/ui/button";
+import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api, type ProgressSummary } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
@@ -22,11 +23,7 @@ export function ProgressBoard() {
   });
 
   if (progress.isLoading) {
-    return (
-      <div className="space-y-5">
-        <CardSkeleton rows={5} />
-      </div>
-    );
+    return <CardSkeleton rows={5} />;
   }
 
   if (progress.isError || !progress.data) {
@@ -45,32 +42,36 @@ export function ProgressBoard() {
   const goalPct = Math.round((goalDone / goalTarget) * 100);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PracticeOverview data={data} />
 
-      <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today’s Goal</h2>
-            <p className="mt-2 text-lg font-medium">Solve {goalTarget} problems</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {remaining === 0 ? "Goal complete for today." : `${remaining} problem${remaining === 1 ? "" : "s"} remaining`}
+      <SectionCard>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <SectionTitle>Today’s Goal</SectionTitle>
+            <p className="mt-2 text-sm">
+              Solve {goalTarget} problems
+              <span className="text-muted-foreground">
+                {remaining === 0 ? " · complete" : ` · ${remaining} remaining`}
+              </span>
             </p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-semibold tabular-nums">
-              {goalDone} / {goalTarget}
+            <div className="mt-3 max-w-md">
+              <Meter value={goalPct} label="Today's goal" />
             </div>
-            <div className="text-xs text-muted-foreground">{goalPct}%</div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-xl font-semibold tabular-nums tracking-tight">
+                {goalDone}/{goalTarget}
+              </div>
+              <div className="text-[11px] text-muted-foreground">{goalPct}%</div>
+            </div>
+            <Button asChild size="sm">
+              <Link href={practiceHref}>{cta}</Link>
+            </Button>
           </div>
         </div>
-        <div className="mt-4">
-          <Meter value={goalPct} label="Today's goal" />
-        </div>
-        <Button asChild className="mt-4">
-          <Link href={practiceHref}>{cta}</Link>
-        </Button>
-      </section>
+      </SectionCard>
 
       <ActivityHeatmap
         days={data.activity_calendar ?? []}
@@ -80,7 +81,7 @@ export function ProgressBoard() {
 
       <RecommendedPractice items={data.recommendations ?? []} isNew={isNew} />
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-2">
         <TopicProgress rows={data.topic_progress ?? []} hasSolved={data.total_solved > 0} />
         <InterviewReadiness data={data.readiness ?? null} />
       </div>

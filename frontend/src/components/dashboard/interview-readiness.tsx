@@ -1,30 +1,30 @@
 import { Meter } from "@/components/dashboard/meter";
-import { EmptyState } from "@/components/ui/state";
+import { SectionCard, SectionTitle } from "@/components/ui/section";
 import type { InterviewReadiness as Readiness } from "@/lib/api";
 
 export function InterviewReadiness({ data }: { data: Readiness | null }) {
   return (
-    <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interview Readiness</h2>
+    <SectionCard className="h-full">
+      <SectionTitle>Interview Readiness</SectionTitle>
       {!data ? (
-        <div className="mt-4">
-          <EmptyState
-            title="Not enough practice yet."
-            body="Readiness is estimated from coverage, difficulty mix, topics, and consistency — not an AI interview score."
-          />
-        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Estimated from coverage, difficulty mix, topics, and consistency — not an interview score. Solve a
+          problem to generate a baseline.
+        </p>
       ) : (
-        <div className="mt-4 space-y-5">
-          <div>
-            <div className="text-sm text-muted-foreground">Overall</div>
-            <div className="mt-1 text-4xl font-semibold tabular-nums">{data.overall}%</div>
-            <p className="mt-2 text-xs text-muted-foreground">{data.blurb}</p>
+        <div className="mt-4 space-y-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <div className="text-[13px] text-muted-foreground">Overall</div>
+              <div className="text-3xl font-semibold tabular-nums tracking-tight">{data.overall}%</div>
+            </div>
           </div>
-          <ul className="space-y-3">
+          <p className="text-[12px] leading-5 text-muted-foreground">{data.blurb}</p>
+          <ul className="space-y-2.5">
             {data.factors.map((factor) => (
               <li key={factor.key}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span className="text-foreground">{factor.label}</span>
+                <div className="mb-1 flex justify-between text-[13px]">
+                  <span>{factor.label}</span>
                   <span className="tabular-nums text-muted-foreground">{factor.percent}%</span>
                 </div>
                 <Meter value={factor.percent} label={factor.label} />
@@ -33,6 +33,6 @@ export function InterviewReadiness({ data }: { data: Readiness | null }) {
           </ul>
         </div>
       )}
-    </section>
+    </SectionCard>
   );
 }

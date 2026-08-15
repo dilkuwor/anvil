@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { BrandMark } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, type User } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
@@ -38,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (me.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted-foreground" aria-busy="true">
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground" aria-busy="true">
         Loading workspace…
       </div>
     );
@@ -51,7 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
-        <p className="text-coral">Unable to load your session.</p>
+        <p className="text-sm text-coral">Unable to load your session.</p>
         <Button variant="secondary" onClick={() => me.refetch()}>
           Try Again
         </Button>
@@ -61,31 +62,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-steel-800 bg-steel-950/95">
-        <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center justify-between px-4">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="flex items-center gap-2 font-semibold tracking-tight">
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-zinc-950">A</span>
-              InterviewAnvil
+      <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex h-12 w-full max-w-[1600px] items-center justify-between px-4">
+          <div className="flex min-w-0 items-center gap-5">
+            <Link href="/dashboard" className="shrink-0 text-sm">
+              <BrandMark compact />
             </Link>
-            <nav className="flex items-center gap-1" aria-label="Primary">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-steel-800 hover:text-foreground",
-                    pathname.startsWith(item.href) && "bg-steel-800 text-foreground",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
+            <nav className="flex items-center gap-0.5" aria-label="Primary">
+              {NAV.map((item) => {
+                const active = pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-[13px] hover:text-foreground",
+                      active ? "font-medium text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground sm:gap-3">
+          <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground sm:gap-2">
             <ThemeToggle />
-            <span className="hidden sm:inline">{me.data?.username}</span>
+            <span className="hidden max-w-[8rem] truncate sm:inline">{me.data?.username}</span>
             <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
               Log out
             </Button>
@@ -95,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={cn(
           "mx-auto flex w-full flex-1 flex-col px-4",
-          editor ? "max-w-[1600px] py-3" : "max-w-7xl py-6",
+          editor ? "max-w-[1600px] py-3" : "max-w-6xl py-5",
         )}
       >
         {children}

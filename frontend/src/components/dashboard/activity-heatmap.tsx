@@ -2,7 +2,7 @@
 
 import { memo, useMemo, useState } from "react";
 
-import { EmptyState } from "@/components/ui/state";
+import { SectionCard, SectionTitle } from "@/components/ui/section";
 import type { ActivityDay } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -52,19 +52,19 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
 
   if (days.length === 0) {
     return (
-      <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Practice Activity</h2>
-        <div className="mt-4">
-          <EmptyState title="No activity yet." body="Solve your first problem to start building your practice history." />
-        </div>
-      </section>
+      <SectionCard>
+        <SectionTitle>Practice Activity</SectionTitle>
+        <p className="mt-4 text-sm text-muted-foreground">
+          No activity yet. Solve a problem to start building practice history.
+        </p>
+      </SectionCard>
     );
   }
 
   return (
-    <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
+    <SectionCard>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Practice Activity</h2>
+        <SectionTitle>Practice Activity</SectionTitle>
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="sr-only">Year</span>
           <select
@@ -124,7 +124,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
         <Stat label="Current streak" value={`${currentStreak} days`} />
         <Stat label="Best streak" value={`${longestStreak} days`} />
       </dl>
-    </section>
+    </SectionCard>
   );
 });
 

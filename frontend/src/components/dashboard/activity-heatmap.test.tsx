@@ -6,7 +6,7 @@ import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 describe("ActivityHeatmap", () => {
   it("shows an empty state when there is no calendar data", () => {
     render(<ActivityHeatmap days={[]} currentStreak={0} longestStreak={0} />);
-    expect(screen.getByText("No activity yet.")).toBeInTheDocument();
+    expect(screen.getByText(/No activity yet/)).toBeInTheDocument();
   });
 
   it("renders a year grid when activity exists", () => {

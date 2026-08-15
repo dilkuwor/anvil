@@ -10,7 +10,7 @@ export function Meter({
   const width = Math.max(0, Math.min(100, value));
   return (
     <div
-      className="h-1.5 overflow-hidden rounded-full bg-steel-800"
+      className="h-1 overflow-hidden rounded-full bg-steel-800"
       role="progressbar"
       aria-label={label}
       aria-valuemin={0}

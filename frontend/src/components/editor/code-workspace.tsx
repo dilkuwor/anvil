@@ -98,26 +98,26 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   ];
 
   const prompt = (
-    <section className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-xl border border-steel-800 bg-steel-900/60 xl:min-h-0">
-      <div className="border-b border-steel-800 px-5 py-4">
-        <Link href="/problems" className="text-xs text-muted-foreground hover:text-accent-light">
+    <section className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 xl:min-h-0">
+      <div className="border-b border-steel-800 px-4 py-3">
+        <Link href="/problems" className="text-[12px] text-muted-foreground hover:text-accent">
           ← Problems
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold">{problem.title}</h1>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+          <h1 className="text-lg font-semibold tracking-tight">{problem.title}</h1>
           <DifficultyBadge difficulty={problem.difficulty} />
           <StatusPip status={problem.status} />
         </div>
-        <div className="mt-2 text-xs text-muted-foreground">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
+        <div className="mt-1 text-[12px] text-muted-foreground">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
       </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-steel-800 px-3" role="tablist">
+      <div className="flex gap-0.5 overflow-x-auto border-b border-steel-800 px-2" role="tablist">
         {tabs.map((item) => (
           <button
             key={item.id}
             type="button"
             role="tab"
             aria-selected={tab === item.id}
-            className={`shrink-0 px-3 py-2 text-sm ${tab === item.id ? "border-b-2 border-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            className={`shrink-0 px-3 py-2 text-[13px] ${tab === item.id ? "border-b-2 border-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setTab(item.id)}
           >
             {item.label}
@@ -143,11 +143,11 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   );
 
   const editor = (
-    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-xl border border-steel-800 bg-editor-surface xl:min-h-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-800 px-4 py-2">
+    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-2xl border border-steel-800 bg-editor-surface xl:min-h-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-800 px-3 py-2">
         <div>
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Java · Solution</div>
-          <div className="text-[11px] text-muted-foreground">Used JDK types are imported for you.</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Java · Solution</div>
+          <div className="text-[11px] text-muted-foreground">JDK types are imported automatically.</div>
         </div>
         <div className="flex items-center gap-2">
           <Button

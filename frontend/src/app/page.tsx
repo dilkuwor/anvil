@@ -1,32 +1,38 @@
 import Link from "next/link";
 
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { PublicHeader } from "@/components/layout/public-header";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
-      <header className="flex items-center justify-end px-4 py-3">
-        <ThemeToggle />
-      </header>
-      <div className="mx-auto flex max-w-5xl flex-col justify-center px-6 py-16">
-        <p className="mb-4 text-sm uppercase tracking-[0.2em] text-accent">Coding practice</p>
-        <h1 className="max-w-3xl text-5xl font-semibold tracking-tight">
-          Forge working Java solutions against a real judge.
-        </h1>
-        <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          InterviewAnvil is a focused interview bench: read a problem, write Java in the editor, run sample
-          tests, and submit against hidden cases in an isolated sandbox.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Button asChild size="lg">
-            <Link href="/register">Create an account</Link>
-          </Button>
-          <Button asChild size="lg" variant="secondary">
+    <div className="flex min-h-screen flex-col">
+      <PublicHeader
+        action={
+          <Button asChild variant="ghost" size="sm">
             <Link href="/login">Log in</Link>
           </Button>
+        }
+      />
+      <main className="flex flex-1 items-center">
+        <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-accent">Interview practice</p>
+          <h1 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-[2.75rem] sm:leading-[1.15]">
+            Write Java. Run the judge. Get interview-ready.
+          </h1>
+          <p className="mt-4 max-w-xl text-[15px] leading-7 text-muted-foreground">
+            A focused bench for software interviews: original problems, a real Java sandbox, and progress
+            that reflects the work you actually did.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <Link href="/register">Create an account</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+              <Link href="/login">Log in</Link>
+            </Button>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

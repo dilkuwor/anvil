@@ -3,9 +3,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-xl border border-steel-800 bg-steel-900/50 px-5 py-8 text-center">
-      <p className="font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+    <div className="px-1 py-6 text-center">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-[13px] text-muted-foreground">{body}</p>
     </div>
   );
 }
