@@ -46,12 +46,20 @@ export function RoadmapPanel({
           <h2 id="roadmap-topic-title" className="mt-2 text-lg font-semibold tracking-tight">
             {topic.title}
           </h2>
+          <p className="mt-1 text-[13px] font-medium text-muted-foreground">
+            {topic.locked ? "Locked" : topic.status === "completed" ? "Completed" : topic.status === "in_progress" ? "In progress" : "Not started"}
+          </p>
         </div>
         <button type="button" onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">
           Close
         </button>
       </div>
       <p className="mt-2 text-[13px] leading-6 text-muted-foreground">{topic.description}</p>
+      {topic.locked ? (
+        <p className="mt-3 rounded-lg border border-steel-800 bg-steel-950 px-3 py-2 text-[13px] leading-6">
+          Locked until you start {prereqs.length ? prereqs.map((item) => item.title).join(", ") : "its prerequisites"}.
+        </p>
+      ) : null}
       <div className="mt-6">
         <div className="flex items-baseline justify-between text-sm">
           <span className="tabular-nums">
@@ -64,6 +72,7 @@ export function RoadmapPanel({
             value={topic.percent}
             tone={topic.status === "completed" ? "bg-success" : "bg-accent"}
             label={`${topic.title} complete`}
+            className="h-2"
           />
         </div>
       </div>
@@ -78,17 +87,15 @@ export function RoadmapPanel({
         </div>
       </dl>
       <div className="mt-8 flex flex-col gap-2">
-        {learnTopic ? (
-          <Button asChild>
-            <Link href={learnTopic.href}>Learn Topic</Link>
-          </Button>
-        ) : null}
+        <Button asChild>
+          <Link href={learnTopic?.href ?? practiceHref}>Open Topic</Link>
+        </Button>
         {topic.total === 0 ? (
           <Button variant="secondary" disabled>
             No problems yet
           </Button>
         ) : (
-          <Button asChild variant={learnTopic ? "secondary" : "default"}>
+          <Button asChild variant="secondary">
             <Link href={practiceHref}>Practice Problems</Link>
           </Button>
         )}

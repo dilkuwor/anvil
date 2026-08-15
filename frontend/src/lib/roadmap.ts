@@ -22,10 +22,10 @@ export type RoadmapTopic = RoadmapTopicDef & {
   locked: boolean;
 };
 
-export const NODE_WIDTH = 196;
-export const NODE_HEIGHT = 86;
-export const CANVAS_WIDTH = 1280;
-export const CANVAS_HEIGHT = 1320;
+export const NODE_WIDTH = 276;
+export const NODE_HEIGHT = 124;
+export const CANVAS_WIDTH = 1636;
+export const CANVAS_HEIGHT = 1380;
 
 export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
   {
@@ -33,11 +33,11 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     title: "Arrays & Hashing",
     description: "Indexing, frequency maps, and the core patterns most interviews start with.",
     prerequisites: [],
-    next: ["two-pointers", "stack-queue", "intervals"],
+    next: ["two-pointers", "stack-queue", "intervals", "bit-manipulation", "math-geometry"],
     relatedTags: ["array", "hashmap", "string"],
     filterTag: "array",
-    x: 542,
-    y: 24,
+    x: 680,
+    y: 40,
   },
   {
     id: "two-pointers",
@@ -47,8 +47,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["binary-search", "sliding-window", "linked-list"],
     relatedTags: ["two-pointers"],
     filterTag: "two-pointers",
-    x: 292,
-    y: 196,
+    x: 40,
+    y: 236,
   },
   {
     id: "stack-queue",
@@ -58,8 +58,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["linked-list"],
     relatedTags: ["stack", "queue"],
     filterTag: "stack",
-    x: 792,
-    y: 196,
+    x: 360,
+    y: 236,
   },
   {
     id: "binary-search",
@@ -69,8 +69,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["trees"],
     relatedTags: ["binary-search"],
     filterTag: "binary-search",
-    x: 142,
-    y: 368,
+    x: 40,
+    y: 432,
   },
   {
     id: "sliding-window",
@@ -80,8 +80,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["trees"],
     relatedTags: ["sliding-window"],
     filterTag: "sliding-window",
-    x: 442,
-    y: 368,
+    x: 360,
+    y: 432,
   },
   {
     id: "linked-list",
@@ -91,8 +91,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["trees"],
     relatedTags: ["linked-list"],
     filterTag: "linked-list",
-    x: 742,
-    y: 368,
+    x: 680,
+    y: 432,
   },
   {
     id: "intervals",
@@ -102,8 +102,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["greedy"],
     relatedTags: ["array"],
     filterTag: "array",
-    x: 1042,
-    y: 368,
+    x: 1000,
+    y: 236,
   },
   {
     id: "trees",
@@ -113,8 +113,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["tries", "heap", "backtracking"],
     relatedTags: ["tree"],
     filterTag: "tree",
-    x: 442,
-    y: 548,
+    x: 360,
+    y: 628,
   },
   {
     id: "greedy",
@@ -124,8 +124,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["dp-1d"],
     relatedTags: ["array"],
     filterTag: "array",
-    x: 1042,
-    y: 548,
+    x: 1000,
+    y: 432,
   },
   {
     id: "tries",
@@ -135,8 +135,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: [],
     relatedTags: ["string", "tree"],
     filterTag: "string",
-    x: 142,
-    y: 728,
+    x: 40,
+    y: 824,
   },
   {
     id: "heap",
@@ -146,8 +146,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["graphs"],
     relatedTags: ["queue"],
     filterTag: "queue",
-    x: 442,
-    y: 728,
+    x: 360,
+    y: 824,
   },
   {
     id: "backtracking",
@@ -157,8 +157,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["graphs", "dp-1d"],
     relatedTags: ["tree"],
     filterTag: "tree",
-    x: 742,
-    y: 728,
+    x: 680,
+    y: 824,
   },
   {
     id: "graphs",
@@ -168,8 +168,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["advanced-graphs", "dp-2d"],
     relatedTags: ["tree"],
     filterTag: "tree",
-    x: 292,
-    y: 908,
+    x: 360,
+    y: 1020,
   },
   {
     id: "dp-1d",
@@ -179,8 +179,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: ["dp-2d"],
     relatedTags: ["dynamic-programming"],
     filterTag: "dynamic-programming",
-    x: 742,
-    y: 908,
+    x: 1000,
+    y: 1020,
   },
   {
     id: "bit-manipulation",
@@ -190,8 +190,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: [],
     relatedTags: ["math"],
     filterTag: "math",
-    x: 1042,
-    y: 908,
+    x: 1320,
+    y: 1020,
   },
   {
     id: "advanced-graphs",
@@ -201,8 +201,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: [],
     relatedTags: ["tree"],
     filterTag: "tree",
-    x: 292,
-    y: 1088,
+    x: 360,
+    y: 1216,
   },
   {
     id: "dp-2d",
@@ -212,8 +212,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: [],
     relatedTags: ["dynamic-programming"],
     filterTag: "dynamic-programming",
-    x: 742,
-    y: 1088,
+    x: 680,
+    y: 1216,
   },
   {
     id: "math-geometry",
@@ -223,8 +223,8 @@ export const ROADMAP_TOPICS: RoadmapTopicDef[] = [
     next: [],
     relatedTags: ["math"],
     filterTag: "math",
-    x: 1042,
-    y: 1088,
+    x: 1320,
+    y: 1216,
   },
 ];
 
@@ -294,4 +294,97 @@ export function roadmapEdges(topics: RoadmapTopicDef[] = ROADMAP_TOPICS): { from
     }
   }
   return edges;
+}
+
+export function relatedTopicIds(topic: RoadmapTopic | RoadmapTopicDef | undefined): Set<string> {
+  const ids = new Set<string>();
+  if (!topic) return ids;
+  ids.add(topic.id);
+  for (const id of topic.prerequisites) ids.add(id);
+  for (const id of topic.next) ids.add(id);
+  return ids;
+}
+
+const SIDE_RAIL_VIA: Record<string, string> = {
+  "bit-manipulation": "intervals",
+  "math-geometry": "greedy",
+};
+
+export function roadmapEdgePath(
+  from: { id?: string; x: number; y: number },
+  to: { id?: string; x: number; y: number },
+): string {
+  const viaId = to.id ? SIDE_RAIL_VIA[to.id] : undefined;
+  const via = viaId ? ROADMAP_TOPICS.find((topic) => topic.id === viaId) : undefined;
+  if (via) return sideRailElbow(from, via, to);
+
+  const x1 = from.x + NODE_WIDTH / 2;
+  const y1 = from.y + NODE_HEIGHT;
+  const x2 = to.x + NODE_WIDTH / 2;
+  const y2 = to.y;
+  const dy = Math.max(y2 - y1, 1);
+  const cp = Math.max(36, Math.min(160, dy * 0.38));
+  return `M ${x1} ${y1} C ${x1} ${y1 + cp}, ${x2} ${y2 - cp}, ${x2} ${y2}`;
+}
+
+function sideRailElbow(
+  from: { x: number; y: number },
+  via: { id?: string; x: number; y: number },
+  to: { x: number; y: number },
+): string {
+  const startX = from.x + NODE_WIDTH / 2;
+  const startY = from.y + NODE_HEIGHT;
+  const endX = to.x + NODE_WIDTH / 2;
+  const endY = to.y;
+  const gutterY = startY + (via.id === "greedy" ? 40 : 22);
+  const laneX = via.x + NODE_WIDTH + (via.id === "greedy" ? 32 : 16);
+  const radius = Math.min(16, gutterY - startY - 2, (laneX - startX) / 4, (endX - laneX) / 4);
+  return [
+    `M ${startX} ${startY}`,
+    `L ${startX} ${gutterY - radius}`,
+    `Q ${startX} ${gutterY} ${startX + radius} ${gutterY}`,
+    `L ${laneX - radius} ${gutterY}`,
+    `Q ${laneX} ${gutterY} ${laneX} ${gutterY + radius}`,
+    `L ${laneX} ${endY - radius}`,
+    `Q ${laneX} ${endY} ${laneX + radius} ${endY}`,
+    `L ${endX} ${endY}`,
+  ].join(" ");
+}
+
+export function readableRoadmapScale(viewWidth: number): number {
+  const pad = 56;
+  const widthScale = Math.max(0.2, (viewWidth - pad) / CANVAS_WIDTH);
+  const floor = viewWidth < 640 ? 0.78 : viewWidth < 1024 ? 0.86 : 0.94;
+  const ceiling = 1.12;
+  return Math.min(ceiling, Math.max(floor, widthScale));
+}
+
+export function roadmapContentBounds(topics: { x: number; y: number }[] = ROADMAP_TOPICS) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const topic of topics) {
+    minX = Math.min(minX, topic.x);
+    minY = Math.min(minY, topic.y);
+    maxX = Math.max(maxX, topic.x + NODE_WIDTH);
+    maxY = Math.max(maxY, topic.y + NODE_HEIGHT);
+  }
+  if (!Number.isFinite(minX)) {
+    return { minX: 0, minY: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+  }
+  return { minX, minY, width: maxX - minX, height: maxY - minY };
+}
+
+export function fitRoadmapView(viewWidth: number, viewHeight: number, topics: { x: number; y: number }[] = ROADMAP_TOPICS) {
+  const bounds = roadmapContentBounds(topics);
+  const padX = 40;
+  const padTop = 64;
+  const padBottom = 28;
+  const availW = Math.max(80, viewWidth - padX * 2);
+  const availH = Math.max(80, viewHeight - padTop - padBottom);
+  const scale = Math.max(0.2, Math.min(availW / bounds.width, availH / bounds.height, 1.12));
+  const tx = (viewWidth - bounds.width * scale) / 2 - bounds.minX * scale;
+  const ty = padTop + (availH - bounds.height * scale) / 2 - bounds.minY * scale;
+  return { scale, tx, ty };
 }

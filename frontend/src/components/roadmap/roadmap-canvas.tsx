@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { Minus, Plus } from "lucide-react";
 
 import { RoadmapNode } from "@/components/roadmap/roadmap-node";
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
-  NODE_HEIGHT,
-  NODE_WIDTH,
+  fitRoadmapView,
+  relatedTopicIds,
+  roadmapEdgePath,
   roadmapEdges,
   type RoadmapTopic,
 } from "@/lib/roadmap";
 
-const MIN = 0.45;
-const MAX = 1.6;
+const MIN = 0.25;
+const MAX = 1.75;
 
 export function RoadmapCanvas({
   topics,
@@ -27,31 +29,42 @@ export function RoadmapCanvas({
   onSelect: (id: string) => void;
 }) {
   const frame = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.85);
+  const userAdjusted = useRef(false);
+  const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(24);
-  const [ty, setTy] = useState(16);
+  const [ty, setTy] = useState(64);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
   const clampScale = (value: number) => Math.min(MAX, Math.max(MIN, value));
 
-  const fit = useCallback(() => {
+  const applyFitView = useCallback(() => {
     const box = frame.current?.getBoundingClientRect();
     if (!box) return;
-    const next = clampScale(Math.min((box.width - 48) / CANVAS_WIDTH, (box.height - 48) / CANVAS_HEIGHT));
-    setScale(next);
-    setTx((box.width - CANVAS_WIDTH * next) / 2);
-    setTy(16);
-  }, []);
+    const next = fitRoadmapView(box.width, box.height, topics);
+    setScale(clampScale(next.scale));
+    setTx(next.tx);
+    setTy(next.ty);
+    userAdjusted.current = false;
+  }, [topics]);
 
-  useEffect(() => {
-    fit();
-  }, [fit]);
+  useLayoutEffect(() => {
+    applyFitView();
+    const node = frame.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (!userAdjusted.current) applyFitView();
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [applyFitView]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = frame.current;
     if (!node) return;
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
+      userAdjusted.current = true;
       if (event.ctrlKey || event.metaKey) {
         setScale((value) => clampScale(value + (event.deltaY > 0 ? -0.08 : 0.08)));
         return;
@@ -65,23 +78,32 @@ export function RoadmapCanvas({
 
   const edges = roadmapEdges();
   const byId = new Map(topics.map((topic) => [topic.id, topic]));
-  const selected = selectedId ? byId.get(selectedId) : null;
+  const focusId = hoveredId ?? selectedId;
+  const focus = focusId ? byId.get(focusId) : undefined;
+  const related = relatedTopicIds(focus);
+  const dimming = hoveredId != null;
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="absolute left-4 top-3 z-10 flex flex-wrap items-center gap-1.5">
-        <Control onClick={() => setScale((value) => clampScale(value + 0.12))}>+</Control>
-        <Control onClick={() => setScale((value) => clampScale(value - 0.12))}>−</Control>
-        <Control
-          onClick={() => {
-            setScale(0.85);
-            setTx(24);
-            setTy(16);
-          }}
-        >
+      <div className="absolute left-3 top-3 z-20 flex items-center gap-0.5 rounded-lg border border-steel-800 bg-steel-900/95 p-1 shadow-sm backdrop-blur-md">
+        <Control label="Zoom in" onClick={() => {
+          userAdjusted.current = true;
+          setScale((value) => clampScale(value + 0.12));
+        }}>
+          <Plus className="h-4 w-4" />
+        </Control>
+        <Control label="Zoom out" onClick={() => {
+          userAdjusted.current = true;
+          setScale((value) => clampScale(value - 0.12));
+        }}>
+          <Minus className="h-4 w-4" />
+        </Control>
+        <Control label="Reset view" wide onClick={applyFitView}>
           Reset
         </Control>
-        <Control onClick={fit}>Fit to View</Control>
+        <Control label="Fit roadmap" wide onClick={applyFitView}>
+          Fit to View
+        </Control>
       </div>
       <div
         ref={frame}
@@ -93,6 +115,7 @@ export function RoadmapCanvas({
         }}
         onPointerMove={(event) => {
           if (!drag.current) return;
+          userAdjusted.current = true;
           setTx(drag.current.tx + event.clientX - drag.current.x);
           setTy(drag.current.ty + event.clientY - drag.current.y);
         }}
@@ -113,21 +136,18 @@ export function RoadmapCanvas({
               const from = byId.get(edge.from);
               const to = byId.get(edge.to);
               if (!from || !to) return null;
-              const x1 = from.x + NODE_WIDTH / 2;
-              const y1 = from.y + NODE_HEIGHT;
-              const x2 = to.x + NODE_WIDTH / 2;
-              const y2 = to.y;
-              const mid = (y1 + y2) / 2;
-              const active =
-                selected != null && (selected.id === from.id || selected.id === to.id || selected.next.includes(to.id) && selected.id === from.id);
+              const connected = Boolean(focus && (focus.id === from.id || focus.id === to.id) && related.has(from.id) && related.has(to.id));
+              const faded = dimming && !connected;
               return (
                 <path
                   key={`${edge.from}-${edge.to}`}
-                  d={`M ${x1} ${y1} C ${x1} ${mid}, ${x2} ${mid}, ${x2} ${y2}`}
+                  d={roadmapEdgePath(from, to)}
                   fill="none"
-                  stroke={active ? "var(--accent)" : "var(--steel-600)"}
-                  strokeWidth={active ? 2 : 1.25}
-                  opacity={active ? 0.9 : 0.45}
+                  stroke={connected ? "var(--accent)" : "var(--muted-foreground)"}
+                  strokeWidth={connected ? 2.5 : 2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={faded ? 0.16 : connected ? 0.95 : 0.78}
                 />
               );
             })}
@@ -138,7 +158,10 @@ export function RoadmapCanvas({
               topic={topic}
               selected={topic.id === selectedId}
               recommended={topic.id === recommendedId}
+              dimmed={dimming && !related.has(topic.id)}
+              related={dimming && related.has(topic.id) && topic.id !== hoveredId}
               onSelect={onSelect}
+              onHover={setHoveredId}
             />
           ))}
         </div>
@@ -147,12 +170,28 @@ export function RoadmapCanvas({
   );
 }
 
-function Control({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function Control({
+  children,
+  onClick,
+  label,
+  wide = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  label: string;
+  wide?: boolean;
+}) {
   return (
     <button
       type="button"
+      title={label}
+      aria-label={label}
       onClick={onClick}
-      className="h-8 min-w-8 rounded-md border border-steel-800 bg-steel-900 px-2 text-sm text-muted-foreground hover:text-foreground"
+      className={
+        wide
+          ? "inline-flex h-8 items-center justify-center rounded-md px-2.5 text-[12px] font-medium text-muted-foreground hover:bg-steel-800 hover:text-foreground"
+          : "inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-steel-800 hover:text-foreground"
+      }
     >
       {children}
     </button>
