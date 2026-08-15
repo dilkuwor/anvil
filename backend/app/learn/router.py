@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.common.database import get_db
@@ -14,6 +15,11 @@ from app.learn.schemas import (
     LearningSearchResponse,
     LearningTopicDetail,
     RoadmapLearnLink,
+    LessonAskRequest,
+    LessonAskResponse,
+    LessonTutorRequest,
+    TopicAskRequest,
+    TopicAskResponse,
 )
 from app.users.models import User
 
@@ -46,6 +52,17 @@ def get_topic(
     return service.get_topic(db, current_user.id, slug)
 
 
+@router.post("/topics/{slug}/ask", response_model=TopicAskResponse)
+def ask_about_topic(
+    slug: str,
+    payload: TopicAskRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TopicAskResponse:
+    answer = service.explain_topic(db, slug, payload.question)
+    return TopicAskResponse(topic_slug=slug, answer=answer)
+
+
 @router.get("/lessons/{slug}", response_model=LearningLessonDetail)
 def get_lesson(
     slug: str,
@@ -53,6 +70,45 @@ def get_lesson(
     current_user: User = Depends(get_current_user),
 ) -> LearningLessonDetail:
     return service.get_lesson(db, current_user.id, slug)
+
+
+@router.post("/lessons/{slug}/ask", response_model=LessonAskResponse)
+def ask_about_lesson(
+    slug: str,
+    payload: LessonAskRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LessonAskResponse:
+    answer = service.explain_lesson(db, slug, payload.question, payload.conversation)
+    return LessonAskResponse(lesson_slug=slug, answer=answer)
+
+
+@router.post("/lessons/{lesson_id}/ask-ai")
+def ask_lesson_ai(
+    lesson_id: UUID,
+    payload: LessonTutorRequest,
+    stream: bool = Query(default=False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if stream:
+        return StreamingResponse(
+            service.stream_lesson_tutor(
+                db,
+                lesson_id=lesson_id,
+                question=payload.question,
+                conversation=payload.conversation,
+            ),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+    slug, answer = service.explain_lesson_tutor(
+        db,
+        lesson_id=lesson_id,
+        question=payload.question,
+        conversation=payload.conversation,
+    )
+    return LessonAskResponse(lesson_slug=slug, answer=answer)
 
 
 @router.get("/search", response_model=LearningSearchResponse)

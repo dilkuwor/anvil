@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -7,7 +10,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.common.enums import LearningProgressStatus, ProgressStatus
-from app.common.errors import NotFoundError
+from app.common.errors import NotFoundError, ServiceUnavailableError
+from app.interviews import ollama
 from app.learn.models import (
     LearningCategory,
     LearningLesson,
@@ -25,11 +29,112 @@ from app.learn.schemas import (
     LearningSearchResponse,
     LearningTopicDetail,
     LearningTopicSummary,
+    LessonAskMessage,
     RelatedProblemOut,
     RoadmapLearnLink,
 )
 from app.problems.models import Problem
 from app.progress.models import UserProblemProgress
+
+_TUTOR_SYSTEM = """You are the InterviewAnvil AI interview tutor.
+
+You are helping the candidate understand the current lesson and prepare
+for technical interviews.
+
+Use the provided lesson content as your primary source of context.
+
+Explain concepts accurately and practically.
+
+Focus on:
+- interview expectations
+- engineering tradeoffs
+- real-world examples
+- common mistakes
+- concise technical explanations
+
+Do not blindly agree with the candidate.
+
+If the candidate's reasoning is incorrect, explain why and provide the
+correct reasoning.
+
+When appropriate, ask follow-up questions like a technical interviewer.
+
+Do not reveal the full solution to an interview problem unless the user
+explicitly asks for it.
+
+Keep answers concise unless the user asks for a detailed explanation.
+
+Start directly with the useful answer. Do not greet the candidate.
+Avoid filler such as "Okay, let's talk about...", "Absolutely!", or
+"That's a great question!".
+
+Use short headings, bullets, and small code snippets when they help.
+Stay easy to scan.
+
+If the previous assistant message asked a question and the user is
+answering it, evaluate that answer. Cover:
+- What was correct
+- What was missing
+- How an interviewer would rate it
+- A stronger answer
+- Exactly one follow-up question
+
+Ask only one interview or quiz question at a time and wait.
+
+If the question is outside this lesson, answer briefly and connect the
+explanation back to the current topic when possible."""
+
+_INTENT_INSTRUCTIONS = {
+    "explain": (
+        "Give a clear explanation of this lesson's concept, then close with one "
+        "interview-oriented takeaway."
+    ),
+    "why": "Explain the engineering and interview relevance of this lesson.",
+    "example": "Give one realistic production example tied to this lesson. Be concrete.",
+    "tradeoffs": (
+        "Give a concise tradeoff comparison for this lesson. Use bullets. "
+        "Say when you would choose each option."
+    ),
+    "interview": (
+        "Interactive interview mode. Ask ONE realistic interview question about "
+        "this lesson. Do not answer it. Do not greet the candidate. Start with "
+        "the question."
+    ),
+    "evaluate": (
+        "The candidate is answering your previous question. Evaluate now using "
+        "this structure:\n"
+        "- What was correct\n"
+        "- What was missing\n"
+        "- How an interviewer would rate it\n"
+        "- A stronger answer\n"
+        "- Exactly one follow-up question\n"
+        "Do not dump a list of new questions. Do not greet the candidate."
+    ),
+    "quiz": (
+        "Quiz mode. Ask ONE question at a time about this lesson and wait. "
+        "Do not reveal the answer. Do not greet the candidate. Start with the question."
+    ),
+    "interview_question": (
+        "Ask one realistic interview question from this lesson. Do not reveal "
+        "the answer unless they explicitly ask for it."
+    ),
+    "mistakes": (
+        "List the common mistakes for this lesson. For each one, say why it "
+        "hurts in an interview or in production."
+    ),
+    "beginner": (
+        "Explain this as if the candidate is new to the topic. Stay technically "
+        "correct. Use a simple analogy, then the precise definition."
+    ),
+    "production": (
+        "Explain how this works in a production system: architecture, failure "
+        "modes, and tradeoffs. Stay tied to this lesson."
+    ),
+    "general": (
+        "Answer using this lesson as the primary source. If the question is "
+        "outside the lesson, answer briefly and connect it back."
+    ),
+}
 
 
 def list_categories(db: Session, user_id: UUID) -> list[LearningCategoryCard]:
@@ -99,6 +204,116 @@ def get_topic(db: Session, user_id: UUID, slug: str) -> LearningTopicDetail:
         related_problems=related,
         practice_tag=_practice_tag(topic),
     )
+
+
+def explain_topic(db: Session, slug: str, question: str | None = None) -> str:
+    topic = _topic_by_slug(db, slug)
+    lessons = [
+        lesson
+        for lesson in sorted(topic.lessons, key=lambda item: (item.display_order, item.title))
+        if lesson.is_published
+    ]
+    outline = "\n".join(f"- {lesson.title}: {lesson.short_description}" for lesson in lessons) or "- (no lessons yet)"
+    asked = (question or "").strip()
+    if asked:
+        user_turn = f"The learner asked:\n{asked}\n\nAnswer in the context of this topic only."
+    else:
+        user_turn = (
+            "Explain this topic for an interview candidate. Cover:\n"
+            "1. The core concept in plain language.\n"
+            "2. Why it shows up in interviews.\n"
+            "3. Concrete use cases and when to apply it.\n"
+            "Keep it concise (under 250 words). Use short headings."
+        )
+    system = (
+        "You are an InterviewAnvil tutor sitting next to a software engineer preparing for interviews. "
+        "Explain clearly. Do not write full solution code. Do not invent hidden test cases. "
+        "Stay on this topic.\n\n"
+        f"Category: {topic.category.title}\n"
+        f"Topic: {topic.title} ({topic.difficulty})\n"
+        f"Description: {topic.description}\n"
+        f"Lessons in this topic:\n{outline}"
+    )
+    try:
+        return ollama.tutor_reply(system, user_turn)
+    except Exception:
+        if asked:
+            return (
+                f"{topic.title} is part of {topic.category.title}. {topic.description} "
+                "Open a lesson on this page for the structured explanation, then try Ask AI again in a moment."
+            )
+        cases = "; ".join(lesson.title for lesson in lessons[:4]) or "the lessons listed here"
+        return (
+            f"## {topic.title}\n\n{topic.description}\n\n"
+            f"## Use cases\n\nYou will see this in interviews around {cases}. "
+            "Work through the lessons on this page for examples, tradeoffs, and interview questions."
+        )
+
+
+def explain_lesson(
+    db: Session,
+    slug: str,
+    question: str | None = None,
+    conversation: list[LessonAskMessage] | None = None,
+) -> str:
+    try:
+        prepared = _prepare_lesson_tutor(db, slug=slug, question=question, conversation=conversation)
+        return ollama.tutor_reply(prepared.system, prepared.user_turn, conversation=prepared.history)
+    except (ServiceUnavailableError, NotFoundError):
+        raise
+    except Exception:
+        lesson = _lesson_by_slug(db, slug)
+        asked = (question or "").strip()
+        if asked:
+            return (
+                f"{lesson.title} sits under {lesson.topic.title}. {lesson.short_description} "
+                "Try Ask AI again in a moment, or use the takeaways on this page."
+            )
+        return (
+            f"## {lesson.title}\n\n{lesson.short_description}\n\n"
+            "## Use cases\n\n"
+            "Use this concept when an interviewer asks you to size a system, defend a tradeoff, "
+            "or walk through how you would apply it on the job. The lesson body on this page has the details."
+        )
+
+
+def explain_lesson_tutor(
+    db: Session,
+    *,
+    lesson_id: UUID | None = None,
+    slug: str | None = None,
+    question: str,
+    conversation: list[LessonAskMessage] | None = None,
+) -> tuple[str, str]:
+    prepared = _prepare_lesson_tutor(db, lesson_id=lesson_id, slug=slug, question=question, conversation=conversation)
+    try:
+        answer = ollama.tutor_reply(prepared.system, prepared.user_turn, conversation=prepared.history)
+    except Exception as exc:
+        raise ServiceUnavailableError() from exc
+    return prepared.lesson_slug, answer
+
+
+def stream_lesson_tutor(
+    db: Session,
+    *,
+    lesson_id: UUID | None = None,
+    slug: str | None = None,
+    question: str,
+    conversation: list[LessonAskMessage] | None = None,
+):
+    prepared = _prepare_lesson_tutor(db, lesson_id=lesson_id, slug=slug, question=question, conversation=conversation)
+
+    def events():
+        try:
+            for delta in ollama.tutor_reply_stream(
+                prepared.system, prepared.user_turn, conversation=prepared.history
+            ):
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        except Exception:
+            yield f"data: {json.dumps({'error': 'AI tutor is temporarily unavailable. Please try again.'})}\n\n"
+
+    return events()
 
 
 def get_lesson(db: Session, user_id: UUID, slug: str) -> LearningLessonDetail:
@@ -304,6 +519,153 @@ def roadmap_link(db: Session, user_id: UUID, roadmap_key: str) -> RoadmapLearnLi
         practice_tag=_practice_tag(topic),
         mock_problem_slug=mock,
     )
+
+
+@dataclass
+class _PreparedTutor:
+    lesson_slug: str
+    system: str
+    user_turn: str
+    history: list[dict[str, str]]
+
+
+def _prepare_lesson_tutor(
+    db: Session,
+    *,
+    lesson_id: UUID | None = None,
+    slug: str | None = None,
+    question: str | None = None,
+    conversation: list[LessonAskMessage] | None = None,
+) -> _PreparedTutor:
+    lesson = _lesson_by_id(db, lesson_id) if lesson_id is not None else _lesson_by_slug(db, slug or "")
+    topic = lesson.topic
+    asked = (question or "").strip()
+    history = [
+        {"role": item.role, "content": item.content.strip()}
+        for item in (conversation or [])
+        if item.content.strip()
+    ][-12:]
+    intent = _detect_intent(asked, history)
+    context = _lesson_tutor_context(lesson, topic)
+    system = f"{_TUTOR_SYSTEM}\n\nCurrent lesson context:\n{context}"
+    if asked:
+        user_turn = (
+            f"The candidate asked:\n{asked}\n\n"
+            f"Detected intent: {intent}\n"
+            f"{_INTENT_INSTRUCTIONS.get(intent, _INTENT_INSTRUCTIONS['general'])}"
+        )
+    else:
+        user_turn = (
+            "Explain this lesson for an interview candidate. Cover:\n"
+            "1. The core concept in plain language.\n"
+            "2. Why it shows up in interviews.\n"
+            "3. One concrete example.\n"
+            "4. One interview-style takeaway.\n"
+            "Keep it concise. Use short headings. Do not greet the candidate."
+        )
+    return _PreparedTutor(lesson_slug=lesson.slug, system=system, user_turn=user_turn, history=history)
+
+
+def _lesson_by_id(db: Session, lesson_id: UUID) -> LearningLesson:
+    lesson = db.scalar(
+        select(LearningLesson)
+        .options(selectinload(LearningLesson.topic).selectinload(LearningTopic.category))
+        .where(LearningLesson.id == lesson_id, LearningLesson.is_published.is_(True))
+    )
+    if lesson is None:
+        raise NotFoundError("Lesson not found.")
+    return lesson
+
+
+def _lesson_tutor_context(lesson: LearningLesson, topic: LearningTopic) -> str:
+    sections = _parse_lesson_sections(lesson.content or "")
+    takeaways = "\n".join(f"- {item}" for item in (lesson.takeaways or [])[:8]) or "- (none)"
+    questions = "\n".join(f"- {item}" for item in (lesson.interview_questions or [])[:8]) or "- (none)"
+    concept = sections.get("concept") or lesson.short_description
+    body = (lesson.content or "").strip()
+    if len(body) > 4000:
+        body = body[:3997] + "…"
+    return (
+        f"Category: {topic.category.title}\n"
+        f"Topic: {topic.title}\n"
+        f"Lesson title: {lesson.title}\n"
+        f"Lesson summary/concept: {concept}\n"
+        f"Why it matters: {sections.get('why') or '(see lesson notes)'}\n"
+        f"How it works: {sections.get('how') or '(see lesson notes)'}\n"
+        f"Examples: {sections.get('example') or sections.get('uses') or '(see lesson notes)'}\n"
+        f"Tradeoffs: {sections.get('tradeoffs') or '(see lesson notes)'}\n"
+        f"Common mistakes: {sections.get('mistakes') or '(see lesson notes)'}\n"
+        f"Interview tips: {sections.get('tip') or '(see lesson notes)'}\n"
+        f"Key takeaways:\n{takeaways}\n"
+        f"Interview questions:\n{questions}\n\n"
+        f"Full lesson notes:\n{body}"
+    )
+
+
+def _parse_lesson_sections(content: str) -> dict[str, str]:
+    aliases = {
+        "why it matters": "why",
+        "how it works": "how",
+        "example": "example",
+        "examples": "example",
+        "common use cases": "uses",
+        "use cases": "uses",
+        "tradeoffs": "tradeoffs",
+        "trade-offs": "tradeoffs",
+        "common mistakes": "mistakes",
+        "interview tip": "tip",
+        "interview tips": "tip",
+    }
+    parts = re.split(r"\n(?=## )", content.strip())
+    sections: dict[str, str] = {}
+    if parts:
+        intro = parts[0]
+        if intro.startswith("# "):
+            intro = intro.split("\n", 1)[1] if "\n" in intro else ""
+        intro = intro.strip()
+        if intro and not intro.startswith("## "):
+            sections["concept"] = intro
+    for part in parts[1:]:
+        heading, _, body = part.partition("\n")
+        key = aliases.get(heading.replace("#", "").strip().lower())
+        if key:
+            sections[key] = body.strip()
+    return sections
+
+
+def _detect_intent(question: str, history: list[dict[str, str]]) -> str:
+    text = question.lower()
+    command = _command_intent(text)
+    last_assistant = next((item.get("content", "") for item in reversed(history) if item.get("role") == "assistant"), "")
+    if command is None and last_assistant and "?" in last_assistant:
+        return "evaluate"
+    return command or "general"
+
+
+def _command_intent(text: str) -> str | None:
+    if re.search(r"\bquiz me\b|\btest me\b", text):
+        return "quiz"
+    if re.search(r"\binterview me\b", text):
+        return "interview"
+    if re.search(r"interview question", text):
+        return "interview_question"
+    if re.search(r"trade-?offs?", text):
+        return "tradeoffs"
+    if re.search(r"common mistakes|what to avoid", text):
+        return "mistakes"
+    if re.search(r"\bexample\b|real[- ]world", text):
+        return "example"
+    if re.search(r"why (does |do |is |this )?matter|why it matters", text):
+        return "why"
+    if re.search(r"beginner|eli5|like i.?m (a )?new|simplify", text):
+        return "beginner"
+    if re.search(r"production|real system|in a real", text):
+        return "production"
+    if re.search(r"\bexplain\b", text):
+        return "explain"
+    if re.search(r"\bquiz\b", text):
+        return "quiz"
+    return None
 
 
 def _topic_by_slug(db: Session, slug: str) -> LearningTopic:

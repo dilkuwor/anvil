@@ -37,6 +37,11 @@ class ConflictError(AppError):
         super().__init__(message, status_code=409, code="conflict")
 
 
+class ServiceUnavailableError(AppError):
+    def __init__(self, message: str = "AI tutor is temporarily unavailable. Please try again."):
+        super().__init__(message, status_code=503, code="service_unavailable")
+
+
 def _error_body(message: str, code: str, status_code: int) -> dict:
     return {"error": {"message": message, "code": code, "status": status_code}}
 

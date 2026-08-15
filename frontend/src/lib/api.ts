@@ -49,6 +49,69 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
+export async function streamSsePost(
+  path: string,
+  body: unknown,
+  onDelta: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(response.status, data?.error?.message ?? "Request failed.", data?.error?.code ?? "error");
+  }
+  if (contentType.includes("application/json")) {
+    const data = (await response.json()) as { answer?: string };
+    const answer = data.answer ?? "";
+    if (answer) onDelta(answer);
+    return answer;
+  }
+  if (!response.body) {
+    throw new ApiError(502, "AI tutor is temporarily unavailable. Please try again.", "service_unavailable");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let assembled = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+    for (const part of parts) {
+      const line = part
+        .split("\n")
+        .map((item) => item.replace(/^data:\s?/, ""))
+        .join("")
+        .trim();
+      if (!line) continue;
+      let event: { delta?: string; done?: boolean; error?: string };
+      try {
+        event = JSON.parse(line) as { delta?: string; done?: boolean; error?: string };
+      } catch {
+        continue;
+      }
+      if (event.error) {
+        throw new ApiError(503, event.error, "service_unavailable");
+      }
+      if (event.delta) {
+        assembled += event.delta;
+        onDelta(event.delta);
+      }
+    }
+  }
+  return assembled;
+}
+
 export type User = {
   id: string;
   email: string;

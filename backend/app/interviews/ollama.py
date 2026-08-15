@@ -17,14 +17,20 @@ logger = get_logger(__name__)
 _JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
 
 
-def chat(messages: list[dict[str, str]], *, timeout: float = 60.0) -> str:
+def chat(
+    messages: list[dict[str, str]],
+    *,
+    timeout: float = 60.0,
+    num_predict: int = 220,
+    max_chars: int = 900,
+) -> str:
     settings = get_settings()
     url = f"{settings.ollama_base_url.rstrip('/')}/api/chat"
     payload = {
         "model": settings.ollama_model,
         "messages": messages,
         "stream": False,
-        "options": {"temperature": 0.45, "num_predict": 220},
+        "options": {"temperature": 0.45, "num_predict": num_predict},
     }
     last_error: Exception | None = None
     with httpx.Client(timeout=timeout) as client:
@@ -45,7 +51,7 @@ def chat(messages: list[dict[str, str]], *, timeout: float = 60.0) -> str:
                 content = ((data.get("message") or {}).get("content") or "").strip()
                 if not content:
                     raise ValueError("Empty interviewer response.")
-                return _clean_reply(content)
+                return _clean_reply(content, max_chars=max_chars)
             except (httpx.TimeoutException, httpx.TransportError, ValueError) as exc:
                 last_error = exc
                 if attempt == 2:
@@ -54,6 +60,85 @@ def chat(messages: list[dict[str, str]], *, timeout: float = 60.0) -> str:
     if last_error:
         raise last_error
     raise RuntimeError("Ollama request failed.")
+
+
+def tutor_reply(
+    system: str,
+    user_turn: str,
+    conversation: list[dict[str, str]] | None = None,
+) -> str:
+    messages = _tutor_messages(system, user_turn, conversation)
+    try:
+        return chat(messages, timeout=75.0, num_predict=700, max_chars=4500)
+    except Exception as exc:
+        logger.warning("ollama_tutor_failed", error=str(exc))
+        raise
+
+
+def tutor_reply_stream(
+    system: str,
+    user_turn: str,
+    conversation: list[dict[str, str]] | None = None,
+):
+    messages = _tutor_messages(system, user_turn, conversation)
+    try:
+        yield from chat_stream(messages, timeout=90.0, num_predict=700)
+    except Exception as exc:
+        logger.warning("ollama_tutor_stream_failed", error=str(exc))
+        raise
+
+
+def chat_stream(
+    messages: list[dict[str, str]],
+    *,
+    timeout: float = 90.0,
+    num_predict: int = 700,
+):
+    settings = get_settings()
+    url = f"{settings.ollama_base_url.rstrip('/')}/api/chat"
+    payload = {
+        "model": settings.ollama_model,
+        "messages": messages,
+        "stream": True,
+        "options": {"temperature": 0.45, "num_predict": num_predict},
+    }
+    with httpx.Client(timeout=timeout) as client:
+        with client.stream("POST", url, json=payload) as response:
+            if response.status_code >= 400:
+                response.read()
+                response.raise_for_status()
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                delta = ((data.get("message") or {}).get("content") or "")
+                if delta:
+                    yield delta
+                if data.get("done"):
+                    break
+
+
+def _tutor_messages(
+    system: str,
+    user_turn: str,
+    conversation: list[dict[str, str]] | None,
+) -> list[dict[str, str]]:
+    history = _sanitize_history(conversation or [])
+    return [{"role": "system", "content": system}, *history, {"role": "user", "content": user_turn}]
+
+
+def _sanitize_history(conversation: list[dict[str, str]]) -> list[dict[str, str]]:
+    cleaned: list[dict[str, str]] = []
+    for item in conversation[-12:]:
+        role = (item.get("role") or "").strip().lower()
+        content = (item.get("content") or "").strip()
+        if role not in {"user", "assistant"} or not content:
+            continue
+        cleaned.append({"role": role, "content": content[:4000]})
+    return cleaned
 
 
 def interviewer_reply(system: str, transcript: list[dict[str, str]], user_turn: str) -> str:
@@ -88,9 +173,9 @@ def parse_feedback_json(raw: str) -> dict[str, Any]:
     return data
 
 
-def _clean_reply(text: str) -> str:
+def _clean_reply(text: str, max_chars: int = 900) -> str:
     cleaned = text.strip().strip('"').strip()
     cleaned = re.sub(r"^\s*(interviewer|assistant)\s*:\s*", "", cleaned, flags=re.I)
-    if len(cleaned) > 900:
-        cleaned = cleaned[:897].rsplit(" ", 1)[0] + "…"
+    if max_chars and len(cleaned) > max_chars:
+        cleaned = cleaned[: max_chars - 1].rsplit(" ", 1)[0] + "…"
     return cleaned

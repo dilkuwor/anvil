@@ -1,6 +1,7 @@
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RelatedProblemOut(BaseModel):
@@ -121,3 +122,32 @@ class RoadmapLearnLink(BaseModel):
     topic: LearningTopicSummary | None = None
     practice_tag: str | None = None
     mock_problem_slug: str | None = None
+
+
+class TopicAskRequest(BaseModel):
+    question: str | None = Field(default=None, max_length=500)
+
+
+class TopicAskResponse(BaseModel):
+    topic_slug: str
+    answer: str
+
+
+class LessonAskMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class LessonAskRequest(BaseModel):
+    question: str | None = Field(default=None, max_length=2000)
+    conversation: list[LessonAskMessage] = Field(default_factory=list, max_length=24)
+
+
+class LessonTutorRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    conversation: list[LessonAskMessage] = Field(default_factory=list, max_length=24)
+
+
+class LessonAskResponse(BaseModel):
+    lesson_slug: str
+    answer: str

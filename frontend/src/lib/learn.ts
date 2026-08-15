@@ -114,6 +114,31 @@ export type LearningProgressSummary = {
   categories: LearningCategoryCard[];
 };
 
+export type TopicAskResponse = {
+  topic_slug: string;
+  answer: string;
+};
+
+export type LessonAskMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type LessonAskResponse = {
+  lesson_slug: string;
+  answer: string;
+};
+
+export function suggestedLessonQuestions(lesson: LearningLessonDetail): { label: string; question: string }[] {
+  return [
+    { label: "Explain this concept", question: `Explain ${lesson.title} like I'm preparing for an interview.` },
+    { label: "Quiz me", question: `Quiz me on ${lesson.title}.` },
+    { label: "Interview me", question: `Interview me on ${lesson.title}.` },
+    { label: "Real-world example", question: `Give me a real-world example of ${lesson.title}.` },
+    { label: "Common mistakes", question: `What are the common mistakes with ${lesson.title}?` },
+  ];
+}
+
 export type RoadmapLearnLink = {
   topic: LearningTopicSummary | null;
   practice_tag: string | null;
