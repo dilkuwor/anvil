@@ -7,27 +7,35 @@ import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { InterviewReadiness } from "@/components/dashboard/interview-readiness";
 import { Meter } from "@/components/dashboard/meter";
 import { PracticeOverview } from "@/components/dashboard/practice-overview";
+import { ProfileCard } from "@/components/dashboard/profile-card";
 import { RecommendedPractice } from "@/components/dashboard/recommended-practice";
 import { TopicProgress } from "@/components/dashboard/topic-progress";
 import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
-import { api, type ProgressSummary } from "@/lib/api";
+import { api, type ProgressSummary, type User } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 import { DEFAULT_DAILY_GOAL } from "@/lib/utils";
 
 export function ProgressBoard() {
+  const me = useQuery({
+    queryKey: queryKeys.me,
+    queryFn: () => api.get<User>("/api/v1/auth/me"),
+  });
   const progress = useQuery({
     queryKey: queryKeys.progress,
     queryFn: () => api.get<ProgressSummary>("/api/v1/progress"),
   });
 
-  if (progress.isLoading) {
+  if (progress.isLoading || me.isLoading) {
     return <CardSkeleton rows={5} />;
   }
 
   if (progress.isError || !progress.data) {
     return <ErrorState message="Unable to load your progress." onRetry={() => progress.refetch()} />;
+  }
+  if (me.isError || !me.data) {
+    return <ErrorState message="Unable to load your profile." onRetry={() => me.refetch()} />;
   }
 
   const data = progress.data;
@@ -42,7 +50,12 @@ export function ProgressBoard() {
   const goalPct = Math.round((goalDone / goalTarget) * 100);
 
   return (
-    <div className="space-y-5">
+    <div className="grid items-start gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
+      <aside className="space-y-5 xl:sticky xl:top-16">
+        <ProfileCard user={me.data} />
+      </aside>
+
+      <div className="min-w-0 space-y-5">
       <PracticeOverview data={data} />
 
       <SectionCard>
@@ -84,6 +97,7 @@ export function ProgressBoard() {
       <div className="grid gap-4 xl:grid-cols-2">
         <TopicProgress rows={data.topic_progress ?? []} hasSolved={data.total_solved > 0} />
         <InterviewReadiness data={data.readiness ?? null} />
+      </div>
       </div>
     </div>
   );
