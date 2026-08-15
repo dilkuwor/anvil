@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ResultPanel } from "@/components/editor/result-panel";
@@ -71,6 +71,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   const [showProblem, setShowProblem] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const prevErrorRef = useRef(false);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -95,7 +96,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     if (!interviewMode || !session || session.completed) return;
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(tick);
-  }, [interviewMode, session?.id, session?.completed]);
+  }, [interviewMode, session]);
 
   const remaining = session
     ? session.completed
@@ -110,10 +111,15 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   }, [remaining, interviewMode, session, sessionQuery]);
 
   useEffect(() => {
-    if (sessionQuery.isError && interviewMode) {
+    const isError = sessionQuery.isError && interviewMode;
+    if (isError && !prevErrorRef.current) {
+      prevErrorRef.current = true;
       setInterviewMode(false);
       setSessionId(null);
       sessionStorage.removeItem(interviewStorageKey(problem.slug));
+    }
+    if (!sessionQuery.isError) {
+      prevErrorRef.current = false;
     }
   }, [sessionQuery.isError, interviewMode, problem.slug]);
 
