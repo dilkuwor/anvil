@@ -1,4 +1,4 @@
-import { Binary, BookOpen, Boxes, Coffee, Cpu, MessageSquare, Network, type LucideIcon } from "lucide-react";
+import { Binary, BookOpen, Boxes, Coffee, Cpu, MessageSquare, Network, Sparkles, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const ICONS: Record<string, LucideIcon> = {
   cpu: Cpu,
   boxes: Boxes,
   message: MessageSquare,
+  sparkles: Sparkles,
   book: BookOpen,
 };
 

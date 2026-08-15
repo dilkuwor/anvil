@@ -114,7 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={cn(
           "flex w-full flex-1 flex-col",
           pathname.startsWith("/roadmap")
-            ? "ia-content h-[calc(100dvh-3rem)] min-h-0 overflow-hidden py-0"
+            ? "h-[calc(100dvh-3rem)] min-h-0 w-full overflow-hidden py-0"
             : editor
               ? "mx-auto max-w-[1600px] px-4 py-3"
               : "ia-content py-6",

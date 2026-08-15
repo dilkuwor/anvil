@@ -8,7 +8,7 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border border-steel-800 bg-steel-900 p-5", className)}>
+    <section className={cn("overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 p-5", className)}>
       {children}
     </section>
   );

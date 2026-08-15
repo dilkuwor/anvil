@@ -31,10 +31,20 @@ export function RoadmapView() {
   }, [selected]);
 
   if (problems.isLoading) {
-    return <CardSkeleton rows={6} />;
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+        <div className="w-full max-w-xl">
+          <CardSkeleton rows={6} />
+        </div>
+      </div>
+    );
   }
   if (problems.isError) {
-    return <ErrorState message="Unable to load the roadmap." onRetry={() => problems.refetch()} />;
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+        <ErrorState message="Unable to load the roadmap." onRetry={() => problems.refetch()} />
+      </div>
+    );
   }
 
   return (

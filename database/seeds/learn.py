@@ -92,6 +92,13 @@ CATEGORIES = [
         "icon": "message",
         "order": 6,
     },
+    {
+        "slug": "ai-ml",
+        "title": "AI & Machine Learning",
+        "description": "Master machine learning, LLMs, RAG, agents, and production AI systems for modern software engineering interviews.",
+        "icon": "sparkles",
+        "order": 7,
+    },
 ]
 
 
@@ -1163,9 +1170,16 @@ def _behavioral_topics() -> list[dict]:
     return out
 
 
+def _ai_topics() -> list[dict]:
+    from database.seeds.learn_ai import ai_topics
+
+    return ai_topics()
+
+
 TOPICS.extend(_system_design_topics())
 TOPICS.extend(_java_topics())
 TOPICS.extend(_cs_topics())
 TOPICS.extend(_ood_topics())
 TOPICS.extend(_behavioral_topics())
+TOPICS.extend(_ai_topics())
 

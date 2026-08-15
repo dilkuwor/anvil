@@ -73,6 +73,8 @@ def seed_learning(db: Session) -> tuple[int, int, int]:
             ).all()
             for link in existing_links:
                 db.delete(link)
+            if existing_links:
+                db.flush()
             for order, problem_slug in enumerate(lesson_spec.get("problems") or [], start=1):
                 problem = db.scalar(select(Problem).where(Problem.slug == problem_slug))
                 if problem is None:

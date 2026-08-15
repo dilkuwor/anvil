@@ -47,7 +47,7 @@ export function LearnIndex() {
         meta={`${completed}/${totalLessons} lessons`}
       />
 
-      <SectionCard className="p-0">
+      <SectionCard className="overflow-hidden p-0">
         <div className="border-b border-steel-800 p-3">
           <label className="sr-only" htmlFor="learn-search">
             Search lessons

@@ -37,7 +37,7 @@ def test_learn_catalog_progress_and_search(auth_client, db):
     assert categories.status_code == 200
     body = categories.json()
     slugs = {item["slug"] for item in body}
-    assert slugs == {"dsa", "system-design", "java", "cs-fundamentals", "ood", "behavioral"}
+    assert slugs == {"dsa", "system-design", "java", "cs-fundamentals", "ood", "behavioral", "ai-ml"}
     dsa = next(item for item in body if item["slug"] == "dsa")
     assert dsa["topic_count"] > 0
     assert dsa["lesson_count"] > 0
@@ -78,3 +78,60 @@ def test_learn_catalog_progress_and_search(auth_client, db):
     roadmap = auth_client.get("/api/v1/learn/roadmap/arrays-hashing").json()
     assert roadmap["topic"]["slug"] == "arrays-hashing"
     assert roadmap["mock_problem_slug"] == "pair-target"
+
+
+def test_ai_category_is_additive(auth_client, db):
+    _seed_catalog(db)
+    ai = auth_client.get("/api/v1/learn/categories/ai-ml")
+    assert ai.status_code == 200
+    body = ai.json()
+    assert body["title"] == "AI & Machine Learning"
+    assert body["lesson_count"] >= 60
+    assert body["lesson_count"] <= 80
+    slugs = {topic["slug"] for topic in body["topics"]}
+    assert "ai-rag" in slugs
+    assert "ai-agents" in slugs
+    assert "ai-context-tokens" in slugs
+    assert "arrays-hashing" not in slugs
+
+    dsa = auth_client.get("/api/v1/learn/categories/dsa").json()
+    assert dsa["lesson_count"] == 25
+
+    tokens = auth_client.get("/api/v1/learn/lessons/ai-token-counting-cost")
+    assert tokens.status_code == 200
+    lesson = tokens.json()
+    assert lesson["status"] == "IN_PROGRESS"
+    assert lesson["next"] is not None
+    assert "20k" in lesson["content"].lower() or "20K" in lesson["content"]
+    assert lesson["takeaways"]
+    assert lesson["interview_questions"]
+
+    search = auth_client.get("/api/v1/learn/search", params={"q": "KV cache"})
+    titles = {item["title"] for item in search.json()["items"]}
+    assert any("KV" in title or "Cache" in title for title in titles)
+
+    agents = auth_client.get("/api/v1/learn/roadmap/ai-agents").json()
+    assert agents["topic"]["slug"] == "ai-agents"
+
+
+def test_learn_seed_is_idempotent(db):
+    _seed_catalog(db)
+    from app.learn.seed import seed_learning
+    from app.learn.models import LearningCategory, LearningLesson, LearningTopic
+    from sqlalchemy import func, select
+
+    first = (
+        db.scalar(select(func.count()).select_from(LearningCategory)),
+        db.scalar(select(func.count()).select_from(LearningTopic)),
+        db.scalar(select(func.count()).select_from(LearningLesson)),
+    )
+    seed_learning(db)
+    db.commit()
+    second = (
+        db.scalar(select(func.count()).select_from(LearningCategory)),
+        db.scalar(select(func.count()).select_from(LearningTopic)),
+        db.scalar(select(func.count()).select_from(LearningLesson)),
+    )
+    assert first == second
+    assert first[0] == 7
+    assert first[2] == 174
