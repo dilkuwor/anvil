@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
@@ -24,3 +24,31 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+    linkedin_url: str | None = None
+    github_url: str | None = None
+    website_url: str | None = None
+    country: str | None = None
+
+
+class UpdateProfileRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_]+$")
+    linkedin_url: str | None = Field(default=None, max_length=500)
+    github_url: str | None = Field(default=None, max_length=500)
+    website_url: str | None = Field(default=None, max_length=500)
+    country: str | None = Field(default=None, max_length=80)
+
+    @field_validator("linkedin_url", "github_url", "website_url", "country", mode="before")
+    @classmethod
+    def empty_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("linkedin_url", "github_url", "website_url")
+    @classmethod
+    def validate_http_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not (value.startswith("https://") or value.startswith("http://")):
+            raise ValueError("Enter a valid URL starting with http:// or https://")
+        return value

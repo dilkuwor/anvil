@@ -39,6 +39,8 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body == null ? undefined : JSON.stringify(body) }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PATCH", body: body == null ? undefined : JSON.stringify(body) }),
 };
 
 export type User = {
@@ -48,6 +50,18 @@ export type User = {
   role: string;
   is_active: boolean;
   created_at: string;
+  linkedin_url?: string | null;
+  github_url?: string | null;
+  website_url?: string | null;
+  country?: string | null;
+};
+
+export type UpdateProfileRequest = {
+  username: string;
+  linkedin_url: string;
+  github_url: string;
+  website_url: string;
+  country: string;
 };
 
 export type Tag = { id: string; name: string; slug: string };

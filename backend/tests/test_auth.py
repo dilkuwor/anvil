@@ -50,3 +50,28 @@ def test_duplicate_email(client):
 def test_protected_route_requires_auth(client):
     response = client.get("/api/v1/problems")
     assert response.status_code == 401
+
+
+def test_update_profile(auth_client):
+    updated = auth_client.patch(
+        "/api/v1/auth/me",
+        json={
+            "username": "forger2",
+            "linkedin_url": "https://www.linkedin.com/in/forger",
+            "github_url": "https://github.com/forger",
+            "website_url": "https://forger.dev",
+            "country": "Portugal",
+        },
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["username"] == "forger2"
+    assert body["linkedin_url"] == "https://www.linkedin.com/in/forger"
+    assert body["country"] == "Portugal"
+    assert auth_client.get("/api/v1/auth/me").json()["github_url"] == "https://github.com/forger"
+
+    invalid = auth_client.patch(
+        "/api/v1/auth/me",
+        json={"username": "forger2", "linkedin_url": "linkedin.com/in/forger"},
+    )
+    assert invalid.status_code == 422

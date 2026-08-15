@@ -1,4 +1,5 @@
 import { api, type ProgressSummary, type ProblemDetail, type ProblemListResponse, type SubmissionDetail, type SubmissionListResponse, type Tag, type User } from "@/lib/api";
+import type { ActiveInterviewResponse, InterviewSession } from "@/lib/interview";
 
 export const queryKeys = {
   me: ["me"] as const,
@@ -9,6 +10,8 @@ export const queryKeys = {
   submission: (id: string) => ["submission", id] as const,
   progress: ["progress"] as const,
   activity: (days: number) => ["activity", days] as const,
+  interview: (id: string) => ["interview", id] as const,
+  activeInterview: (problemId: string) => ["interview-active", problemId] as const,
 };
 
 export const fetchers = {
@@ -23,4 +26,7 @@ export const fetchers = {
   submission: (id: string) => api.get<SubmissionDetail>(`/api/v1/submissions/${id}`),
   progress: () => api.get<ProgressSummary>("/api/v1/progress"),
   activity: (days: number) => api.get(`/api/v1/activity?days=${days}`),
+  interview: (id: string) => api.get<InterviewSession>(`/api/v1/interviews/${id}`),
+  activeInterview: (problemId: string) =>
+    api.get<ActiveInterviewResponse>(`/api/v1/interviews/active?problem_id=${problemId}`),
 };

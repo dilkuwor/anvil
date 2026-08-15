@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth.schemas import LoginRequest, RegisterRequest, UserOut
+from app.auth.schemas import LoginRequest, RegisterRequest, UpdateProfileRequest, UserOut
 from app.common.config import get_settings
 from app.common.database import get_db
 from app.common.deps import get_current_user
@@ -77,4 +77,27 @@ def logout(response: Response) -> dict:
 
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)) -> User:
+    return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    payload: UpdateProfileRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    username = payload.username.strip()
+    taken = db.scalar(
+        select(User).where(func.lower(User.username) == username.lower(), User.id != current_user.id)
+    )
+    if taken:
+        raise ConflictError("This username is already taken.")
+    current_user.username = username
+    current_user.linkedin_url = payload.linkedin_url
+    current_user.github_url = payload.github_url
+    current_user.website_url = payload.website_url
+    current_user.country = payload.country
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user

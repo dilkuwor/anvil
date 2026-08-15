@@ -8,6 +8,9 @@ import { toast } from "sonner";
 
 import { ResultPanel } from "@/components/editor/result-panel";
 import { SplitPane } from "@/components/editor/split-pane";
+import { EndInterviewDialog, InterviewBanner } from "@/components/interview/interview-banner";
+import { InterviewFeedback } from "@/components/interview/interview-feedback";
+import { InterviewerPanel } from "@/components/interview/interviewer-panel";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { StatusPip } from "@/components/problems/status-pip";
 import { SubmissionHistory } from "@/components/submissions/submission-history";
@@ -15,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { useTheme } from "@/components/theme/theme-provider";
 import { api, type ExecutionResult, type ProblemDetail } from "@/lib/api";
+import type { ActiveInterviewResponse, InterviewSession } from "@/lib/interview";
+import { remainingFromStart } from "@/lib/interview";
 import { queryKeys } from "@/lib/queries";
 
 const Monaco = dynamic(() => import("@monaco-editor/react").then((mod) => mod.default), { ssr: false });
@@ -24,6 +29,10 @@ function storageKey(slug: string) {
 }
 
 type ProblemTab = "problem" | "examples" | "constraints" | "hints" | "history";
+
+function interviewStorageKey(slug: string) {
+  return `ia:interview:${slug}`;
+}
 
 export function CodeWorkspace({ slug }: { slug: string }) {
   const problem = useQuery({
@@ -54,6 +63,14 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [tab, setTab] = useState<ProblemTab>("problem");
   const [collapsed, setCollapsed] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem(interviewStorageKey(problem.slug));
+  });
+  const [interviewMode, setInterviewMode] = useState(() => Boolean(sessionId));
+  const [showProblem, setShowProblem] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -62,11 +79,136 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     return () => window.clearTimeout(handle);
   }, [code, problem.slug]);
 
+  const sessionQuery = useQuery({
+    queryKey: queryKeys.interview(sessionId ?? "none"),
+    queryFn: () => api.get<InterviewSession>(`/api/v1/interviews/${sessionId}`),
+    enabled: Boolean(sessionId) && interviewMode,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data || data.completed) return false;
+      return 15_000;
+    },
+  });
+  const session = sessionQuery.data;
+
+  useEffect(() => {
+    if (!interviewMode || !session || session.completed) return;
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(tick);
+  }, [interviewMode, session?.id, session?.completed]);
+
+  const remaining = session
+    ? session.completed
+      ? 0
+      : remainingFromStart(session.started_at, session.duration_seconds, now)
+    : 0;
+
+  useEffect(() => {
+    if (interviewMode && session && !session.completed && remaining === 0) {
+      void sessionQuery.refetch();
+    }
+  }, [remaining, interviewMode, session, sessionQuery]);
+
+  useEffect(() => {
+    if (sessionQuery.isError && interviewMode) {
+      setInterviewMode(false);
+      setSessionId(null);
+      sessionStorage.removeItem(interviewStorageKey(problem.slug));
+    }
+  }, [sessionQuery.isError, interviewMode, problem.slug]);
+
+  function cacheSession(next: InterviewSession) {
+    setSessionId(next.id);
+    queryClient.setQueryData(queryKeys.interview(next.id), next);
+    sessionStorage.setItem(interviewStorageKey(problem.slug), next.id);
+  }
+
+  function leaveInterview() {
+    setInterviewMode(false);
+    setShowProblem(false);
+    setConfirmEnd(false);
+    setSessionId(null);
+    sessionStorage.removeItem(interviewStorageKey(problem.slug));
+  }
+
+  const startInterview = useMutation({
+    mutationFn: async () => {
+      const active = await api.get<ActiveInterviewResponse>(
+        `/api/v1/interviews/active?problem_id=${problem.id}`,
+      );
+      if (active.session) return active.session;
+      return api.post<InterviewSession>("/api/v1/interviews", { problem_id: problem.id });
+    },
+    onSuccess: (data) => {
+      cacheSession(data);
+      setInterviewMode(true);
+      setShowProblem(false);
+    },
+    onError: () => toast.error("Unable to start mock interview."),
+  });
+
+  const sendMessage = useMutation({
+    mutationFn: (content: string) =>
+      api.post<InterviewSession>(`/api/v1/interviews/${sessionId}/messages`, { content }),
+    onSuccess: cacheSession,
+    onError: () => toast.error("Unable to send your response."),
+  });
+
+  const requestHint = useMutation({
+    mutationFn: () => api.post<InterviewSession>(`/api/v1/interviews/${sessionId}/hint`),
+    onSuccess: cacheSession,
+    onError: () => toast.error("Unable to request a hint."),
+  });
+
+  const notifyEvent = useMutation({
+    mutationFn: (payload: {
+      type: "RUN" | "SUBMIT";
+      status: string;
+      passed: number;
+      total: number;
+      runtime_ms: number | null;
+      memory_kb: number | null;
+    }) => api.post<InterviewSession>(`/api/v1/interviews/${sessionId}/events`, payload),
+    onSuccess: cacheSession,
+  });
+
+  const endInterview = useMutation({
+    mutationFn: () => api.post<InterviewSession>(`/api/v1/interviews/${sessionId}/end`),
+    onSuccess: (data) => {
+      cacheSession(data);
+      setConfirmEnd(false);
+    },
+    onError: () => toast.error("Unable to end the interview."),
+  });
+
+  const retryInterview = useMutation({
+    mutationFn: () => api.post<InterviewSession>("/api/v1/interviews", { problem_id: problem.id }),
+    onSuccess: (data) => {
+      cacheSession(data);
+      setInterviewMode(true);
+      setShowProblem(false);
+    },
+    onError: () => toast.error("Unable to start another mock interview."),
+  });
+
+  function reportInterview(type: "RUN" | "SUBMIT", data: ExecutionResult) {
+    if (!interviewMode || !sessionId || session?.completed) return;
+    notifyEvent.mutate({
+      type,
+      status: data.status,
+      passed: data.passed,
+      total: data.total,
+      runtime_ms: data.runtime_ms,
+      memory_kb: data.memory_kb,
+    });
+  }
+
   const run = useMutation({
     mutationFn: () => api.post<ExecutionResult>(`/api/v1/problems/${problem.id}/run`, { source_code: code }),
     onSuccess: (data) => {
       setResult(data);
       queryClient.invalidateQueries({ queryKey: queryKeys.progress });
+      reportInterview("RUN", data);
     },
     onError: () => toast.error("Unable to execute submission."),
   });
@@ -84,11 +226,20 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       queryClient.invalidateQueries({ queryKey: queryKeys.progress });
       queryClient.invalidateQueries({ queryKey: ["problems"] });
       if (data.status === "ACCEPTED") toast.success("Accepted. Problem marked solved.");
+      reportInterview("SUBMIT", data);
     },
     onError: () => toast.error("Unable to execute submission."),
   });
 
   const busy = run.isPending || submit.isPending;
+  const interviewBusy =
+    startInterview.isPending ||
+    sendMessage.isPending ||
+    requestHint.isPending ||
+    endInterview.isPending ||
+    retryInterview.isPending;
+  const interviewLive = interviewMode && Boolean(session) && !session?.completed;
+  const interviewDone = interviewMode && Boolean(session?.completed);
   const tabs: { id: ProblemTab; label: string }[] = [
     { id: "problem", label: "Problem" },
     { id: "examples", label: "Examples" },
@@ -107,6 +258,21 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
           <h1 className="text-lg font-semibold tracking-tight">{problem.title}</h1>
           <DifficultyBadge difficulty={problem.difficulty} />
           <StatusPip status={problem.status} />
+          {interviewLive || interviewDone ? (
+            <Button variant="ghost" size="sm" onClick={() => setShowProblem(false)}>
+              Hide Problem
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-accent/40 text-accent hover:bg-accent/10"
+              disabled={startInterview.isPending}
+              onClick={() => startInterview.mutate()}
+            >
+              {startInterview.isPending ? "Starting…" : "Mock Interview"}
+            </Button>
+          )}
         </div>
         <div className="mt-1 text-[12px] text-muted-foreground">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
       </div>
@@ -150,14 +316,25 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
           <div className="text-[11px] text-muted-foreground">JDK types are imported automatically.</div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden xl:inline-flex"
-            onClick={() => setCollapsed((value) => !value)}
-          >
-            {collapsed ? "Show Problem" : "Hide Problem"}
-          </Button>
+          {interviewLive || interviewDone ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden xl:inline-flex"
+              onClick={() => setShowProblem((value) => !value)}
+            >
+              {showProblem ? "Hide Problem" : "Show Problem"}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden xl:inline-flex"
+              onClick={() => setCollapsed((value) => !value)}
+            >
+              {collapsed ? "Show Problem" : "Hide Problem"}
+            </Button>
+          )}
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => run.mutate()}>
             {run.isPending ? "Running…" : "Run"}
           </Button>
@@ -189,10 +366,45 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     </section>
   );
 
+  const interviewer =
+    interviewDone && session ? (
+      <InterviewFeedback session={session} onBack={leaveInterview} onRetry={() => retryInterview.mutate()} />
+    ) : interviewLive && session ? (
+      <InterviewerPanel
+        session={session}
+        busy={interviewBusy}
+        onSend={(content) => sendMessage.mutate(content)}
+        onHint={() => requestHint.mutate()}
+        onShowProblem={() => setShowProblem(true)}
+        onEnd={() => setConfirmEnd(true)}
+      />
+    ) : interviewMode && startInterview.isPending ? (
+      <section className="flex h-full min-h-[22rem] items-center justify-center rounded-2xl border border-steel-800 bg-steel-900 text-sm text-muted-foreground xl:min-h-0">
+        Starting mock interview…
+      </section>
+    ) : null;
+
+  const left = interviewMode && !showProblem && interviewer ? interviewer : prompt;
+
   return (
     <div className="flex h-full min-h-[calc(100vh-6rem)] flex-col gap-3 xl:min-h-0 xl:flex-1">
-      <div className="xl:hidden">{prompt}</div>
-      <SplitPane left={prompt} right={editor} collapsed={collapsed} />
+      {interviewMode ? (
+        <InterviewBanner
+          phaseLabel={session?.phase_label ?? (startInterview.isPending ? "Introduction" : "…")}
+          remainingSeconds={remaining}
+        />
+      ) : null}
+      <div className="flex flex-col gap-3 xl:hidden">
+        {interviewer}
+        {showProblem || !interviewMode ? prompt : null}
+      </div>
+      <SplitPane left={left} right={editor} collapsed={interviewMode ? false : collapsed} />
+      <EndInterviewDialog
+        open={confirmEnd}
+        busy={endInterview.isPending}
+        onContinue={() => setConfirmEnd(false)}
+        onConfirm={() => endInterview.mutate()}
+      />
     </div>
   );
 }

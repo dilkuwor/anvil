@@ -39,3 +39,27 @@ class ProgressStatus(StrEnum):
 
 class Language(StrEnum):
     JAVA = "JAVA"
+
+
+class InterviewPhase(StrEnum):
+    INTRO = "INTRO"
+    UNDERSTANDING = "UNDERSTANDING"
+    APPROACH = "APPROACH"
+    CODING = "CODING"
+    TESTING = "TESTING"
+    FOLLOW_UP = "FOLLOW_UP"
+    FEEDBACK = "FEEDBACK"
+
+
+class InterviewMessageRole(StrEnum):
+    INTERVIEWER = "INTERVIEWER"
+    CANDIDATE = "CANDIDATE"
+
+
+class InterviewEventType(StrEnum):
+    MESSAGE = "MESSAGE"
+    RUN = "RUN"
+    SUBMIT = "SUBMIT"
+    HINT = "HINT"
+    END = "END"
+    TIMEOUT = "TIMEOUT"

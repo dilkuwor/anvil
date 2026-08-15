@@ -90,7 +90,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground sm:gap-2">
             <ThemeToggle />
-            <span className="hidden max-w-[8rem] truncate sm:inline">{me.data?.username}</span>
+            <Link
+              href="/settings"
+              className={cn(
+                "max-w-[8rem] truncate hover:text-foreground",
+                pathname.startsWith("/settings") && "font-medium text-foreground",
+              )}
+            >
+              {me.data?.username}
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
               Log out
             </Button>

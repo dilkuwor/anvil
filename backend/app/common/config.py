@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     code_runner_memory_mb: int = 256
     code_runner_cpus: float = 1.0
 
+    ollama_base_url: str = "http://100.120.169.81:11434"
+    ollama_model: str = "gemma3:4b"
+    interview_duration_seconds: int = 45 * 60
+
     @field_validator("cookie_samesite")
     @classmethod
     def validate_samesite(cls, value: str) -> str:
