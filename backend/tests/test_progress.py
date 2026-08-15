@@ -40,3 +40,7 @@ def test_empty_progress_includes_catalog_totals(auth_client):
     assert payload["today_solved"] == 0
     assert payload["recent_events"] == []
     assert payload["total_problems"] == 0
+    assert payload["activity_calendar"] == []
+    assert payload["topic_progress"] == []
+    assert payload["recommendations"] == []
+    assert payload["readiness"] is None

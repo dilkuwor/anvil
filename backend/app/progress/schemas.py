@@ -1,4 +1,12 @@
+from uuid import UUID
+
 from pydantic import BaseModel
+
+
+class TagRef(BaseModel):
+    id: UUID
+    name: str
+    slug: str
 
 
 class ActivityDay(BaseModel):
@@ -16,6 +24,42 @@ class RecentEvent(BaseModel):
     status: str
     submission_status: str
     created_at: str
+
+
+class TopicProgress(BaseModel):
+    name: str
+    slug: str
+    solved: int
+    total: int
+    percent: int
+
+
+class RecommendedProblem(BaseModel):
+    id: UUID
+    title: str
+    slug: str
+    difficulty: str
+    status: str
+    tags: list[TagRef]
+
+
+class ReadinessFactor(BaseModel):
+    key: str
+    label: str
+    percent: int
+
+
+class ReadinessTopic(BaseModel):
+    name: str
+    slug: str
+    percent: int
+
+
+class InterviewReadiness(BaseModel):
+    overall: int
+    blurb: str
+    factors: list[ReadinessFactor]
+    topics: list[ReadinessTopic]
 
 
 class ProgressSummary(BaseModel):
@@ -36,3 +80,7 @@ class ProgressSummary(BaseModel):
     longest_streak: int
     recent_activity: list[ActivityDay]
     recent_events: list[RecentEvent] = []
+    activity_calendar: list[ActivityDay] = []
+    topic_progress: list[TopicProgress] = []
+    recommendations: list[RecommendedProblem] = []
+    readiness: InterviewReadiness | None = None

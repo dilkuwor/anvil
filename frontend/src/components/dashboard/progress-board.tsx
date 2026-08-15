@@ -3,15 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
+import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
+import { InterviewReadiness } from "@/components/dashboard/interview-readiness";
+import { Meter } from "@/components/dashboard/meter";
 import { ProgressRing } from "@/components/dashboard/progress-ring";
-import { WeakAreasPanel } from "@/components/dashboard/weak-areas";
-import { DifficultyBadge } from "@/components/problems/difficulty-badge";
-import { StatusPip } from "@/components/problems/status-pip";
+import { RecommendedPractice } from "@/components/dashboard/recommended-practice";
+import { TopicProgress } from "@/components/dashboard/topic-progress";
 import { Button } from "@/components/ui/button";
-import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/state";
+import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api, type ProgressSummary } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
-import { DEFAULT_DAILY_GOAL, formatRelative } from "@/lib/utils";
+import { DEFAULT_DAILY_GOAL } from "@/lib/utils";
 
 export function ProgressBoard() {
   const progress = useQuery({
@@ -22,114 +24,123 @@ export function ProgressBoard() {
   if (progress.isLoading) {
     return (
       <div className="space-y-6">
-        <SkeletonHeader />
-        <CardSkeleton rows={4} />
+        <div className="space-y-2">
+          <div className="h-8 w-40 animate-pulse rounded-md bg-steel-800" />
+          <div className="h-4 w-72 animate-pulse rounded-md bg-steel-800" />
+        </div>
+        <CardSkeleton rows={5} />
       </div>
     );
   }
 
   if (progress.isError || !progress.data) {
-    return (
-      <ErrorState message="Unable to load your progress." onRetry={() => progress.refetch()} />
-    );
+    return <ErrorState message="Unable to load your progress." onRetry={() => progress.refetch()} />;
   }
 
   const data = progress.data;
+  const isNew = data.total_solved === 0 && data.problems_attempted === 0 && data.total_submissions === 0;
+  const next = data.recommendations[0];
+  const practiceHref = next ? `/problems/${next.slug}` : "/problems";
+  const cta = isNew ? "Start Practice →" : "Continue Practice";
+
   const goalTarget = DEFAULT_DAILY_GOAL;
   const goalDone = Math.min(data.today_solved ?? 0, goalTarget);
+  const remaining = Math.max(goalTarget - goalDone, 0);
   const goalPct = Math.round((goalDone / goalTarget) * 100);
 
-  const stats = [
-    { label: "Solved", value: String(data.total_solved) },
-    { label: "Attempted", value: String(data.problems_attempted) },
-    { label: "Submissions", value: String(data.total_submissions) },
-    { label: "Current Streak", value: `${data.current_streak}d` },
-    { label: "Best Streak", value: `${data.longest_streak}d` },
-  ];
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="mt-1 text-sm text-zinc-500">Practice progress, consistency, and what to solve next.</p>
         </div>
         <Button asChild>
-          <Link href="/problems">Continue Practice</Link>
+          <Link href={practiceHref}>{cta}</Link>
         </Button>
       </div>
 
-      <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5 sm:p-7">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Practice Progress</h2>
-        <div className="mt-6 grid items-center gap-8 lg:grid-cols-[minmax(0,280px)_1fr]">
+      <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5 sm:p-6">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Practice Progress</h2>
+        <div className="mt-5 grid items-center gap-6 lg:grid-cols-[minmax(0,260px)_1fr]">
           <ProgressRing data={data} />
           <div className="grid gap-3 sm:grid-cols-3">
-            <DifficultyStat label="Easy" solved={data.easy_solved} total={data.easy_total ?? 0} tone="text-teal" />
-            <DifficultyStat label="Medium" solved={data.medium_solved} total={data.medium_total ?? 0} tone="text-accent-light" />
-            <DifficultyStat label="Hard" solved={data.hard_solved} total={data.hard_total ?? 0} tone="text-coral" />
+            <DifficultyStat
+              label="Easy"
+              solved={data.easy_solved}
+              total={data.easy_total ?? 0}
+              tone="text-teal"
+              bar="bg-teal"
+            />
+            <DifficultyStat
+              label="Medium"
+              solved={data.medium_solved}
+              total={data.medium_total ?? 0}
+              tone="text-accent-light"
+              bar="bg-accent"
+            />
+            <DifficultyStat
+              label="Hard"
+              solved={data.hard_solved}
+              total={data.hard_total ?? 0}
+              tone="text-coral"
+              bar="bg-coral"
+            />
           </div>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-steel-800 bg-steel-900/50 px-4 py-3">
+        {[
+          { label: "Solved", value: String(data.total_solved) },
+          { label: "Attempted", value: String(data.problems_attempted) },
+          { label: "Submissions", value: String(data.total_submissions) },
+          { label: "Current Streak", value: `${data.current_streak}d` },
+          { label: "Best Streak", value: `${data.longest_streak}d` },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-2xl border border-steel-800 bg-steel-900/40 px-4 py-3">
             <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{stat.label}</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums">{stat.value}</div>
+            <div className="mt-1 text-xl font-semibold tabular-nums">{stat.value}</div>
           </div>
         ))}
       </section>
 
       <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Today’s Goal</h2>
-        <p className="mt-3 text-lg font-medium">Solve {goalTarget} problems</p>
-        <p className="mt-1 text-sm text-zinc-400">
-          {goalDone} / {goalTarget} completed
-        </p>
-        <div
-          className="mt-3 h-2 overflow-hidden rounded-full bg-steel-800"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={goalTarget}
-          aria-valuenow={goalDone}
-          aria-label="Today's goal"
-        >
-          <div className="h-full rounded-full bg-accent" style={{ width: `${goalPct}%` }} />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Today’s Goal</h2>
+            <p className="mt-2 text-lg font-medium">Solve {goalTarget} problems</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              {remaining === 0 ? "Goal complete for today." : `${remaining} problem${remaining === 1 ? "" : "s"} remaining`}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-semibold tabular-nums">
+              {goalDone} / {goalTarget}
+            </div>
+            <div className="text-xs text-zinc-500">{goalPct}%</div>
+          </div>
+        </div>
+        <div className="mt-4">
+          <Meter value={goalPct} label="Today's goal" />
         </div>
         <Button asChild className="mt-4">
-          <Link href="/problems">Continue Practice</Link>
+          <Link href={practiceHref}>{cta}</Link>
         </Button>
       </section>
 
-      <section className="rounded-2xl border border-steel-800 bg-steel-900/70 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Recent Activity</h2>
-        {(data.recent_events ?? []).length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              title="No activity yet."
-              body="Start solving problems to build your interview progress."
-            />
-          </div>
-        ) : (
-          <ul className="mt-4 divide-y divide-steel-800">
-            {(data.recent_events ?? []).map((event) => (
-              <li key={`${event.problem_slug}-${event.created_at}`}>
-                <Link
-                  href={`/problems/${event.problem_slug}`}
-                  className="flex flex-wrap items-center gap-3 py-3 text-sm hover:text-accent-light"
-                >
-                  <StatusPip status={event.status} />
-                  <span className="min-w-0 flex-1 font-medium text-zinc-100">{event.problem_title}</span>
-                  <DifficultyBadge difficulty={event.difficulty} />
-                  <span className="text-xs text-zinc-500">{formatRelative(event.created_at)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <ActivityHeatmap
+        days={data.activity_calendar ?? []}
+        currentStreak={data.current_streak}
+        longestStreak={data.longest_streak}
+      />
 
-      <WeakAreasPanel areas={[]} />
+      <RecommendedPractice items={data.recommendations ?? []} isNew={isNew} />
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <TopicProgress rows={data.topic_progress ?? []} hasSolved={data.total_solved > 0} />
+        <InterviewReadiness data={data.readiness ?? null} />
+      </div>
     </div>
   );
 }
@@ -139,27 +150,27 @@ function DifficultyStat({
   solved,
   total,
   tone,
+  bar,
 }: {
   label: string;
   solved: number;
   total: number;
   tone: string;
+  bar: string;
 }) {
+  const percent = total > 0 ? Math.round((solved / total) * 100) : 0;
   return (
-    <div className="rounded-xl border border-steel-800 bg-steel-950/60 px-4 py-4">
+    <div className="rounded-2xl border border-steel-800 bg-steel-950/60 px-4 py-4">
       <div className={`text-sm font-semibold ${tone}`}>{label}</div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums">
-        {solved}/{total}
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <div className="text-2xl font-semibold tabular-nums">
+          {solved} / {total}
+        </div>
+        <div className="text-sm tabular-nums text-zinc-500">{percent}%</div>
       </div>
-    </div>
-  );
-}
-
-function SkeletonHeader() {
-  return (
-    <div className="space-y-2">
-      <div className="h-8 w-40 animate-pulse rounded-md bg-steel-800" />
-      <div className="h-4 w-72 animate-pulse rounded-md bg-steel-800" />
+      <div className="mt-3">
+        <Meter value={percent} tone={bar} label={`${label} solved`} />
+      </div>
     </div>
   );
 }

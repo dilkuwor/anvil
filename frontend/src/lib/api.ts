@@ -165,6 +165,36 @@ export type RecentEvent = {
   created_at: string;
 };
 
+export type TopicProgress = {
+  name: string;
+  slug: string;
+  solved: number;
+  total: number;
+  percent: number;
+};
+
+export type RecommendedProblem = {
+  id: string;
+  title: string;
+  slug: string;
+  difficulty: string;
+  status: string;
+  tags: Tag[];
+};
+
+export type ReadinessFactor = {
+  key: string;
+  label: string;
+  percent: number;
+};
+
+export type InterviewReadiness = {
+  overall: number;
+  blurb: string;
+  factors: ReadinessFactor[];
+  topics: { name: string; slug: string; percent: number }[];
+};
+
 export type ProgressSummary = {
   total_solved: number;
   easy_solved: number;
@@ -183,4 +213,8 @@ export type ProgressSummary = {
   longest_streak: number;
   recent_activity: ActivityDay[];
   recent_events: RecentEvent[];
+  activity_calendar: ActivityDay[];
+  topic_progress: TopicProgress[];
+  recommendations: RecommendedProblem[];
+  readiness: InterviewReadiness | null;
 };

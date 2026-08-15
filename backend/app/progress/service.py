@@ -2,10 +2,11 @@ from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.common.enums import Difficulty, ProgressStatus, SubmissionStatus
 from app.problems.models import Problem
+from app.progress.insights import interview_readiness, recommend_problems, serialize_recommendation, topic_progress
 from app.progress.models import Activity, UserProblemProgress
 from app.submissions.models import Submission
 
@@ -158,6 +159,33 @@ def get_progress_summary(db: Session, user_id: UUID) -> dict:
         .limit(8)
     ).all()
 
+    catalog = list(
+        db.scalars(select(Problem).options(selectinload(Problem.tags)).where(Problem.is_active.is_(True))).all()
+    )
+    solved_set = set(solved_ids)
+    status_by_id = {row.problem_id: row.status for row in progress_rows}
+    last_attempted = {row.problem_id: row.last_attempted_at for row in progress_rows}
+    topics = topic_progress(catalog, solved_set)
+    recs = recommend_problems(
+        catalog,
+        status_by_id=status_by_id,
+        last_attempted=last_attempted,
+        solved_ids=solved_set,
+        topics=topics,
+    )
+    calendar_start = today - timedelta(days=366)
+    activity_calendar = [
+        {
+            "date": row.activity_date.isoformat(),
+            "problems_solved": row.problems_solved,
+            "submissions": row.submissions,
+            "practice_minutes": row.practice_minutes,
+            "runs": row.runs,
+        }
+        for row in sorted(activity_rows, key=lambda item: item.activity_date)
+        if row.activity_date >= calendar_start
+    ]
+
     recent = sorted(activity_rows, key=lambda row: row.activity_date, reverse=True)[:14]
     return {
         "total_solved": len(solved_ids),
@@ -196,6 +224,28 @@ def get_progress_summary(db: Session, user_id: UUID) -> dict:
             }
             for submission, title, slug, difficulty in event_rows
         ],
+        "activity_calendar": activity_calendar,
+        "topic_progress": topics,
+        "recommendations": [
+            serialize_recommendation(
+                problem, status_by_id.get(problem.id, ProgressStatus.NOT_STARTED.value)
+            )
+            for problem in recs
+        ],
+        "readiness": interview_readiness(
+            total_solved=len(solved_ids),
+            total_problems=sum(catalog_totals.values()),
+            easy_solved=difficulty_counts[Difficulty.EASY.value],
+            easy_total=catalog_totals[Difficulty.EASY.value],
+            medium_solved=difficulty_counts[Difficulty.MEDIUM.value],
+            medium_total=catalog_totals[Difficulty.MEDIUM.value],
+            hard_solved=difficulty_counts[Difficulty.HARD.value],
+            hard_total=catalog_totals[Difficulty.HARD.value],
+            current_streak=current_streak,
+            accepted_submissions=accepted_submissions,
+            total_submissions=total_submissions,
+            topics=topics,
+        ),
     }
 
 

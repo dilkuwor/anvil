@@ -22,6 +22,10 @@ const empty: ProgressSummary = {
   longest_streak: 0,
   recent_activity: [],
   recent_events: [],
+  activity_calendar: [],
+  topic_progress: [],
+  recommendations: [],
+  readiness: null,
 };
 
 describe("ProgressRing", () => {
