@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
-import { api, type ProblemListItem, type ProblemListResponse, type Tag } from "@/lib/api";
+import { api, type ProblemListItem, type ProblemListResponse, type ProgressSummary, type Tag } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 
 export function ProblemList() {
@@ -45,6 +45,10 @@ export function ProblemList() {
     queryKey: queryKeys.tags,
     queryFn: () => api.get<Tag[]>("/api/v1/tags"),
   });
+  const progress = useQuery({
+    queryKey: queryKeys.progress,
+    queryFn: () => api.get<ProgressSummary>("/api/v1/progress"),
+  });
 
   function update(next: Record<string, string>) {
     const merged = new URLSearchParams(params.toString());
@@ -58,17 +62,20 @@ export function ProblemList() {
 
   const totalPages = Math.max(1, Math.ceil((problems.data?.total ?? 0) / 15));
   const items = problems.data?.items ?? [];
+  const catalogTotal = progress.data?.total_problems ?? problems.data?.total ?? 0;
+  const solved = progress.data?.total_solved ?? 0;
+  const remaining = Math.max(catalogTotal - solved, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title="Problems"
         description="Java catalog by difficulty, topic, and status."
-        meta={`${problems.data?.total ?? 0} problems`}
+        meta={`${catalogTotal} problems · ${solved} solved · ${remaining} remaining`}
       />
 
       <SectionCard className="p-0">
-        <div className="grid gap-2 border-b border-steel-800 p-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-2 border-b border-steel-800 p-3 sm:grid-cols-2 lg:grid-cols-5">
           <Input
             placeholder="Search title…"
             defaultValue={q}
@@ -122,13 +129,13 @@ export function ProblemList() {
         {items.length ? (
           <>
             <div className="hidden md:block">
-              <table className="w-full text-left text-[13px]">
+              <table className="w-full table-fixed text-left text-[13px]">
                 <thead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-2.5 font-medium">Problem</th>
-                    <th className="px-4 py-2.5 font-medium">Difficulty</th>
+                    <th className="w-[38%] px-4 py-2.5 font-medium">Problem</th>
+                    <th className="w-[8.5rem] px-4 py-2.5 font-medium">Difficulty</th>
                     <th className="px-4 py-2.5 font-medium">Topics</th>
-                    <th className="px-4 py-2.5 font-medium">Status</th>
+                    <th className="w-[9.5rem] px-4 py-2.5 font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,7 +152,7 @@ export function ProblemList() {
                       <td className="px-4 py-2.5 text-muted-foreground">
                         {item.tags.map((tagItem) => tagItem.name).join(" · ") || "—"}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="whitespace-nowrap px-4 py-2.5">
                         <StatusPip status={item.status} />
                       </td>
                     </tr>

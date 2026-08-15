@@ -43,7 +43,7 @@ export function LessonView({ slug }: { slug: string }) {
   const firstProblem = data.related_problems[0];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="space-y-2">
         <Breadcrumbs
           items={[

@@ -42,7 +42,7 @@ export function ProgressBoard() {
   const goalPct = Math.round((goalDone / goalTarget) * 100);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PracticeOverview data={data} />
 
       <SectionCard>

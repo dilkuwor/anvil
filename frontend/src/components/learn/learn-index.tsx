@@ -40,7 +40,7 @@ export function LearnIndex() {
   const completed = progress.data?.completed_lessons ?? 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title="Learn"
         description="Interview-focused lessons that lead into practice and mock interviews."

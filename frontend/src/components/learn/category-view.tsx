@@ -26,7 +26,7 @@ export function CategoryView({ slug }: { slug: string }) {
 
   const data = category.data;
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="space-y-2">
         <Breadcrumbs items={[{ href: "/learn", label: "Learn" }, { label: data.title }]} />
         <PageHeader

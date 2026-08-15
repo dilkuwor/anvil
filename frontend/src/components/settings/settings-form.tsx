@@ -49,7 +49,7 @@ function ProfileEditor({ user }: { user: User }) {
   });
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-4">
+    <div className="mx-auto w-full max-w-xl space-y-5">
       <PageHeader title="Settings" description="Update how you appear on InterviewAnvil." />
       <SectionCard>
         <SectionTitle>Profile</SectionTitle>

@@ -30,7 +30,7 @@ export function TopicView({ slug }: { slug: string }) {
   const mockHref = data.related_problems[0] ? `/problems/${data.related_problems[0].slug}` : practiceHref;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="space-y-2">
         <Breadcrumbs
           items={[

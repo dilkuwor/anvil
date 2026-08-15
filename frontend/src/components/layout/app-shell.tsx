@@ -24,7 +24,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const editor = pathname.startsWith("/problems/") && pathname !== "/problems";
-  const wide = editor || pathname.startsWith("/roadmap");
   const me = useQuery<User>({
     queryKey: queryKeys.me,
     queryFn: () => api.get<User>("/api/v1/auth/me"),
@@ -66,7 +65,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 backdrop-blur-md">
-        <div className="mx-auto flex h-12 w-full max-w-[1600px] items-center justify-between px-4">
+        <div
+          className={cn(
+            "flex h-12 items-center justify-between",
+            editor ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content",
+          )}
+        >
           <div className="flex min-w-0 items-center gap-5">
             <Link href="/dashboard" className="shrink-0 text-sm">
               <BrandMark compact />
@@ -108,12 +112,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
       <main
         className={cn(
-          "mx-auto flex w-full flex-1 flex-col px-4",
+          "flex w-full flex-1 flex-col",
           pathname.startsWith("/roadmap")
-            ? "h-[calc(100dvh-3rem)] max-w-none px-0 py-0 min-h-0 overflow-hidden"
-            : wide
-              ? "max-w-[1600px] py-3"
-              : "max-w-6xl py-5",
+            ? "ia-content h-[calc(100dvh-3rem)] min-h-0 overflow-hidden py-0"
+            : editor
+              ? "mx-auto max-w-[1600px] px-4 py-3"
+              : "ia-content py-6",
         )}
       >
         {children}

@@ -104,6 +104,17 @@ body {
   min-height: 100%;
 }
 
+.ia-content {
+  width: min(1400px, calc(100vw - 2rem));
+  margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .ia-content {
+    width: min(1400px, calc(100vw - 64px));
+  }
+}
+
 body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
