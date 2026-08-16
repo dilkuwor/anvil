@@ -24,7 +24,13 @@ export function SectionTitle({ children, className }: { children: React.ReactNod
   );
 }
 
-export function BrandMark({ compact = false }: { compact?: boolean }) {
+export function BrandMark({
+  compact = false,
+  wordmarkClassName,
+}: {
+  compact?: boolean;
+  wordmarkClassName?: string;
+}) {
   return (
     <span className="inline-flex items-center gap-2 font-semibold tracking-tight">
       <span
@@ -35,7 +41,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
       >
         A
       </span>
-      InterviewAnvil
+      <span className={wordmarkClassName}>InterviewAnvil</span>
     </span>
   );
 }

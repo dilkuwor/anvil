@@ -41,19 +41,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <PublicHeader
-        action={
-          mode === "login" ? (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/register">Create account</Link>
-            </Button>
-          ) : (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/login">Log in</Link>
-            </Button>
-          )
-        }
-      />
+      <PublicHeader />
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-[400px] rounded-2xl border border-steel-800 bg-steel-900 p-6 sm:p-7">
           <h1 className="text-xl font-semibold tracking-tight">
