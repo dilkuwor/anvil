@@ -1,10 +1,9 @@
-import { Check, Flame, FileCode, CircleDot, Trophy } from "lucide-react";
+import { Flame, Trophy } from "lucide-react";
 
 import { Meter } from "@/components/dashboard/meter";
 import { ProgressRing } from "@/components/dashboard/progress-ring";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import type { ProgressSummary } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 export function PracticeOverview({ data }: { data: ProgressSummary }) {
   return (
@@ -21,12 +20,8 @@ export function PracticeOverview({ data }: { data: ProgressSummary }) {
           <DifficultyRow label="Hard" solved={data.hard_solved} total={data.hard_total ?? 0} tone="text-coral" bar="bg-coral" />
         </div>
 
-        <div className="grid grid-cols-6 gap-2 lg:pl-6">
-          <StatCard icon={Check} label="Solved" value={String(data.total_solved)} className="col-span-2" />
-          <StatCard icon={CircleDot} label="Attempted" value={String(data.problems_attempted)} className="col-span-2" />
-          <StatCard icon={FileCode} label="Submissions" value={String(data.total_submissions)} className="col-span-2" />
-          <StatCard icon={Flame} label="Current Streak" value={`${data.current_streak}d`} className="col-span-3" />
-          <StatCard icon={Trophy} label="Best Streak" value={`${data.longest_streak}d`} className="col-span-3" />
+        <div className="lg:pl-6">
+          <ActivityPanel data={data} />
         </div>
       </div>
     </SectionCard>
@@ -63,29 +58,45 @@ function DifficultyRow({
   );
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  className,
-}: {
-  icon: typeof Check;
-  label: string;
-  value: string;
-  className?: string;
-}) {
+function ActivityPanel({ data }: { data: ProgressSummary }) {
   return (
-    <div
-      className={cn(
-        "flex h-16 flex-col justify-between rounded-xl border border-steel-800 bg-steel-950/40 px-2.5 py-2",
-        className,
-      )}
-    >
-      <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        <Icon className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
-        <span className="truncate">{label}</span>
+    <div className="rounded-xl border border-steel-800 bg-steel-950/30 px-4 py-3">
+      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Activity</p>
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <Metric label="Solved" value={data.total_solved} />
+        <Metric label="Attempts" value={data.problems_attempted} />
+        <Metric label="Submissions" value={data.total_submissions} />
       </div>
-      <div className="text-lg font-semibold tabular-nums tracking-tight">{value}</div>
+      <div className="my-3 h-px bg-steel-800" />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-[12px] text-muted-foreground">Current streak</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold tabular-nums tracking-tight">
+            <Flame className="h-3.5 w-3.5 text-accent" aria-hidden />
+            {formatDays(data.current_streak)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[12px] text-muted-foreground">Best streak</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-sm font-medium tabular-nums text-foreground/90">
+            <Trophy className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+            {formatDays(data.longest_streak)}
+          </p>
+        </div>
+      </div>
     </div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-[12px] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tabular-nums tracking-tight">{value}</p>
+    </div>
+  );
+}
+
+function formatDays(value: number) {
+  return `${value} ${value === 1 ? "day" : "days"}`;
 }

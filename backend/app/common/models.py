@@ -2,6 +2,7 @@
 
 from app.cheatsheets.models import CheatSheet, CheatSheetSection, CheatSheetSectionContent
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession
+from app.lists.models import ProblemList, ProblemListItem
 from app.learn.models import (
     LearningCategory,
     LearningLesson,
@@ -27,6 +28,8 @@ __all__ = [
     "LearningLessonProblem",
     "LearningTopic",
     "UserLearningProgress",
+    "ProblemList",
+    "ProblemListItem",
     "Problem",
     "ProblemTag",
     "Submission",

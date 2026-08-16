@@ -1,23 +1,52 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { PageHeader } from "@/components/layout/page-header";
+import { AddToListPopover } from "@/components/problems/add-to-list-popover";
+import { CreateListModal } from "@/components/problems/create-list-modal";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
+import { ProblemsTabs } from "@/components/problems/problems-tabs";
 import { StatusPip } from "@/components/problems/status-pip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
-import { api, type ProblemListItem, type ProblemListResponse, type ProgressSummary, type Tag } from "@/lib/api";
+import { api, ApiError, type ProblemListItem, type ProblemListResponse, type ProgressSummary, type Tag } from "@/lib/api";
+import type { ProblemListCard } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
+import { useSession } from "@/lib/session";
 
 export function ProblemList() {
   const params = useSearchParams();
   const router = useRouter();
+  const { signedIn } = useSession();
+  const queryClient = useQueryClient();
+  const [creating, setCreating] = useState(false);
+  const [auth, setAuth] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const create = useMutation({
+    mutationFn: (payload: { name: string; description: string }) => api.post<ProblemListCard>("/api/v1/problem-lists", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.problemLists });
+      setCreating(false);
+      router.push("/problems/lists");
+    },
+    onError: (error) => setFormError(error instanceof ApiError ? error.message : "Unable to create list."),
+  });
+
+  function requestCreate() {
+    if (!signedIn) {
+      setAuth(true);
+      return;
+    }
+    setFormError(null);
+    setCreating(true);
+  }
   const q = params.get("q") ?? "";
   const difficulty = params.get("difficulty") ?? "";
   const tag = params.get("tag") ?? "";
@@ -73,6 +102,7 @@ export function ProblemList() {
         description="Java catalog by difficulty, topic, and status."
         meta={`${catalogTotal} problems · ${solved} solved · ${remaining} remaining`}
       />
+      <ProblemsTabs onCreate={requestCreate} />
 
       <SectionCard className="p-0">
         <div className="grid gap-2 border-b border-steel-800 p-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -136,11 +166,12 @@ export function ProblemList() {
                     <th className="w-[8.5rem] px-4 py-2.5 font-medium">Difficulty</th>
                     <th className="px-4 py-2.5 font-medium">Topics</th>
                     <th className="w-[9.5rem] px-4 py-2.5 font-medium">Status</th>
+                    <th className="w-10 px-2 py-2.5 font-medium"><span className="sr-only">Lists</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.id} className="border-t border-steel-800 hover:bg-steel-950/50">
+                    <tr key={item.id} className="group border-t border-steel-800 hover:bg-steel-950/50">
                       <td className="px-4 py-2.5">
                         <Link href={`/problems/${item.slug}`} className="font-medium hover:text-accent">
                           {item.title}
@@ -155,6 +186,22 @@ export function ProblemList() {
                       <td className="whitespace-nowrap px-4 py-2.5">
                         <StatusPip status={item.status} />
                       </td>
+                      <td className="px-2 py-2.5 text-right">
+                        <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                          {signedIn ? (
+                            <AddToListPopover problemId={item.id} onCreate={requestCreate} />
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label="Add to list"
+                              className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => setAuth(true)}
+                            >
+                              +
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -162,7 +209,13 @@ export function ProblemList() {
             </div>
             <div className="space-y-2 p-3 md:hidden">
               {items.map((item) => (
-                <ProblemCard key={item.id} item={item} />
+                <ProblemCard
+                  key={item.id}
+                  item={item}
+                  signedIn={signedIn}
+                  onAdd={() => (signedIn ? undefined : setAuth(true))}
+                  onCreate={requestCreate}
+                />
               ))}
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-steel-800 px-3 py-2.5">
@@ -179,21 +232,49 @@ export function ProblemList() {
           </>
         ) : null}
       </SectionCard>
+      {creating ? (
+        <CreateListModal
+          error={formError}
+          busy={create.isPending}
+          onClose={() => setCreating(false)}
+          onSubmit={(name, description) => create.mutate({ name, description })}
+        />
+      ) : null}
+      {auth ? <AuthPrompt kind="lists" onClose={() => setAuth(false)} /> : null}
     </div>
   );
 }
 
-function ProblemCard({ item }: { item: ProblemListItem }) {
+function ProblemCard({
+  item,
+  signedIn,
+  onAdd,
+  onCreate,
+}: {
+  item: ProblemListItem;
+  signedIn: boolean;
+  onAdd: () => void;
+  onCreate: () => void;
+}) {
   return (
-    <Link href={`/problems/${item.slug}`} className="block rounded-xl border border-steel-800 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-sm font-medium">{item.title}</h2>
-        <DifficultyBadge difficulty={item.difficulty} />
-      </div>
-      <div className="mt-1.5 text-[12px] text-muted-foreground">{item.tags.map((tag) => tag.name).join(" · ") || "—"}</div>
-      <div className="mt-2">
+    <div className="rounded-xl border border-steel-800 p-3">
+      <Link href={`/problems/${item.slug}`} className="block">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-sm font-medium">{item.title}</h2>
+          <DifficultyBadge difficulty={item.difficulty} />
+        </div>
+        <div className="mt-1.5 text-[12px] text-muted-foreground">{item.tags.map((tag) => tag.name).join(" · ") || "—"}</div>
+      </Link>
+      <div className="mt-2 flex items-center justify-between">
         <StatusPip status={item.status} />
+        {signedIn ? (
+          <AddToListPopover problemId={item.id} onCreate={onCreate} />
+        ) : (
+          <button type="button" className="text-[12px] text-muted-foreground" onClick={onAdd}>
+            Add to list
+          </button>
+        )}
       </div>
-    </Link>
+    </div>
   );
 }

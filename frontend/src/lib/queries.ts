@@ -22,6 +22,8 @@ export const queryKeys = {
   cheatSheets: ["cheatsheets"] as const,
   cheatSheet: (slug: string) => ["cheatsheets", slug] as const,
   publicProfile: (username: string) => ["public-profile", username] as const,
+  problemLists: ["problem-lists"] as const,
+  problemList: (id: string) => ["problem-lists", id] as const,
 };
 
 export const fetchers = {

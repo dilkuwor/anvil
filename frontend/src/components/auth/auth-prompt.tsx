@@ -27,6 +27,10 @@ const COPY: Record<AuthPromptKind, { title: string; body: string }> = {
     title: "Sign in to track progress",
     body: "Create an account to save lesson progress and pick up where you left off.",
   },
+  lists: {
+    title: "Sign in to save lists",
+    body: "Create an account to organize problems into custom lists.",
+  },
 };
 
 export function AuthPrompt({

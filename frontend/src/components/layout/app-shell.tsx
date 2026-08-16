@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const editor = pathname.startsWith("/problems/") && pathname !== "/problems";
+  const editor = pathname.startsWith("/problems/") && !pathname.startsWith("/problems/lists");
   const me = useQuery({
     queryKey: queryKeys.me,
     queryFn: fetchCurrentUser,
