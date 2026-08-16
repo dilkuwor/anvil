@@ -134,7 +134,35 @@ def test_learn_seed_is_idempotent(db):
     )
     assert first == second
     assert first[0] == 7
-    assert first[2] == 174
+    assert first[2] == 182
+
+
+def test_system_design_problems_topic(auth_client, db):
+    _seed_catalog(db)
+    category = auth_client.get("/api/v1/learn/categories/system-design").json()
+    slugs = {topic["slug"] for topic in category["topics"]}
+    assert "sd-design-problems" in slugs
+    assert "capacity-estimation" in slugs
+
+    topic = auth_client.get("/api/v1/learn/topics/sd-design-problems").json()
+    assert topic["category_slug"] == "system-design"
+    assert topic["lesson_count"] == 8
+    titles = {lesson["title"] for lesson in topic["lessons"]}
+    assert "Design a URL Shortener" in titles
+    assert "Design a News Feed" in titles
+    assert "Design a Chat System" in titles
+
+    lesson = auth_client.get("/api/v1/learn/lessons/sd-url-shortener").json()
+    assert lesson["status"] == "IN_PROGRESS"
+    assert lesson["topic_slug"] == "sd-design-problems"
+    assert "302" in lesson["content"] or "base62" in lesson["content"]
+    assert lesson["takeaways"]
+    assert lesson["interview_questions"]
+    assert lesson["next"] is not None
+
+    search = auth_client.get("/api/v1/learn/search", params={"q": "URL shortener"})
+    found = {item["title"] for item in search.json()["items"]}
+    assert "Design a URL Shortener" in found
 
 
 def test_ask_ai_uses_topic_context(auth_client, db, monkeypatch):

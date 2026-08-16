@@ -984,6 +984,212 @@ def _system_design_topics() -> list[dict]:
     return out
 
 
+def _system_design_problem_topic() -> dict:
+    return _topic(
+        "system-design",
+        "sd-design-problems",
+        "Design Problems",
+        "Full 45-minute system design interview prompts. Practice the structure on real products, not just the vocabulary.",
+        "MEDIUM",
+        80,
+        21,
+        [
+            L(
+                "sd-url-shortener",
+                "Design a URL Shortener",
+                "The classic opener: write path, read path, and a 100:1 read ratio.",
+                12,
+                "Design a service like bit.ly. Users submit a long URL and get a short code. Opening the short link 302s to the original. Interviewers want requirements, a key scheme, a simple first design, then cache and scale.",
+                "This is the most common 45-minute design. It tests whether you start with API and numbers before drawing six databases.",
+                "Clarify: custom aliases, expiry, auth, analytics. Estimate: 100M new URLs/month, 100:1 reads. API: POST /v1/urls → {code, short, long}, GET /{code} → 302. First design: one app + SQL table (code PK, long_url, created_at). Generate a 7-char base62 code from a counter or hash; handle collisions. Then add a cache on code→url and a unique-id generator so writes do not serialize on one row.",
+                "Write: app allocates id 125, encodes to base62 `cb`, stores {cb → https://example.com/a}. Read: cache hit returns the long URL; miss loads SQL and fills the cache with a TTL.",
+                "- Read-heavy redirects\n- Unique id generation\n- Cache-aside on a hot key",
+                "Hash of the URL is simpler but collides and cannot support two shorts for one long URL. A counter needs a range allocator (Snowflake-style or DB sequences in batches) so app nodes do not fight one lock.",
+                "- Jumping to Kafka and Cassandra on a 100M-row table\n- No collision or uniqueness story\n- Forgetting that GET must be fast and cacheable\n- 6-char codes that run out sooner than you think",
+                "Say the read path in one sentence, then the write path. Depth on the key generator beats a crowded diagram.",
+                [
+                    "Requirements and QPS first, then one box, then the bottleneck.",
+                    "Base62 + unique ids beat hashing the URL.",
+                    "Cache the redirect. Writes can be slower.",
+                ],
+                [
+                    "How do you generate a unique short code?",
+                    "What is the read path at 100:1?",
+                    "When do you shard this table?",
+                ],
+            ),
+            L(
+                "sd-news-feed",
+                "Design a News Feed",
+                "Fan-out on write vs read, ranking, and what 'fresh' means.",
+                12,
+                "Design a home feed: a user posts, followers see it, roughly in time order with some ranking. The hard part is fan-out — who materializes the feed, and when.",
+                "Feeds show whether you can pick a consistency model and defend a write amplification number.",
+                "Ask: Twitter-style (follow graph, public) or LinkedIn-style (connection, slower)? How many follows? How fresh? API: POST /posts, GET /feed?cursor=. Fan-out on write: on publish, push the post id onto each follower's precomputed feed (Redis list / Cassandra). Fan-out on read: pull recent posts from people you follow at request time. Hybrid: precompute for normal users, pull celebrities at read time so one mega-user does not write 40M rows.",
+                "A user with 200 followers posts. The write path enqueues 200 feed inserts. A celebrity with 20M followers only writes the post; readers merge that author's recent posts into the cached feed.",
+                "- Social timelines\n- Notification inboxes\n- Activity streams",
+                "Fan-out on write is fast to read and expensive to write. Fan-out on read is cheap to write and slow or bursty to read. Ranking on the precomputed list needs a later re-rank of a candidate set, not a global sort of the internet.",
+                "- One strategy for every user\n- No pagination story\n- Ignoring celebrity / hot-key fan-out\n- Designing the whole ranking ML stack in 15 minutes",
+                "Pick hybrid and name the celebrity threshold. Then walk one publish and one GET /feed.",
+                [
+                    "Fan-out on write vs read is the design.",
+                    "Celebrities break naive fan-out.",
+                    "Cursor pagination, not offset.",
+                ],
+                [
+                    "Fan-out on write vs read?",
+                    "How do you handle a celebrity post?",
+                    "How do you paginate a feed?",
+                ],
+            ),
+            L(
+                "sd-chat-system",
+                "Design a Chat System",
+                "1:1 and group messages, delivery, and online presence.",
+                11,
+                "Design a messenger: 1:1 chat first, then groups, unread, and 'online'. Messages must arrive quickly and survive refresh. The shape is connections + an append-only message store.",
+                "Chat tests websockets vs polling, ordering, and what happens when a phone goes to sleep.",
+                "API: websocket for live traffic, REST to load history. Store messages in an append-only table keyed by chat_id + created_at/id. 1:1 chats are a conversation id. Groups need a member list and fan-out to online connections (gateway holds sockets; a pub/sub channel per chat). Presence is a heartbeat in Redis with a short TTL. Unread is a per-user last_read_id, not a row per message.",
+                "Alice sends to Bob. Gateway writes the message, publishes to chat:42, Bob's gateway connection receives it. If Bob is offline, the next history fetch returns everything after last_read_id.",
+                "- 1:1 messaging\n- Small group chat\n- Typing indicators and presence",
+                "Polling is simpler and worse for latency. Multiple devices need the event on every connection for that user. Exactly-once delivery is a lie — use at-least-once plus an idempotent message id.",
+                "- Storing one row per unread recipient on every send\n- No offline story\n- Ordering across partitions you never named\n- Building a full end-to-end encrypted protocol unprompted",
+                "Draw the websocket, the message table, and the offline fetch. Mention message ids before 'Kafka'.",
+                [
+                    "Live path is a socket. History is a query.",
+                    "Append-only messages keyed by chat.",
+                    "Presence is a TTL, not a boolean forever.",
+                ],
+                [
+                    "Websocket vs long polling?",
+                    "How do you store group messages?",
+                    "How do you implement unread counts?",
+                ],
+            ),
+            L(
+                "sd-rate-limiter-design",
+                "Design a Rate Limiter",
+                "Protect the edge: token bucket, keys, and 429s.",
+                10,
+                "Design a limiter that caps requests per user or API key, usually at the gateway. Interviewers want the algorithm, where state lives, and what the client sees.",
+                "It is a compact design you can finish well. It also shows up inside every public API design.",
+                "Ask: per user, IP, or API key? Burst or strict window? Distributed or one box? Token bucket is the default: each key has tokens that refill at rate R, burst B. Sliding window is smoother and more state. Store counters in Redis (INCR + EXPIRE, or a Lua token-bucket). Return 429 with Retry-After. Fail open or closed if Redis is down — say it out loud.",
+                "100 req/min/key. Gateway asks Redis. Token available → decrement and proxy. Empty → 429. A burst of 20 is allowed if B=20, then refill 100/60 tokens per second.",
+                "- Public APIs\n- Login and OTP\n- Downstream protection",
+                "Local in-memory limits drift across pods. A global Redis key is correct and becomes a hot key — shard by key hash. Strict fixed windows let a user double-fire at the boundary.",
+                "- Silent drops with no 429\n- One global counter for every user\n- Ignoring multi-pod drift\n- Perfect precision on a clock you do not own",
+                "Name the key, the algorithm, Redis, and the 429. That is a complete answer.",
+                [
+                    "Token bucket at the edge.",
+                    "State is per key in Redis.",
+                    "Always return 429 + Retry-After.",
+                ],
+                [
+                    "Token bucket vs sliding window?",
+                    "Where do you store the counters?",
+                    "What happens if Redis is down?",
+                ],
+            ),
+            L(
+                "sd-web-crawler",
+                "Design a Web Crawler",
+                "Frontier, politeness, dedup, and what you store.",
+                10,
+                "Design a crawler that starts from seed URLs, fetches pages, extracts links, and stores content without melting target sites or looping forever.",
+                "It is a distributed-queue problem with politeness constraints. Interviewers listen for robots.txt, per-host rate limits, and URL dedup.",
+                "Frontier queue of URLs to visit. Fetcher workers pull a URL, honor robots.txt and a per-host delay, download, canonicalize, extract links, enqueue new ones. Dedup visited URLs with a Bloom filter plus a store of seen hosts/paths. Persist raw HTML or extracted text in object storage; keep metadata in a DB. Politely isolate queues per host so one domain cannot starve the crawl.",
+                "Seed example.com. Worker fetches /, extracts /a and /b, skips /a if already seen, waits 1s before the next example.com fetch, while another worker hits a different host.",
+                "- Search indexing\n- Site mirrors\n- Link graph analysis",
+                "A single FIFO frontier hotspots popular hosts. Per-host queues plus a scheduler are fairer and slower. Freshness needs recrawl priority, not only BFS from seeds.",
+                "- No politeness / robots.txt\n- Dedup only in memory on one box\n- Crawling query-string duplicates as new pages\n- Treating JavaScript apps as static HTML without saying so",
+                "Frontier, fetcher, politeness, dedup. In that order. Then mention storage.",
+                [
+                    "Per-host queues keep the crawl polite.",
+                    "Dedup URLs before you fetch.",
+                    "Separate metadata from page blobs.",
+                ],
+                [
+                    "How do you avoid recrawling the same URL?",
+                    "How do you stay polite to one host?",
+                    "BFS vs priority recrawl?",
+                ],
+            ),
+            L(
+                "sd-video-streaming",
+                "Design a Video Streaming Service",
+                "Upload, transcode, CDN, and adaptive bitrate.",
+                11,
+                "Design something like YouTube: upload a video, process it, and play it worldwide with acceptable startup time. The live path is not the origin server.",
+                "This one tests async pipelines and CDNs. If you stream bytes from your API box, you failed the setup.",
+                "Upload: client PUTs to object storage via a signed URL. A queue kicks transcode workers that produce renditions (360p–1080p) and a manifest (HLS/DASH). Metadata (title, owner, duration) lives in SQL. Playback: the app returns a CDN URL for the manifest; the player picks a bitrate and fetches segments from the edge. Thumbnails and previews are extra objects. Comments and likes are a separate, eventual service.",
+                "A 1GB upload lands in S3. Workers emit 360/720/1080p segments. The watch page returns https://cdn/.../master.m3u8. Tokyo viewers hit a nearby POP, not your origin.",
+                "- VOD platforms\n- Course video\n- Product demos",
+                "Transcode is CPU-heavy and async — never in the upload request. More renditions cost storage and processing. Live streaming adds ingest and a much tighter lag budget; say so if they want live.",
+                "- Serving video from the app tier\n- One bitrate for the world\n- No CDN\n- Mixing metadata updates with the byte path",
+                "Signed upload, queue, renditions, CDN manifest. Leave recommendation ML for the last five minutes.",
+                [
+                    "Upload to object storage, not your API.",
+                    "Transcode asynchronously into renditions.",
+                    "Playback is a CDN problem.",
+                ],
+                [
+                    "Why adaptive bitrate?",
+                    "What happens after upload?",
+                    "Where do viewers fetch segments?",
+                ],
+            ),
+            L(
+                "sd-ride-sharing",
+                "Design a Ride Sharing System",
+                "Riders, drivers, matching, and live location.",
+                11,
+                "Design a ride-hailing loop: request a ride, match a nearby driver, track the trip, settle payment. Matching and location updates are the interesting boxes.",
+                "It combines geo queries, a stateful trip, and a marketplace that must not double-book a driver.",
+                "Actors: rider, driver, trip. Location: drivers send GPS every few seconds to a location service (Redis GEO or a tiled in-memory grid). Request: find the k nearest available drivers in the tile, offer in order, first accept wins — use a lock on driver_id. Trip is a state machine (requested → matched → pickup → in_ride → done) in SQL. Payment is an async call with an idempotency key. Notifications go through push. ETA is a separate map service, not something you invent.",
+                "A rider requests in a downtown tile. Three drivers are offered. Driver B accepts; A and C offers cancel. Both apps subscribe to trip:99 for location and state.",
+                "- Ride hailing\n- Delivery dispatch\n- Nearby-driver maps",
+                "Global 'nearest driver' scans do not scale — tile the map. Over-offering reduces wait and wastes driver attention. Strong consistency on the accept lock matters; location can be a few seconds stale.",
+                "- One SQL query of all drivers by haversine\n- No trip state machine\n- Double-dispatching the same driver\n- Building your own routing engine",
+                "Tiles + an accept lock + a trip state machine. Location is approximate on purpose.",
+                [
+                    "Geo-tile drivers. Do not scan the planet.",
+                    "Matching needs a lock on accept.",
+                    "A trip is a state machine.",
+                ],
+                [
+                    "How do you find nearby drivers?",
+                    "How do you prevent two riders matching one driver?",
+                    "What state does a trip have?",
+                ],
+            ),
+            L(
+                "sd-autocomplete",
+                "Design Search Autocomplete",
+                "Prefix queries at type-ahead latency, with a way to rank suggestions.",
+                10,
+                "Design type-ahead: as the user types, show the top k completions in ~50–100ms. The data structure is a trie or a prefix index; the product question is freshness vs speed.",
+                "It is a tight, finishable design. It also connects to ranking and caching.",
+                "Client debounces and GETs /suggest?q=ca. An in-memory trie (or n-gram table) on each suggest box holds prefixes → top k terms. Rank by historical frequency, with a daily (or hourly) offline job rebuilding the top lists so the live path is a memory lookup. Cache hot prefixes at the edge. Personalization, if asked, is a cheap re-rank of the global top k, not a unique trie per user. Handle typos only if they push — fuzzy is a later layer.",
+                "Prefix `ca` returns [cat, car, cafe] from a precomputed list. A new viral query appears after the next aggregation job, not on the next keystroke.",
+                "- Search bars\n- Tag suggest\n- Command palettes",
+                "A live update on every query is fresher and harder. Precomputed top-k is fast and slightly stale. Sharding the trie by prefix keeps each box in RAM.",
+                "- Hitting the primary search index on every keystroke\n- No debounce\n- Building a unique structure per user on day one\n- Ignoring unicode / normalization",
+                "Debounce, in-memory prefix → top k, offline rebuild. Mention cache for `a` and `the`.",
+                [
+                    "Live path is an in-memory prefix lookup.",
+                    "Rank offline; serve a top-k list.",
+                    "Debounce the client.",
+                ],
+                [
+                    "Why not query the search index on each key?",
+                    "How do you keep suggestions fresh?",
+                    "How do you shard a trie?",
+                ],
+            ),
+        ],
+    )
+
+
 def _twelve(row: tuple) -> tuple:
     items = list(row)
     if items and isinstance(items[-1], str) and items[-1] in {"EASY", "MEDIUM", "HARD"}:
@@ -1177,6 +1383,7 @@ def _ai_topics() -> list[dict]:
 
 
 TOPICS.extend(_system_design_topics())
+TOPICS.append(_system_design_problem_topic())
 TOPICS.extend(_java_topics())
 TOPICS.extend(_cs_topics())
 TOPICS.extend(_ood_topics())
