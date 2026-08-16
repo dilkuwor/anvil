@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.common.database import get_db
-from app.common.deps import get_current_user
+from app.common.deps import get_current_user, get_optional_user
 from app.learn import service
 from app.learn.schemas import (
     LearningCategoryCard,
@@ -29,27 +29,27 @@ router = APIRouter(prefix="/api/v1/learn", tags=["learn"])
 @router.get("/categories", response_model=list[LearningCategoryCard])
 def list_categories(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> list[LearningCategoryCard]:
-    return service.list_categories(db, current_user.id)
+    return service.list_categories(db, current_user.id if current_user else None)
 
 
 @router.get("/categories/{slug}", response_model=LearningCategoryDetail)
 def get_category(
     slug: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> LearningCategoryDetail:
-    return service.get_category(db, current_user.id, slug)
+    return service.get_category(db, current_user.id if current_user else None, slug)
 
 
 @router.get("/topics/{slug}", response_model=LearningTopicDetail)
 def get_topic(
     slug: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> LearningTopicDetail:
-    return service.get_topic(db, current_user.id, slug)
+    return service.get_topic(db, current_user.id if current_user else None, slug)
 
 
 @router.post("/topics/{slug}/ask", response_model=TopicAskResponse)
@@ -67,9 +67,9 @@ def ask_about_topic(
 def get_lesson(
     slug: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> LearningLessonDetail:
-    return service.get_lesson(db, current_user.id, slug)
+    return service.get_lesson(db, current_user.id if current_user else None, slug)
 
 
 @router.post("/lessons/{slug}/ask", response_model=LessonAskResponse)
@@ -115,9 +115,9 @@ def ask_lesson_ai(
 def search_learn(
     q: str = Query(default="", min_length=0, max_length=80),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> LearningSearchResponse:
-    return service.search_learn(db, current_user.id, q)
+    return service.search_learn(db, current_user.id if current_user else None, q)
 
 
 @router.get("/progress", response_model=LearningProgressSummary)
@@ -132,9 +132,9 @@ def get_progress(
 def get_roadmap_learn(
     roadmap_key: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> RoadmapLearnLink:
-    return service.roadmap_link(db, current_user.id, roadmap_key)
+    return service.roadmap_link(db, current_user.id if current_user else None, roadmap_key)
 
 
 @router.post("/lessons/{lesson_id}/start", response_model=LearningLessonDetail)

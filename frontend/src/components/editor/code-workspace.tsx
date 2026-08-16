@@ -21,6 +21,8 @@ import { api, type ExecutionResult, type ProblemDetail } from "@/lib/api";
 import type { ActiveInterviewResponse, InterviewSession } from "@/lib/interview";
 import { remainingFromStart } from "@/lib/interview";
 import { queryKeys } from "@/lib/queries";
+import { AuthPrompt } from "@/components/auth/auth-prompt";
+import { useSession, type AuthPromptKind } from "@/lib/session";
 
 const Monaco = dynamic(() => import("@monaco-editor/react").then((mod) => mod.default), { ssr: false });
 
@@ -55,6 +57,8 @@ export function CodeWorkspace({ slug }: { slug: string }) {
 
 function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   const queryClient = useQueryClient();
+  const { signedIn } = useSession();
+  const [authPrompt, setAuthPrompt] = useState<AuthPromptKind | null>(null);
   const { theme } = useTheme();
   const [code, setCode] = useState(() => {
     if (typeof window === "undefined") return problem.starter_code;
@@ -273,8 +277,8 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
               variant="outline"
               size="sm"
               className="border-accent/40 text-accent hover:bg-accent/10"
-              disabled={startInterview.isPending}
-              onClick={() => startInterview.mutate()}
+              disabled={signedIn && startInterview.isPending}
+              onClick={() => (signedIn ? startInterview.mutate() : setAuthPrompt("mock"))}
             >
               {startInterview.isPending ? "Starting…" : "Mock Interview"}
             </Button>
@@ -302,13 +306,22 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
         {tab === "constraints" ? <ConstraintsBody problem={problem} /> : null}
         {tab === "hints" ? <HintsBody problem={problem} /> : null}
         {tab === "history" ? (
-          <SubmissionHistory
-            problemId={problem.id}
-            onLoadCode={(source) => {
-              setCode(source);
-              toast.message("Loaded previous submission into the editor.");
-            }}
-          />
+          signedIn ? (
+            <SubmissionHistory
+              problemId={problem.id}
+              onLoadCode={(source) => {
+                setCode(source);
+                toast.message("Loaded previous submission into the editor.");
+              }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              <button type="button" className="text-accent hover:text-accent-light" onClick={() => setAuthPrompt("progress")}>
+                Log in
+              </button>{" "}
+              to see your submissions.
+            </p>
+          )
         ) : null}
       </div>
     </section>
@@ -341,10 +354,15 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
               {collapsed ? "Show Problem" : "Hide Problem"}
             </Button>
           )}
-          <Button variant="secondary" size="sm" disabled={busy} onClick={() => run.mutate()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={signedIn && busy}
+            onClick={() => (signedIn ? run.mutate() : setAuthPrompt("run"))}
+          >
             {run.isPending ? "Running…" : "Run"}
           </Button>
-          <Button size="sm" disabled={busy} onClick={() => submit.mutate()}>
+          <Button size="sm" disabled={signedIn && busy} onClick={() => (signedIn ? submit.mutate() : setAuthPrompt("submit"))}>
             {submit.isPending ? "Submitting…" : "Submit"}
           </Button>
         </div>
@@ -405,6 +423,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
         {showProblem || !interviewMode ? prompt : null}
       </div>
       <SplitPane left={left} right={editor} collapsed={interviewMode ? false : collapsed} />
+      {authPrompt ? <AuthPrompt kind={authPrompt} onClose={() => setAuthPrompt(null)} /> : null}
       <EndInterviewDialog
         open={confirmEnd}
         busy={endInterview.isPending}

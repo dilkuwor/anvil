@@ -35,6 +35,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+export async function fetchCurrentUser(): Promise<User | null> {
+  return (await request<User | null>("/api/v1/auth/me")) ?? null;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>

@@ -3,8 +3,19 @@ from app.cheatsheets.models import CheatSheet, CheatSheetSection, CheatSheetSect
 from sqlalchemy import func, select
 
 
-def test_cheatsheets_require_auth(client):
-    assert client.get("/api/v1/cheatsheets").status_code == 401
+def test_cheatsheets_are_public(client, db):
+    seed_cheatsheets(db)
+    db.commit()
+    listing = client.get("/api/v1/cheatsheets")
+    assert listing.status_code == 200
+    assert {item["slug"] for item in listing.json()} == {
+        "dsa",
+        "java",
+        "system-design",
+        "lld-ood",
+        "behavioral",
+        "cs-fundamentals",
+    }
 
 
 def test_cheatsheet_catalog_and_detail(auth_client, db):

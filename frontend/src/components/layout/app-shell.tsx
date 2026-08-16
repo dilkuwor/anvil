@@ -10,28 +10,34 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/ui/section";
 import { PageLoader } from "@/components/ui/state";
 import { Button } from "@/components/ui/button";
-import { api, ApiError, type User } from "@/lib/api";
+import { api, fetchCurrentUser } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard" },
+const PUBLIC_NAV = [
   { href: "/problems", label: "Problems" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
 ];
 
+const PRIVATE_PREFIXES = ["/dashboard", "/settings"];
+
+function isPrivatePath(pathname: string): boolean {
+  return PRIVATE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
   const editor = pathname.startsWith("/problems/") && pathname !== "/problems";
-  const me = useQuery<User>({
+  const me = useQuery({
     queryKey: queryKeys.me,
-    queryFn: () => api.get<User>("/api/v1/auth/me"),
+    queryFn: fetchCurrentUser,
     retry: false,
   });
+  const signedIn = Boolean(me.data);
 
   const logout = useMutation({
     mutationFn: () => api.post("/api/v1/auth/logout"),
@@ -47,10 +53,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (me.isError) {
-    if (me.error instanceof ApiError && me.error.status === 401) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-      return null;
-    }
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
         <p className="text-sm text-coral">Unable to load your session.</p>
@@ -60,6 +62,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  if (!signedIn && isPrivatePath(pathname)) {
+    router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+    return null;
+  }
+
+  const nav = signedIn ? [{ href: "/dashboard", label: "Dashboard" }, ...PUBLIC_NAV] : PUBLIC_NAV;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -71,11 +80,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <div className="flex min-w-0 items-center gap-5">
-            <Link href="/dashboard" className="shrink-0 text-sm">
+            <Link href={signedIn ? "/dashboard" : "/learn"} className="shrink-0 text-sm">
               <BrandMark compact />
             </Link>
             <nav className="flex items-center gap-0.5 overflow-x-auto" aria-label="Primary">
-              {NAV.map((item) => {
+              {nav.map((item) => {
                 const active = pathname.startsWith(item.href);
                 return (
                   <Link
@@ -93,20 +102,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground sm:gap-2">
-            <ThemeToggle />
-            <Link
-              href="/settings"
-              className={cn(
-                "inline-flex max-w-[10rem] items-center gap-2 truncate hover:text-foreground",
-                pathname.startsWith("/settings") && "font-medium text-foreground",
-              )}
-            >
-              {me.data ? <UserAvatar user={me.data} size="sm" /> : null}
-              <span className="truncate">{me.data?.display_name || me.data?.username}</span>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
-              Log out
-            </Button>
+            {signedIn && me.data ? (
+              <>
+                <ThemeToggle />
+                <Link
+                  href="/settings"
+                  className={cn(
+                    "inline-flex max-w-[10rem] items-center gap-2 truncate hover:text-foreground",
+                    pathname.startsWith("/settings") && "font-medium text-foreground",
+                  )}
+                >
+                  <UserAvatar user={me.data} size="sm" />
+                  <span className="truncate">{me.data.display_name || me.data.username}</span>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild size="sm" variant="ghost">
+                  <Link href={`/login?next=${encodeURIComponent(pathname)}`}>Log in</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href={`/register?next=${encodeURIComponent(pathname)}`}>Register</Link>
+                </Button>
+                <ThemeToggle />
+              </>
+            )}
           </div>
         </div>
       </header>

@@ -13,11 +13,13 @@ import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { LearningCategoryCard, LearningProgressSummary, LearningSearchResponse } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
+import { useSession } from "@/lib/session";
 
 export function LearnIndex() {
   const [query, setQuery] = useState("");
   const trimmed = query.trim();
   const searching = trimmed.length >= 2;
+  const { signedIn } = useSession();
 
   const categories = useQuery({
     queryKey: queryKeys.learnCategories,
@@ -26,6 +28,7 @@ export function LearnIndex() {
   const progress = useQuery({
     queryKey: queryKeys.learnProgress,
     queryFn: () => api.get<LearningProgressSummary>("/api/v1/learn/progress"),
+    enabled: signedIn,
   });
   const search = useQuery({
     queryKey: queryKeys.learnSearch(trimmed),

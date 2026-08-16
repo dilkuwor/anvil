@@ -137,7 +137,7 @@ _INTENT_INSTRUCTIONS = {
 }
 
 
-def list_categories(db: Session, user_id: UUID) -> list[LearningCategoryCard]:
+def list_categories(db: Session, user_id: UUID | None) -> list[LearningCategoryCard]:
     categories = db.scalars(
         select(LearningCategory)
         .where(LearningCategory.is_active.is_(True))
@@ -148,7 +148,7 @@ def list_categories(db: Session, user_id: UUID) -> list[LearningCategoryCard]:
     return [_category_card(category, counts, completed) for category in categories]
 
 
-def get_category(db: Session, user_id: UUID, slug: str) -> LearningCategoryDetail:
+def get_category(db: Session, user_id: UUID | None, slug: str) -> LearningCategoryDetail:
     category = db.scalar(select(LearningCategory).where(LearningCategory.slug == slug, LearningCategory.is_active.is_(True)))
     if category is None:
         raise NotFoundError("Learning category not found.")
@@ -175,7 +175,7 @@ def get_category(db: Session, user_id: UUID, slug: str) -> LearningCategoryDetai
     )
 
 
-def get_topic(db: Session, user_id: UUID, slug: str) -> LearningTopicDetail:
+def get_topic(db: Session, user_id: UUID | None, slug: str) -> LearningTopicDetail:
     topic = _topic_by_slug(db, slug)
     lessons = [
         lesson
@@ -316,10 +316,11 @@ def stream_lesson_tutor(
     return events()
 
 
-def get_lesson(db: Session, user_id: UUID, slug: str) -> LearningLessonDetail:
+def get_lesson(db: Session, user_id: UUID | None, slug: str) -> LearningLessonDetail:
     lesson = _lesson_by_slug(db, slug)
-    _touch_progress(db, user_id, lesson.id)
-    db.commit()
+    if user_id is not None:
+        _touch_progress(db, user_id, lesson.id)
+        db.commit()
     progress = _progress_map(db, user_id)
     topic = lesson.topic
     siblings = [item for item in sorted(topic.lessons, key=lambda row: (row.display_order, row.title)) if item.is_published]
@@ -337,7 +338,10 @@ def get_lesson(db: Session, user_id: UUID, slug: str) -> LearningLessonDetail:
         takeaways=list(lesson.takeaways or []),
         interview_questions=list(lesson.interview_questions or []),
         estimated_minutes=lesson.estimated_minutes,
-        status=progress.get(lesson.id, LearningProgressStatus.IN_PROGRESS.value),
+        status=progress.get(
+            lesson.id,
+            LearningProgressStatus.IN_PROGRESS.value if user_id is not None else LearningProgressStatus.NOT_STARTED.value,
+        ),
         category_slug=topic.category.slug,
         category_title=topic.category.title,
         topic_slug=topic.slug,
@@ -371,7 +375,7 @@ def complete_lesson(db: Session, user_id: UUID, lesson_id: UUID) -> LearningLess
     return get_lesson(db, user_id, lesson.slug)
 
 
-def search_learn(db: Session, user_id: UUID, query: str) -> LearningSearchResponse:
+def search_learn(db: Session, user_id: UUID | None, query: str) -> LearningSearchResponse:
     term = query.strip()
     if len(term) < 2:
         return LearningSearchResponse(query=term, items=[])
@@ -501,7 +505,7 @@ def progress_summary(db: Session, user_id: UUID) -> LearningProgressSummary:
     )
 
 
-def roadmap_link(db: Session, user_id: UUID, roadmap_key: str) -> RoadmapLearnLink:
+def roadmap_link(db: Session, user_id: UUID | None, roadmap_key: str) -> RoadmapLearnLink:
     topic = db.scalar(
         select(LearningTopic)
         .options(selectinload(LearningTopic.category), selectinload(LearningTopic.lessons))
@@ -717,12 +721,16 @@ def _touch_progress(db: Session, user_id: UUID, lesson_id: UUID) -> UserLearning
     return row
 
 
-def _progress_map(db: Session, user_id: UUID) -> dict[UUID, str]:
+def _progress_map(db: Session, user_id: UUID | None) -> dict[UUID, str]:
+    if user_id is None:
+        return {}
     rows = db.scalars(select(UserLearningProgress).where(UserLearningProgress.user_id == user_id)).all()
     return {row.lesson_id: row.status for row in rows}
 
 
-def _problem_status_map(db: Session, user_id: UUID) -> dict[UUID, str]:
+def _problem_status_map(db: Session, user_id: UUID | None) -> dict[UUID, str]:
+    if user_id is None:
+        return {}
     rows = db.scalars(select(UserProblemProgress).where(UserProblemProgress.user_id == user_id)).all()
     return {row.problem_id: row.status for row in rows}
 
@@ -747,7 +755,9 @@ def _catalog_counts(db: Session) -> dict[UUID, tuple[int, int]]:
     return {key: (int(topic_counts.get(key, 0)), int(lesson_counts.get(key, 0))) for key in keys}
 
 
-def _completed_by_category(db: Session, user_id: UUID) -> dict[UUID, int]:
+def _completed_by_category(db: Session, user_id: UUID | None) -> dict[UUID, int]:
+    if user_id is None:
+        return {}
     rows = db.execute(
         select(LearningTopic.category_id, func.count())
         .join(LearningLesson, LearningLesson.topic_id == LearningTopic.id)

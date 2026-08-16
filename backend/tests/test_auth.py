@@ -15,7 +15,9 @@ def test_register_login_me_logout(client):
     assert me.json()["username"] == "sam"
 
     client.post("/api/v1/auth/logout")
-    assert client.get("/api/v1/auth/me").status_code == 401
+    logged_out = client.get("/api/v1/auth/me")
+    assert logged_out.status_code == 200
+    assert logged_out.json() is None
 
     login = client.post(
         "/api/v1/auth/login",
@@ -48,7 +50,7 @@ def test_duplicate_email(client):
 
 
 def test_protected_route_requires_auth(client):
-    response = client.get("/api/v1/problems")
+    response = client.get("/api/v1/progress")
     assert response.status_code == 401
 
 

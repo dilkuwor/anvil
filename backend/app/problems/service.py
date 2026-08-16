@@ -12,7 +12,7 @@ from app.progress.models import UserProblemProgress
 def list_problems(
     db: Session,
     *,
-    user_id: UUID,
+    user_id: UUID | None,
     search: str | None,
     difficulty: str | None,
     tag: str | None,
@@ -37,21 +37,23 @@ def list_problems(
     if tag:
         query = query.join(Problem.tags).where(or_(Tag.slug == tag, Tag.name.ilike(tag)))
 
-    progress_subq = (
-        select(UserProblemProgress.problem_id, UserProblemProgress.status)
-        .where(UserProblemProgress.user_id == user_id)
-        .subquery()
-    )
-    query = query.outerjoin(progress_subq, progress_subq.c.problem_id == Problem.id)
-
-    if status:
-        wanted = status.upper()
-        if wanted == ProgressStatus.NOT_STARTED:
-            query = query.where(
-                or_(progress_subq.c.status.is_(None), progress_subq.c.status == ProgressStatus.NOT_STARTED)
-            )
-        else:
-            query = query.where(progress_subq.c.status == wanted)
+    if user_id is not None:
+        progress_subq = (
+            select(UserProblemProgress.problem_id, UserProblemProgress.status)
+            .where(UserProblemProgress.user_id == user_id)
+            .subquery()
+        )
+        query = query.outerjoin(progress_subq, progress_subq.c.problem_id == Problem.id)
+        if status:
+            wanted = status.upper()
+            if wanted == ProgressStatus.NOT_STARTED:
+                query = query.where(
+                    or_(progress_subq.c.status.is_(None), progress_subq.c.status == ProgressStatus.NOT_STARTED)
+                )
+            else:
+                query = query.where(progress_subq.c.status == wanted)
+    elif status and status.upper() not in {ProgressStatus.NOT_STARTED.value, ""}:
+        return [], 0, {}
 
     sort_map = {
         "title": Problem.title.asc(),
@@ -69,7 +71,7 @@ def list_problems(
     items = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).unique().all()
     problem_ids = [item.id for item in items]
     statuses: dict[UUID, str] = {}
-    if problem_ids:
+    if problem_ids and user_id is not None:
         rows = db.execute(
             select(UserProblemProgress.problem_id, UserProblemProgress.status).where(
                 UserProblemProgress.user_id == user_id,
@@ -102,7 +104,9 @@ def get_problem_by_id(db: Session, problem_id: UUID) -> Problem:
     return problem
 
 
-def get_user_status(db: Session, user_id: UUID, problem_id: UUID) -> str:
+def get_user_status(db: Session, user_id: UUID | None, problem_id: UUID) -> str:
+    if user_id is None:
+        return ProgressStatus.NOT_STARTED.value
     row = db.scalar(
         select(UserProblemProgress.status).where(
             UserProblemProgress.user_id == user_id,

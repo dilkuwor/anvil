@@ -49,6 +49,18 @@ def _seed_problem(db, *, hidden: bool = True) -> Problem:
     return problem
 
 
+def test_problem_catalog_is_public(client, db):
+    problem = _seed_problem(db)
+    listing = client.get("/api/v1/problems")
+    assert listing.status_code == 200
+    assert listing.json()["items"][0]["title"] == "Pair Target"
+    detail = client.get("/api/v1/problems/pair-target")
+    assert detail.status_code == 200
+    assert detail.json()["slug"] == "pair-target"
+    run = client.post(f"/api/v1/problems/{problem.id}/run", json={"source_code": "class Solution {}"})
+    assert run.status_code == 401
+
+
 def test_problem_list_and_detail_hide_hidden_tests(auth_client, db):
     _seed_problem(db)
     listing = auth_client.get("/api/v1/problems")

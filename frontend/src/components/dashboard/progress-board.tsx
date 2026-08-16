@@ -13,14 +13,14 @@ import { TopicProgress } from "@/components/dashboard/topic-progress";
 import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
-import { api, type ProgressSummary, type User } from "@/lib/api";
+import { api, fetchCurrentUser, type ProgressSummary } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 import { DEFAULT_DAILY_GOAL } from "@/lib/utils";
 
 export function ProgressBoard() {
   const me = useQuery({
     queryKey: queryKeys.me,
-    queryFn: () => api.get<User>("/api/v1/auth/me"),
+    queryFn: fetchCurrentUser,
   });
   const progress = useQuery({
     queryKey: queryKeys.progress,

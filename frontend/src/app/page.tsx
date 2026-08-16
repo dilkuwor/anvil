@@ -25,9 +25,12 @@ export default function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link href="/register">Create an account</Link>
+              <Link href="/learn">Browse lessons</Link>
             </Button>
             <Button asChild size="lg" variant="secondary">
+              <Link href="/problems">Browse problems</Link>
+            </Button>
+            <Button asChild size="lg" variant="ghost">
               <Link href="/login">Log in</Link>
             </Button>
           </div>

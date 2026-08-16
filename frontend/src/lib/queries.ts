@@ -1,4 +1,4 @@
-import { api, type ProgressSummary, type ProblemDetail, type ProblemListResponse, type SubmissionDetail, type SubmissionListResponse, type Tag, type User } from "@/lib/api";
+import { api, fetchCurrentUser, type ProgressSummary, type ProblemDetail, type ProblemListResponse, type SubmissionDetail, type SubmissionListResponse, type Tag } from "@/lib/api";
 import type { ActiveInterviewResponse, InterviewSession } from "@/lib/interview";
 
 export const queryKeys = {
@@ -25,7 +25,7 @@ export const queryKeys = {
 };
 
 export const fetchers = {
-  me: () => api.get<User>("/api/v1/auth/me"),
+  me: () => fetchCurrentUser(),
   tags: () => api.get<Tag[]>("/api/v1/tags"),
   problems: (search: string) => api.get<ProblemListResponse>(`/api/v1/problems${search}`),
   problem: (slug: string) => api.get<ProblemDetail>(`/api/v1/problems/${slug}`),

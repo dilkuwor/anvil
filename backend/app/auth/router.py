@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.auth.schemas import LoginRequest, RegisterRequest, UpdateProfileRequest, UserOut
 from app.common.config import get_settings
 from app.common.database import get_db
-from app.common.deps import get_current_user
+from app.common.deps import get_current_user, get_optional_user
 from app.common.enums import UserRole
 from app.common.errors import AppError, ConflictError, NotFoundError, UnauthorizedError
 from app.common.security import create_access_token, hash_password, verify_password
@@ -78,8 +78,8 @@ def logout(response: Response) -> dict:
     return {"ok": True}
 
 
-@router.get("/me", response_model=UserOut)
-def me(current_user: User = Depends(get_current_user)) -> User:
+@router.get("/me", response_model=UserOut | None)
+def me(current_user: User | None = Depends(get_optional_user)) -> User | None:
     return current_user
 
 

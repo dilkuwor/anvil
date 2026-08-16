@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AskAiButton, AskAiController, AskAiPanel } from "@/components/learn/ask-ai-panel";
@@ -14,9 +15,13 @@ import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { LearningLessonDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
+import { AuthPrompt } from "@/components/auth/auth-prompt";
+import { useSession, type AuthPromptKind } from "@/lib/session";
 
 export function LessonView({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
+  const { signedIn } = useSession();
+  const [authPrompt, setAuthPrompt] = useState<AuthPromptKind | null>(null);
   const lesson = useQuery({
     queryKey: queryKeys.learnLesson(slug),
     queryFn: () => api.get<LearningLessonDetail>(`/api/v1/learn/lessons/${slug}`),
@@ -43,8 +48,7 @@ export function LessonView({ slug }: { slug: string }) {
   const data = lesson.data;
   const firstProblem = data.related_problems[0];
 
-  return (
-    <AskAiController key={data.id} lesson={data}>
+  const page = (
       <div className="space-y-5">
         <div className="space-y-2">
           <Breadcrumbs
@@ -62,13 +66,19 @@ export function LessonView({ slug }: { slug: string }) {
                 {data.category_title} · {data.topic_title} · {data.estimated_minutes} min read
               </p>
             </div>
-            <AskAiButton />
+            {signedIn ? (
+              <AskAiButton />
+            ) : (
+              <Button size="sm" variant="secondary" onClick={() => setAuthPrompt("ask-ai")}>
+                Ask AI
+              </Button>
+            )}
           </div>
         </div>
 
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <SectionCard className="min-w-0">
-            <AskAiPanel />
+            {signedIn ? <AskAiPanel /> : null}
             <LessonMarkdown content={data.content} />
           </SectionCard>
 
@@ -139,9 +149,15 @@ export function LessonView({ slug }: { slug: string }) {
             ) : (
               <span className="px-2 text-[12px] text-muted-foreground">First lesson</span>
             )}
-            <Button size="sm" disabled={complete.isPending || data.status === "COMPLETED"} onClick={() => complete.mutate()}>
-              {data.status === "COMPLETED" ? "Completed" : complete.isPending ? "Saving…" : "Mark Complete"}
-            </Button>
+            {signedIn ? (
+              <Button size="sm" disabled={complete.isPending || data.status === "COMPLETED"} onClick={() => complete.mutate()}>
+                {data.status === "COMPLETED" ? "Completed" : complete.isPending ? "Saving…" : "Mark Complete"}
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => setAuthPrompt("progress")}>
+                Mark Complete
+              </Button>
+            )}
             {data.next ? (
               <Button asChild variant="ghost" size="sm" className="max-w-[38%] justify-end">
                 <Link href={data.next.href} className="truncate">
@@ -153,7 +169,15 @@ export function LessonView({ slug }: { slug: string }) {
             )}
           </div>
         </div>
+      {authPrompt ? <AuthPrompt kind={authPrompt} onClose={() => setAuthPrompt(null)} /> : null}
       </div>
+  );
+
+  return signedIn ? (
+    <AskAiController key={data.id} lesson={data}>
+      {page}
     </AskAiController>
+  ) : (
+    page
   );
 }

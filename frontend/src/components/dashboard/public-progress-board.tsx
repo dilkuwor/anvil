@@ -7,7 +7,7 @@ import { PracticeOverview } from "@/components/dashboard/practice-overview";
 import { ProfileCard } from "@/components/dashboard/profile-card";
 import { TopicProgress } from "@/components/dashboard/topic-progress";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
-import { api, type User } from "@/lib/api";
+import { api, fetchCurrentUser } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 import { toPracticeOverview, type PublicProfile } from "@/lib/public-profile";
 
@@ -19,7 +19,7 @@ export function PublicProgressBoard({ username }: { username: string }) {
   });
   const me = useQuery({
     queryKey: queryKeys.me,
-    queryFn: () => api.get<User>("/api/v1/auth/me"),
+    queryFn: fetchCurrentUser,
     retry: false,
   });
 

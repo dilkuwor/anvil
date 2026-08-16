@@ -26,8 +26,20 @@ def _seed_catalog(db) -> tuple[Problem, LearningLesson]:
     return problem, lesson
 
 
-def test_learn_requires_auth(client):
-    assert client.get("/api/v1/learn/categories").status_code == 401
+def test_learn_catalog_is_public(client, db):
+    _seed_catalog(db)
+    categories = client.get("/api/v1/learn/categories")
+    assert categories.status_code == 200
+    assert {item["slug"] for item in categories.json()} >= {"dsa", "system-design"}
+    lesson = client.get("/api/v1/learn/lessons/hashmap-internals")
+    assert lesson.status_code == 200
+    assert lesson.json()["status"] == "NOT_STARTED"
+
+
+def test_learn_progress_requires_auth(client):
+    assert client.get("/api/v1/learn/progress").status_code == 401
+    assert client.post("/api/v1/learn/lessons/00000000-0000-0000-0000-000000000001/complete").status_code == 401
+    assert client.post("/api/v1/learn/lessons/00000000-0000-0000-0000-000000000001/ask-ai", json={"question": "Explain this"}).status_code == 401
 
 
 def test_learn_catalog_progress_and_search(auth_client, db):

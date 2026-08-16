@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.common.database import get_db
-from app.common.deps import get_current_user
+from app.common.deps import get_current_user, get_optional_user
 from app.common.enums import ProgressStatus
 from app.execution.service import run_code, submit_code
 from app.problems import service
@@ -33,11 +33,11 @@ def list_problems(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> ProblemListResponse:
     items, total, statuses = service.list_problems(
         db,
-        user_id=current_user.id,
+        user_id=current_user.id if current_user else None,
         search=q,
         difficulty=difficulty,
         tag=tag,
@@ -68,7 +68,7 @@ def list_problems(
 def get_problem(
     slug: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> ProblemDetail:
     problem = service.get_problem_by_slug(db, slug)
     visible = [
@@ -101,7 +101,7 @@ def get_problem(
         memory_limit_kb=problem.memory_limit_kb,
         tags=[TagOut.model_validate(tag) for tag in problem.tags],
         visible_tests=visible,
-        status=service.get_user_status(db, current_user.id, problem.id),
+        status=service.get_user_status(db, current_user.id if current_user else None, problem.id),
         created_at=problem.created_at,
     )
 
@@ -109,7 +109,6 @@ def get_problem(
 @router.get("/tags", response_model=list[TagOut])
 def get_tags(
     db: Session = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
 ) -> list[TagOut]:
     return [TagOut.model_validate(tag) for tag in service.list_tags(db)]
 

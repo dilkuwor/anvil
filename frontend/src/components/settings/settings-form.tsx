@@ -11,14 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
-import { api, ApiError, type UpdateProfileRequest, type User } from "@/lib/api";
+import { api, ApiError, fetchCurrentUser, type UpdateProfileRequest, type User } from "@/lib/api";
 import { COUNTRIES } from "@/lib/countries";
 import { queryKeys } from "@/lib/queries";
 
 export function SettingsForm() {
   const me = useQuery({
     queryKey: queryKeys.me,
-    queryFn: () => api.get<User>("/api/v1/auth/me"),
+    queryFn: fetchCurrentUser,
   });
   if (me.isLoading) return <CardSkeleton rows={4} />;
   if (me.isError || !me.data) {

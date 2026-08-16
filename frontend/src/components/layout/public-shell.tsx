@@ -6,16 +6,16 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
-import { api, ApiError, type User } from "@/lib/api";
+import { fetchCurrentUser } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const me = useQuery({
     queryKey: queryKeys.me,
-    queryFn: () => api.get<User>("/api/v1/auth/me"),
+    queryFn: fetchCurrentUser,
     retry: false,
   });
-  const signedIn = Boolean(me.data) && !(me.error instanceof ApiError && me.error.status === 401);
+  const signedIn = Boolean(me.data);
 
   return (
     <div className="flex min-h-screen flex-col">
