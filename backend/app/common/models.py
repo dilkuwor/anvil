@@ -1,5 +1,6 @@
 """Import every ORM model so SQLAlchemy relationship strings resolve."""
 
+from app.cheatsheets.models import CheatSheet, CheatSheetSection, CheatSheetSectionContent
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession
 from app.learn.models import (
     LearningCategory,
@@ -14,6 +15,9 @@ from app.submissions.models import Submission, SubmissionTestResult
 from app.users.models import User
 
 __all__ = [
+    "CheatSheet",
+    "CheatSheetSection",
+    "CheatSheetSectionContent",
     "Activity",
     "InterviewEvent",
     "InterviewMessage",

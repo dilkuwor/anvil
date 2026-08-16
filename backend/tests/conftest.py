@@ -20,6 +20,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 from app.common.database import Base, get_db  # noqa: E402
 from app.common.config import get_settings  # noqa: E402
 from app.main import app  # noqa: E402
+from app.cheatsheets.models import CheatSheet, CheatSheetSection, CheatSheetSectionContent  # noqa: E402
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession  # noqa: E402
 from app.learn.models import (  # noqa: E402
     LearningCategory,

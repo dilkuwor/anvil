@@ -6,6 +6,7 @@ from app.common import models as _models  # noqa: F401
 from app.common.config import get_settings
 from app.common.errors import register_exception_handlers
 from app.common.logging import configure_logging
+from app.cheatsheets.router import router as cheatsheets_router
 from app.interviews.router import router as interviews_router
 from app.learn.router import router as learn_router
 from app.problems.router import router as problems_router
@@ -32,6 +33,7 @@ app.include_router(submissions_router)
 app.include_router(progress_router)
 app.include_router(interviews_router)
 app.include_router(learn_router)
+app.include_router(cheatsheets_router)
 
 
 @app.get("/health")

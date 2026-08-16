@@ -19,6 +19,8 @@ export const queryKeys = {
   learnSearch: (q: string) => ["learn", "search", q] as const,
   learnProgress: ["learn", "progress"] as const,
   learnRoadmap: (key: string) => ["learn", "roadmap", key] as const,
+  cheatSheets: ["cheatsheets"] as const,
+  cheatSheet: (slug: string) => ["cheatsheets", slug] as const,
 };
 
 export const fetchers = {
