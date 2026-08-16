@@ -15,7 +15,7 @@ export function HeroPreview() {
       aria-hidden
       className="w-full min-w-0 max-w-5xl overflow-hidden rounded-2xl border border-steel-800 bg-steel-900"
     >
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-steel-800 px-4 py-2.5 sm:px-5">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-steel-800 px-4 py-2 sm:px-5">
         <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Workspace</p>
         <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
           {WORKFLOW.map((step, index) => (
@@ -27,7 +27,7 @@ export function HeroPreview() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-steel-800 px-4 py-3.5 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-steel-800 px-4 py-3 sm:px-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[15px] font-semibold tracking-tight">Pair Target</p>
@@ -42,17 +42,17 @@ export function HeroPreview() {
       </div>
 
       <div className="grid sm:grid-cols-2">
-        <div className="border-b border-steel-800 px-4 py-3.5 sm:border-b-0 sm:border-r sm:px-5">
+        <div className="border-b border-steel-800 px-4 py-3 sm:border-b-0 sm:border-r sm:px-5">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">System Design</p>
           <p className="mt-1.5 text-sm font-medium">Capacity Estimation</p>
-          <p className="mt-2.5 overflow-x-auto rounded-lg border border-steel-800 bg-steel-950/50 px-3 py-2 font-mono text-[12px] leading-5 text-muted-foreground">
+          <p className="mt-2 overflow-x-auto rounded-lg border border-steel-800 bg-steel-950/50 px-3 py-2 font-mono text-[12px] leading-5 text-muted-foreground">
             QPS = users × actions / 86,400
           </p>
         </div>
 
-        <div className="border-b border-steel-800 px-4 py-3.5 sm:px-5">
+        <div className="border-b border-steel-800 px-4 py-3 sm:px-5">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Mock Interview</p>
-          <dl className="mt-2.5 space-y-2 text-[13px]">
+          <dl className="mt-2 space-y-1.5 text-[13px]">
             {SCORES.map((row) => (
               <div key={row.label} className="flex items-start justify-between gap-3">
                 <dt className="shrink-0 text-muted-foreground">{row.label}</dt>

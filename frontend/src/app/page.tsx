@@ -63,24 +63,27 @@ export default function HomePage() {
                 Practice coding.
                 <br className="hidden sm:block" /> Master the interview.
               </h1>
-              <p className="mt-5 max-w-xl text-[15px] leading-7 text-muted-foreground">
+              <p className="mt-4 max-w-xl text-[15px] leading-7 text-muted-foreground">
                 Everything you need to prepare for software engineering interviews — coding problems, system design,
                 AI/ML, mock interviews, and focused interview review.
               </p>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
                   <Link href="/problems">Start Practicing</Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
                   <Link href="/learn">Explore Learn</Link>
                 </Button>
-                <Button asChild size="lg" variant="ghost" className="max-sm:hidden">
-                  <Link href="/login">Log in</Link>
-                </Button>
+                <Link
+                  href="/login"
+                  className="max-sm:hidden px-1 text-[13px] text-muted-foreground hover:text-foreground"
+                >
+                  Log in
+                </Link>
               </div>
             </div>
 
-            <div className="mt-7 sm:mt-8">
+            <div className="mt-6">
               <HeroPreview />
             </div>
           </div>
@@ -95,7 +98,7 @@ export default function HomePage() {
                   <Link
                     key={item.title}
                     href={item.href}
-                    className="group flex flex-col bg-steel-900 px-5 py-4 transition-colors hover:bg-steel-950/40 sm:px-6 sm:py-5"
+                    className="group flex cursor-pointer flex-col bg-steel-900 px-5 py-4 transition-colors hover:bg-steel-950/55 sm:px-6 sm:py-5"
                   >
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-steel-800 bg-steel-950/50 text-accent transition-colors group-hover:border-accent/30 group-hover:bg-accent/10">
                       <item.icon className="h-4 w-4" aria-hidden />
@@ -112,14 +115,14 @@ export default function HomePage() {
         <section className="border-t border-steel-800">
           <div className="ia-content py-12 lg:py-14">
             <h2 className="text-[1.35rem] font-semibold tracking-tight">Practice with a purpose.</h2>
-            <ol className="mt-8 grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+            <ol className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, index) => (
                 <li key={step.n}>
                   <div className="flex items-center gap-3">
                     <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-accent/25 bg-accent/10 text-[11px] font-medium tabular-nums tracking-[0.08em] text-accent">
                       {step.n}
                     </span>
-                    {index < STEPS.length - 1 ? <span aria-hidden className="hidden h-px flex-1 bg-steel-800 xl:block" /> : null}
+                    {index < STEPS.length - 1 ? <span aria-hidden className="hidden h-px flex-1 bg-steel-800 lg:block" /> : null}
                   </div>
                   <h3 className="mt-3.5 text-sm font-semibold tracking-tight">{step.title}</h3>
                   <p className="mt-1.5 max-w-xs text-[13px] leading-6 text-muted-foreground">{step.body}</p>
@@ -131,7 +134,7 @@ export default function HomePage() {
 
         <section className="border-t border-steel-800">
           <div className="ia-content py-12 lg:py-14">
-            <div className="rounded-2xl border border-steel-800 bg-steel-900 px-6 py-7 sm:px-8 lg:flex lg:items-start lg:justify-between lg:gap-16 lg:px-10 lg:py-8">
+            <div className="rounded-2xl border border-steel-700 bg-steel-900 px-6 py-8 sm:px-8 lg:flex lg:items-start lg:justify-between lg:gap-16 lg:px-10 lg:py-9">
               <h2 className="max-w-[22ch] text-[1.35rem] font-semibold tracking-tight">One workflow for the entire interview loop.</h2>
               <div className="mt-4 max-w-xl lg:mt-0">
                 <p className="text-[15px] leading-7 text-muted-foreground">
