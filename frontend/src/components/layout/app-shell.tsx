@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <div className="flex min-w-0 items-center gap-5">
-            <Link href={signedIn ? "/dashboard" : "/learn"} className="shrink-0 text-sm">
+            <Link href={signedIn ? "/dashboard" : "/"} className="shrink-0 text-sm">
               <BrandMark compact />
             </Link>
             <nav className="flex items-center gap-0.5 overflow-x-auto" aria-label="Primary">

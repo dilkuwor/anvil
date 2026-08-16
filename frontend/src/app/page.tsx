@@ -37,7 +37,7 @@ const STEPS = [
   { n: "01", title: "Solve", body: "Practice realistic interview problems." },
   { n: "02", title: "Learn", body: "Understand the concepts and patterns behind them." },
   { n: "03", title: "Interview", body: "Practice explaining your thinking through mock interviews." },
-  { n: "04", title: "Improve", body: "Use feedback and cheat sheets to target weak areas." },
+  { n: "04", title: "Improve", body: "Review interview feedback, target weak areas, and use cheat sheets." },
 ];
 
 const FOOTER_NAV = [
@@ -57,8 +57,7 @@ export default function HomePage() {
             <div className="absolute left-1/2 top-0 h-[28rem] w-[46rem] -translate-x-1/2 bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_16%,transparent),transparent)]" />
             <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(var(--steel-800)_1px,transparent_1px),linear-gradient(90deg,var(--steel-800)_1px,transparent_1px)] [background-size:52px_52px] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />
           </div>
-
-          <div className="ia-content relative py-16 sm:py-20 lg:py-24">
+          <div className="ia-content relative pt-14 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
             <div className="max-w-2xl">
               <h1 className="text-[2rem] font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-[1.06]">
                 Practice coding.
@@ -68,7 +67,7 @@ export default function HomePage() {
                 Everything you need to prepare for software engineering interviews — coding problems, system design,
                 AI/ML, mock interviews, and focused interview review.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
+              <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
                   <Link href="/problems">Start Practicing</Link>
                 </Button>
@@ -81,28 +80,28 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mt-12 lg:mt-16">
+            <div className="mt-7 sm:mt-8">
               <HeroPreview />
             </div>
           </div>
         </section>
 
         <section>
-          <div className="ia-content py-16 lg:py-20">
+          <div className="ia-content py-12 lg:py-14">
             <h2 className="text-[1.35rem] font-semibold tracking-tight">Everything you need for the interview.</h2>
-            <div className="mt-8 overflow-hidden rounded-2xl border border-steel-800">
+            <div className="mt-6 overflow-hidden rounded-2xl border border-steel-800">
               <div className="grid gap-px bg-steel-800 sm:grid-cols-2">
                 {FEATURES.map((item) => (
                   <Link
                     key={item.title}
                     href={item.href}
-                    className="group flex flex-col bg-steel-900 p-6 transition-colors hover:bg-steel-950/40 sm:p-7"
+                    className="group flex flex-col bg-steel-900 px-5 py-4 transition-colors hover:bg-steel-950/40 sm:px-6 sm:py-5"
                   >
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-steel-800 bg-steel-950/50 text-accent transition-colors group-hover:border-accent/30 group-hover:bg-accent/10">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-steel-800 bg-steel-950/50 text-accent transition-colors group-hover:border-accent/30 group-hover:bg-accent/10">
                       <item.icon className="h-4 w-4" aria-hidden />
                     </span>
-                    <h3 className="mt-5 text-sm font-semibold tracking-tight">{item.title}</h3>
-                    <p className="mt-1.5 max-w-sm text-[13px] leading-6 text-muted-foreground">{item.body}</p>
+                    <h3 className="mt-3.5 text-sm font-semibold tracking-tight">{item.title}</h3>
+                    <p className="mt-1 max-w-sm text-[13px] leading-6 text-muted-foreground">{item.body}</p>
                   </Link>
                 ))}
               </div>
@@ -111,9 +110,9 @@ export default function HomePage() {
         </section>
 
         <section className="border-t border-steel-800">
-          <div className="ia-content py-16 lg:py-20">
+          <div className="ia-content py-12 lg:py-14">
             <h2 className="text-[1.35rem] font-semibold tracking-tight">Practice with a purpose.</h2>
-            <ol className="mt-10 grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+            <ol className="mt-8 grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
               {STEPS.map((step, index) => (
                 <li key={step.n}>
                   <div className="flex items-center gap-3">
@@ -122,7 +121,7 @@ export default function HomePage() {
                     </span>
                     {index < STEPS.length - 1 ? <span aria-hidden className="hidden h-px flex-1 bg-steel-800 xl:block" /> : null}
                   </div>
-                  <h3 className="mt-4 text-sm font-semibold tracking-tight">{step.title}</h3>
+                  <h3 className="mt-3.5 text-sm font-semibold tracking-tight">{step.title}</h3>
                   <p className="mt-1.5 max-w-xs text-[13px] leading-6 text-muted-foreground">{step.body}</p>
                 </li>
               ))}
@@ -131,13 +130,13 @@ export default function HomePage() {
         </section>
 
         <section className="border-t border-steel-800">
-          <div className="ia-content py-16 lg:py-20">
-            <div className="rounded-2xl border border-steel-800 bg-steel-900 px-6 py-8 sm:px-8 sm:py-10 lg:flex lg:items-start lg:justify-between lg:gap-16 lg:px-10">
-              <h2 className="max-w-xs text-[1.35rem] font-semibold tracking-tight">Built for real interview preparation.</h2>
+          <div className="ia-content py-12 lg:py-14">
+            <div className="rounded-2xl border border-steel-800 bg-steel-900 px-6 py-7 sm:px-8 lg:flex lg:items-start lg:justify-between lg:gap-16 lg:px-10 lg:py-8">
+              <h2 className="max-w-[22ch] text-[1.35rem] font-semibold tracking-tight">One workflow for the entire interview loop.</h2>
               <div className="mt-4 max-w-xl lg:mt-0">
                 <p className="text-[15px] leading-7 text-muted-foreground">
-                  InterviewAnvil combines problem solving, technical learning, system design, AI/ML preparation, and mock
-                  interviews into one focused preparation workflow.
+                  Practice problems, learn the underlying concepts, prepare for system design and AI/ML interviews,
+                  simulate interviews, and review your weak areas with focused cheat sheets.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild>
@@ -155,14 +154,20 @@ export default function HomePage() {
 
       <footer className="mt-auto border-t border-steel-800">
         <div className="ia-content flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-          <Link href="/" className="text-sm">
-            <BrandMark compact />
-          </Link>
-          <nav className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[13px] text-muted-foreground" aria-label="Footer">
-            {FOOTER_NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="hover:text-foreground">
-                {item.label}
-              </Link>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Link href="/" className="text-sm">
+              <BrandMark compact />
+            </Link>
+            <p className="text-[12px] text-muted-foreground">© 2026 InterviewAnvil</p>
+          </div>
+          <nav className="flex flex-wrap items-center text-[13px] text-muted-foreground" aria-label="Footer">
+            {FOOTER_NAV.map((item, index) => (
+              <span key={item.href} className="inline-flex items-center">
+                {index > 0 ? <span aria-hidden className="px-2">·</span> : null}
+                <Link href={item.href} className="hover:text-foreground">
+                  {item.label}
+                </Link>
+              </span>
             ))}
           </nav>
         </div>
