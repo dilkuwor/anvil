@@ -1,12 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import { Breadcrumbs, PageHeader } from "@/components/layout/page-header";
 import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
-import { asStringList, asTable, type CheatSheetBlock, type CheatSheetDetail } from "@/lib/cheatsheets";
+import {
+  asStringList,
+  asTable,
+  type CheatSheetBlock,
+  type CheatSheetDetail,
+} from "@/lib/cheatsheets";
 import { queryKeys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +27,41 @@ export function CheatSheetView({ slug }: { slug: string }) {
     return <ErrorState message="Unable to load this cheat sheet." onRetry={() => sheet.refetch()} />;
   }
 
-  const data = sheet.data;
+  return <CheatSheetBody data={sheet.data} />;
+}
+
+function CheatSheetBody({ data }: { data: CheatSheetDetail }) {
+  const [activeSlug, setActiveSlug] = useState(() => {
+    if (typeof window === "undefined") return data.sections[0]?.slug ?? "";
+    const hash = window.location.hash.replace(/^#/, "");
+    return data.sections.some((section) => section.slug === hash) ? hash : (data.sections[0]?.slug ?? "");
+  });
+
+  useEffect(() => {
+    const nodes = data.sections
+      .map((section) => document.getElementById(section.slug))
+      .filter((node): node is HTMLElement => Boolean(node));
+    if (!nodes.length) return;
+
+    const visible = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            visible.set(entry.target.id, entry.boundingClientRect.top);
+          } else {
+            visible.delete(entry.target.id);
+          }
+        }
+        if (!visible.size) return;
+        const next = [...visible.entries()].sort((left, right) => Math.abs(left[1] - 96) - Math.abs(right[1] - 96))[0]?.[0];
+        if (next) setActiveSlug(next);
+      },
+      { rootMargin: "-64px 0px -55% 0px", threshold: [0, 0.15, 0.35, 0.6, 1] },
+    );
+    for (const node of nodes) observer.observe(node);
+    return () => observer.disconnect();
+  }, [data.sections]);
 
   return (
     <div className="space-y-5">
@@ -37,30 +77,41 @@ export function CheatSheetView({ slug }: { slug: string }) {
       <div className="grid items-start gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
         <nav
           aria-label="Sections"
-          className="xl:sticky xl:top-16 rounded-2xl border border-steel-800 bg-steel-900 p-4"
+          className="rounded-2xl border border-steel-800 bg-steel-900 p-4 xl:sticky xl:top-16"
         >
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">On this sheet</p>
-          <ol className="mt-3 space-y-1.5 text-[13px] leading-5">
-            {data.sections.map((section, index) => (
-              <li key={section.slug}>
-                <a href={`#${section.slug}`} className="text-muted-foreground hover:text-accent">
-                  {index + 1}. {section.title}
-                </a>
-              </li>
-            ))}
+          <ol className="mt-3 max-h-[70vh] space-y-0.5 overflow-y-auto text-[13px] leading-5">
+            {data.sections.map((section, index) => {
+              const active = section.slug === activeSlug;
+              return (
+                <li key={section.slug}>
+                  <a
+                    href={`#${section.slug}`}
+                    aria-current={active ? "true" : undefined}
+                    onClick={() => setActiveSlug(section.slug)}
+                    className={cn(
+                      "block rounded-md border-l-2 px-2 py-1",
+                      active
+                        ? "border-accent bg-accent/5 font-medium text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-accent",
+                    )}
+                  >
+                    {index + 1}. {section.title}
+                  </a>
+                </li>
+              );
+            })}
           </ol>
         </nav>
 
         <div className="space-y-4">
           {data.sections.map((section) => (
-            <SectionCard key={section.slug} className="scroll-mt-20">
-              <div id={section.slug} className="scroll-mt-20">
-                <h2 className="text-[15px] font-semibold tracking-tight">{section.title}</h2>
-                <div className="mt-4 space-y-4">
-                  {section.blocks.map((block, index) => (
-                    <Block key={`${section.slug}-${index}`} block={block} />
-                  ))}
-                </div>
+            <SectionCard key={section.slug} id={section.slug} className="scroll-mt-16">
+              <h2 className="text-[15px] font-semibold tracking-tight">{section.title}</h2>
+              <div className="mt-4 space-y-4">
+                {section.blocks.map((block, index) => (
+                  <Block key={`${section.slug}-${index}`} block={block} />
+                ))}
               </div>
             </SectionCard>
           ))}

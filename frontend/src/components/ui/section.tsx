@@ -3,12 +3,14 @@ import { cn } from "@/lib/utils";
 export function SectionCard({
   children,
   className,
+  id,
 }: {
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <section className={cn("overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 p-5", className)}>
+    <section id={id} className={cn("overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 p-5", className)}>
       {children}
     </section>
   );
