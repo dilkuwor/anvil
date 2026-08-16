@@ -51,25 +51,16 @@ export function TopicView({ slug }: { slug: string }) {
             </span>
           }
         />
+        <Meter
+          value={data.percent}
+          tone={data.status === "COMPLETED" ? "bg-success" : "bg-accent"}
+          label={`${data.title} complete`}
+          className="h-1.5"
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <SectionCard className="p-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-steel-800 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                <span>Topic progress</span>
-                <span className="tabular-nums text-muted-foreground">{data.percent}%</span>
-              </div>
-              <div className="mt-2">
-                <Meter
-                  value={data.percent}
-                  tone={data.status === "COMPLETED" ? "bg-success" : "bg-accent"}
-                  label={`${data.title} complete`}
-                />
-              </div>
-            </div>
-          </div>
           <ol>
             {data.lessons.map((lesson, index) => (
               <li key={lesson.id} className="border-t border-steel-800 first:border-t-0">

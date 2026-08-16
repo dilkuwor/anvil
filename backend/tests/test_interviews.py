@@ -153,6 +153,64 @@ def test_problem_context_omits_secret_solution():
     assert "hidden" not in context.lower()
 
 
+def _seed_pair_target(db) -> Problem:
+    problem = Problem(
+        title="Pair Target",
+        slug="pair-target",
+        description="Find two numbers that add to target.",
+        difficulty="EASY",
+        constraints="2 <= nums.length <= 10^4",
+        input_format="nums and target",
+        output_format="two indices",
+        starter_code="class Solution {}",
+        function_signature={"method_name": "twoSum"},
+        hints=["Use a HashMap."],
+        examples=[{"input": "[2,7,11,15], 9", "output": "[0,1]", "explanation": "2+7"}],
+        reference_solution="SECRET",
+        is_active=True,
+    )
+    db.add(problem)
+    db.commit()
+    return problem
+
+
+def test_preview_interview_is_public_and_limited(client, db, monkeypatch):
+    _seed_pair_target(db)
+    monkeypatch.setattr(service.ollama, "interviewer_reply", lambda *args, **kwargs: "What would you try first?")
+
+    started = client.post("/api/v1/interviews/preview")
+    assert started.status_code == 200
+    body = started.json()
+    assert body["problem_slug"] == "pair-target"
+    assert body["messages"][0]["role"] == "INTERVIEWER"
+    session_id = body["id"]
+
+    fetched = client.get(f"/api/v1/interviews/preview/{session_id}")
+    assert fetched.status_code == 200
+
+    for index in range(4):
+        reply = client.post(
+            f"/api/v1/interviews/preview/{session_id}/messages",
+            json={"content": f"I would use a hash map on turn {index}."},
+        )
+        assert reply.status_code == 200
+
+    blocked = client.post(
+        f"/api/v1/interviews/preview/{session_id}/messages",
+        json={"content": "One more thought."},
+    )
+    assert blocked.status_code == 401
+    assert blocked.json()["error"]["code"] == "login_required"
+
+
+def test_preview_interview_cannot_use_authed_routes(client, db, monkeypatch):
+    _seed_pair_target(db)
+    monkeypatch.setattr(service.ollama, "interviewer_reply", lambda *args, **kwargs: "Explain the problem.")
+    session_id = client.post("/api/v1/interviews/preview").json()["id"]
+    denied = client.get(f"/api/v1/interviews/{session_id}")
+    assert denied.status_code == 401
+
+
 def test_timer_uses_backend_start_time(auth_client, db, monkeypatch):
     problem = _seed_problem(db)
     monkeypatch.setattr(service.ollama, "interviewer_reply", lambda *args, **kwargs: "Let's begin.")

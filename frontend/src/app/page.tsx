@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Binary, MessageSquare, Network, Sparkles } from "lucide-react";
+import { Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles } from "lucide-react";
 
 import { HeroPreview } from "@/components/landing/hero-preview";
+import { HomeGate } from "@/components/landing/home-gate";
 import { PublicHeader } from "@/components/layout/public-header";
 import { BrandMark } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
@@ -34,10 +35,10 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: "01", title: "Solve", body: "Practice realistic interview problems." },
-  { n: "02", title: "Learn", body: "Understand the concepts and patterns behind them." },
-  { n: "03", title: "Interview", body: "Practice explaining your thinking through mock interviews." },
-  { n: "04", title: "Improve", body: "Review interview feedback, target weak areas, and use cheat sheets." },
+  { n: "01", title: "Solve", body: "Practice realistic interview problems.", icon: Code2 },
+  { n: "02", title: "Learn", body: "Understand the concepts and patterns behind them.", icon: BookOpen },
+  { n: "03", title: "Interview", body: "Practice explaining your thinking through mock interviews.", icon: MessageSquare },
+  { n: "04", title: "Improve", body: "Review interview feedback, target weak areas, and use cheat sheets.", icon: ListChecks },
 ];
 
 const FOOTER_NAV = [
@@ -49,6 +50,7 @@ const FOOTER_NAV = [
 
 export default function HomePage() {
   return (
+    <HomeGate>
     <div className="flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-clip">
       <PublicHeader />
       <main>
@@ -89,22 +91,27 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section>
-          <div className="ia-content py-12 lg:py-14">
-            <h2 className="text-[1.35rem] font-semibold tracking-tight">Everything you need for the interview.</h2>
+        <section className="border-b border-steel-800 bg-steel-900">
+          <div className="ia-content py-10 lg:py-12">
+            <p className="text-center text-[11px] font-medium uppercase tracking-[0.16em] text-accent">Features</p>
+            <h2 className="mt-1.5 text-center text-xl font-semibold tracking-tight sm:text-2xl">
+              Everything you need for the interview.
+            </h2>
             <div className="mt-6 overflow-hidden rounded-2xl border border-steel-800">
               <div className="grid gap-px bg-steel-800 sm:grid-cols-2">
                 {FEATURES.map((item) => (
                   <Link
                     key={item.title}
                     href={item.href}
-                    className="group flex cursor-pointer flex-col bg-steel-900 px-5 py-4 transition-colors hover:bg-steel-950/55 sm:px-6 sm:py-5"
+                    className="group flex cursor-pointer items-start gap-3.5 bg-steel-900 px-5 py-5 transition-colors hover:bg-steel-950/60 sm:px-6 sm:py-6"
                   >
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-steel-800 bg-steel-950/50 text-accent transition-colors group-hover:border-accent/30 group-hover:bg-accent/10">
-                      <item.icon className="h-4 w-4" aria-hidden />
+                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 text-accent transition-colors group-hover:border-accent/35 group-hover:bg-accent/15">
+                      <item.icon className="h-5 w-5" aria-hidden />
                     </span>
-                    <h3 className="mt-3.5 text-sm font-semibold tracking-tight">{item.title}</h3>
-                    <p className="mt-1 max-w-sm text-[13px] leading-6 text-muted-foreground">{item.body}</p>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold tracking-tight">{item.title}</h3>
+                      <p className="mt-1 max-w-sm text-[13px] leading-6 text-muted-foreground">{item.body}</p>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -112,30 +119,46 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="border-t border-steel-800">
-          <div className="ia-content py-12 lg:py-14">
-            <h2 className="text-[1.35rem] font-semibold tracking-tight">Practice with a purpose.</h2>
-            <ol className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {STEPS.map((step, index) => (
-                <li key={step.n}>
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-accent/25 bg-accent/10 text-[11px] font-medium tabular-nums tracking-[0.08em] text-accent">
-                      {step.n}
-                    </span>
-                    {index < STEPS.length - 1 ? <span aria-hidden className="hidden h-px flex-1 bg-steel-800 lg:block" /> : null}
-                  </div>
-                  <h3 className="mt-3.5 text-sm font-semibold tracking-tight">{step.title}</h3>
-                  <p className="mt-1.5 max-w-xs text-[13px] leading-6 text-muted-foreground">{step.body}</p>
-                </li>
-              ))}
+        <section className="border-b border-steel-800 bg-[color-mix(in_srgb,var(--accent)_5%,var(--background))]">
+          <div className="ia-content py-8 lg:py-10">
+            <p className="text-center text-[11px] font-medium uppercase tracking-[0.16em] text-accent">How it works</p>
+            <h2 className="mt-1.5 text-center text-xl font-semibold tracking-tight sm:text-2xl">Practice with a purpose.</h2>
+            <ol className="mt-5 flex flex-col md:flex-row">
+              {STEPS.map((step, index) => {
+                const last = index === STEPS.length - 1;
+                return (
+                  <li key={step.n} className="flex min-w-0 gap-4 md:flex-1 md:flex-col">
+                    <div className="flex flex-col items-center md:flex-row md:items-center">
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/25 bg-steel-900 text-accent">
+                        <step.icon className="h-4 w-4" aria-hidden />
+                      </span>
+                      {last ? null : (
+                        <span
+                          aria-hidden
+                          className="w-px min-h-6 flex-1 bg-steel-700 md:mx-3 md:h-px md:min-h-0 md:w-auto md:min-w-4 md:flex-1"
+                        />
+                      )}
+                    </div>
+                    <div className={last ? "pb-0 pt-0.5 md:pt-3" : "pb-6 pt-0.5 md:pb-0 md:pr-4 md:pt-3"}>
+                      <p className="text-[11px] font-medium tabular-nums tracking-[0.12em] text-accent">{step.n}</p>
+                      <h3 className="mt-0.5 text-sm font-semibold tracking-tight">{step.title}</h3>
+                      <p className="mt-1 max-w-[18ch] text-[13px] leading-5 text-muted-foreground md:max-w-none">
+                        {step.body}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           </div>
         </section>
 
-        <section className="border-t border-steel-800">
-          <div className="ia-content py-12 lg:py-14">
-            <div className="rounded-2xl border border-steel-700 bg-steel-900 px-6 py-8 sm:px-8 lg:flex lg:items-start lg:justify-between lg:gap-16 lg:px-10 lg:py-9">
-              <h2 className="max-w-[22ch] text-[1.35rem] font-semibold tracking-tight">One workflow for the entire interview loop.</h2>
+        <section className="bg-[color-mix(in_srgb,var(--accent)_8%,var(--steel-900))]">
+          <div className="ia-content py-14 lg:py-16">
+            <div className="rounded-2xl border border-steel-800 bg-[color-mix(in_srgb,var(--accent)_6%,var(--steel-900))] px-6 py-8 sm:px-8 lg:flex lg:items-start lg:justify-between lg:gap-16 lg:px-10 lg:py-10">
+              <h2 className="max-w-[22ch] text-xl font-semibold tracking-tight sm:text-2xl">
+                One workflow for the entire interview loop.
+              </h2>
               <div className="mt-4 max-w-xl lg:mt-0">
                 <p className="text-[15px] leading-7 text-muted-foreground">
                   Practice problems, learn the underlying concepts, prepare for system design and AI/ML interviews,
@@ -176,5 +199,6 @@ export default function HomePage() {
         </div>
       </footer>
     </div>
+    </HomeGate>
   );
 }

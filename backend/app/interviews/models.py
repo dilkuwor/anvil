@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,8 +13,8 @@ class InterviewSession(Base):
     __tablename__ = "interview_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
     )
     problem_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("problems.id", ondelete="CASCADE"), index=True, nullable=False
@@ -32,6 +32,7 @@ class InterviewSession(Base):
     last_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
     wrong_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     candidate_turns: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_preview: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     followups_asked: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     feedback: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

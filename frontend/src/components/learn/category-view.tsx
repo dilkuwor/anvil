@@ -34,17 +34,8 @@ export function CategoryView({ slug }: { slug: string }) {
           description={data.description}
           meta={`${data.completed_lessons}/${data.lesson_count} lessons`}
         />
+        <Meter value={data.percent} label={`${data.title} lessons complete`} className="h-1.5" />
       </div>
-
-      <SectionCard>
-        <div className="flex items-baseline justify-between text-[13px]">
-          <span>Overall progress</span>
-          <span className="tabular-nums text-muted-foreground">{data.percent}%</span>
-        </div>
-        <div className="mt-2">
-          <Meter value={data.percent} label={`${data.title} lessons complete`} />
-        </div>
-      </SectionCard>
 
       <SectionCard className="p-0">
         <div className="hidden md:block">
@@ -112,13 +103,12 @@ export function CategoryView({ slug }: { slug: string }) {
                   {topic.completed_lessons}/{topic.lesson_count}
                 </span>
               </div>
-              <div className="mt-2">
-                <Meter
-                  value={topic.percent}
-                  tone={topic.status === "COMPLETED" ? "bg-success" : "bg-accent"}
-                  label={`${topic.title} complete`}
-                />
-              </div>
+              <Meter
+                value={topic.percent}
+                tone={topic.status === "COMPLETED" ? "bg-success" : "bg-accent"}
+                label={`${topic.title} complete`}
+                className="mt-2"
+              />
             </Link>
           ))}
         </div>

@@ -21,7 +21,7 @@ def test_register_login_me_logout(client):
 
     login = client.post(
         "/api/v1/auth/login",
-        json={"email": "sam@example.com", "password": "supersecret"},
+        json={"username": "sam", "password": "supersecret"},
     )
     assert login.status_code == 200
     assert client.get("/api/v1/auth/me").json()["email"] == "sam@example.com"
@@ -35,7 +35,7 @@ def test_login_rejects_bad_password(client):
     client.post("/api/v1/auth/logout")
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": "sam@example.com", "password": "wrong-password"},
+        json={"username": "sam", "password": "wrong-password"},
     )
     assert response.status_code == 401
     assert "password" not in response.text.lower() or "Invalid" in response.json()["error"]["message"]

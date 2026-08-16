@@ -26,11 +26,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
             <ThemeToggle />
-            {signedIn ? (
-              <Button asChild size="sm" variant="ghost">
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-            ) : (
+            {signedIn ? null : (
               <>
                 <Button asChild size="sm" variant="ghost">
                   <Link href="/login">Log in</Link>

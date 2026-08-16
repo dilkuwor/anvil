@@ -68,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  const nav = signedIn ? [{ href: "/dashboard", label: "Dashboard" }, ...PUBLIC_NAV] : PUBLIC_NAV;
+  const nav = PUBLIC_NAV;
 
   return (
     <div className="flex min-h-screen flex-col">

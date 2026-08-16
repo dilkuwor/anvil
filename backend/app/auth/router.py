@@ -64,10 +64,10 @@ def register(payload: RegisterRequest, response: Response, db: Session = Depends
 
 @router.post("/login", response_model=UserOut)
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)) -> User:
-    email = payload.email.lower().strip()
-    user = db.scalar(select(User).where(func.lower(User.email) == email))
+    username = payload.username.strip()
+    user = db.scalar(select(User).where(func.lower(User.username) == username.lower()))
     if user is None or not user.is_active or not verify_password(payload.password, user.password_hash):
-        raise UnauthorizedError("Invalid email or password.")
+        raise UnauthorizedError("Invalid username or password.")
     _set_auth_cookie(response, create_access_token(user.id))
     return user
 

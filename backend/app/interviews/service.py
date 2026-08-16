@@ -60,34 +60,53 @@ PHASE_GUIDANCE = {
 }
 
 
+PREVIEW_PROBLEM_SLUG = "pair-target"
+PREVIEW_TURN_LIMIT = 4
+
+
 def start_session(db: Session, user_id: UUID, problem_id: UUID) -> InterviewSession:
     problem = _get_problem(db, problem_id)
     existing = get_active_session(db, user_id, problem_id)
     if existing is not None and existing.ended_at is None:
         return existing
+    session = _open_new_session(db, problem, user_id, is_preview=False)
+    return _load_session(db, session.id, user_id)
 
-    settings = get_settings()
-    session = InterviewSession(
-        user_id=user_id,
-        problem_id=problem.id,
-        phase=InterviewPhase.INTRO.value,
-        duration_seconds=settings.interview_duration_seconds,
-        started_at=_now(),
-    )
-    db.add(session)
-    db.flush()
-    _add_event(session, InterviewEventType.MESSAGE, {"kind": "start"})
-    intro = _ask_interviewer(
+
+def start_preview_session(db: Session, slug: str = PREVIEW_PROBLEM_SLUG) -> InterviewSession:
+    problem = db.scalar(select(Problem).where(Problem.slug == slug, Problem.is_active.is_(True)))
+    if problem is None:
+        raise NotFoundError("Problem not found.")
+    session = _open_new_session(db, problem, None, is_preview=True)
+    return _load_preview_session(db, session.id)
+
+
+def get_preview_session(db: Session, session_id: UUID) -> InterviewSession:
+    return _load_preview_session(db, session_id)
+
+
+def add_preview_message(db: Session, session_id: UUID, content: str) -> InterviewSession:
+    session = get_preview_session(db, session_id)
+    _ensure_open(session)
+    if session.candidate_turns >= PREVIEW_TURN_LIMIT:
+        raise AppError("Log in to continue this mock interview.", status_code=401, code="login_required")
+    problem = _get_problem(db, session.problem_id)
+    text = content.strip()
+    _add_message(session, InterviewMessageRole.CANDIDATE, text)
+    session.candidate_turns += 1
+    _add_event(session, InterviewEventType.MESSAGE, {"role": "CANDIDATE", "preview": True})
+    current = session.phase
+    reply = _ask_interviewer(
         problem,
         session,
-        event_note="The interview is starting. Give your opening.",
-        fallback=_fallback_intro(problem),
+        event_note=f"Candidate just spoke. Current phase: {current}. This is a short public preview.",
+        fallback=_fallback_after_message(problem, current),
     )
-    _add_message(session, InterviewMessageRole.INTERVIEWER, intro)
-    session.phase = InterviewPhase.UNDERSTANDING.value
+    _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
+    _advance_after_candidate(session, current)
     db.commit()
     db.refresh(session)
-    return _load_session(db, session.id, user_id)
+    return session
 
 
 def get_active_session(db: Session, user_id: UUID, problem_id: UUID) -> InterviewSession | None:
@@ -340,7 +359,7 @@ def _complete(db: Session, session: InterviewSession, problem: Problem) -> None:
 
 
 def _expire_if_needed(db: Session, session: InterviewSession) -> None:
-    if session.ended_at is not None:
+    if session.ended_at is not None or session.is_preview:
         return
     if remaining_seconds(session) > 0:
         return
@@ -688,6 +707,49 @@ def _add_event(session: InterviewSession, event_type: InterviewEventType, payloa
     )
     session.events.append(event)
     return event
+
+
+def _open_new_session(
+    db: Session,
+    problem: Problem,
+    user_id: UUID | None,
+    *,
+    is_preview: bool,
+) -> InterviewSession:
+    settings = get_settings()
+    session = InterviewSession(
+        user_id=user_id,
+        problem_id=problem.id,
+        phase=InterviewPhase.INTRO.value,
+        duration_seconds=settings.interview_duration_seconds,
+        is_preview=is_preview,
+        started_at=_now(),
+    )
+    db.add(session)
+    db.flush()
+    _add_event(session, InterviewEventType.MESSAGE, {"kind": "start", "preview": is_preview})
+    intro = _ask_interviewer(
+        problem,
+        session,
+        event_note="The interview is starting. Give your opening.",
+        fallback=_fallback_intro(problem),
+    )
+    _add_message(session, InterviewMessageRole.INTERVIEWER, intro)
+    session.phase = InterviewPhase.UNDERSTANDING.value
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def _load_preview_session(db: Session, session_id: UUID) -> InterviewSession:
+    session = db.scalar(
+        select(InterviewSession)
+        .options(selectinload(InterviewSession.messages), selectinload(InterviewSession.events))
+        .where(InterviewSession.id == session_id, InterviewSession.is_preview.is_(True))
+    )
+    if session is None:
+        raise NotFoundError("Interview session not found.")
+    return session
 
 
 def _get_problem(db: Session, problem_id: UUID) -> Problem:

@@ -28,7 +28,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       if (mode === "register") {
         return api.post<User>("/api/v1/auth/register", { email, username, password });
       }
-      return api.post<User>("/api/v1/auth/login", { email, password });
+      return api.post<User>("/api/v1/auth/login", { username, password });
     },
     onSuccess: (user) => {
       queryClient.setQueryData(queryKeys.me, user);
@@ -60,23 +60,30 @@ export function AuthForm({ mode }: { mode: Mode }) {
               mutation.mutate();
             }}
           >
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
             {mode === "register" ? (
               <div className="space-y-1.5">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  minLength={3}
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
             ) : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                minLength={mode === "register" ? 3 : 1}
+                required
+              />
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <Input

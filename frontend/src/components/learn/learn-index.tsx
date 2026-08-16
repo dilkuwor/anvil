@@ -86,37 +86,43 @@ export function LearnIndex() {
           </div>
         ) : (
           <div className="grid gap-px bg-steel-800 sm:grid-cols-2">
-            {categories.data?.map((category) => {
-              const percent = category.lesson_count
-                ? Math.round((100 * category.completed_lessons) / category.lesson_count)
-                : 0;
-              return (
-                <Link
-                  key={category.id}
-                  href={`/learn/${category.slug}`}
-                  className="flex flex-col bg-steel-900 p-5 hover:bg-steel-950/40"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-steel-800 bg-steel-950/50 text-accent">
-                      <CategoryIcon name={category.icon} />
+            {categories.data?.map((category) => (
+              <Link
+                key={category.id}
+                href={`/learn/${category.slug}`}
+                className="flex flex-col bg-steel-900 p-5 hover:bg-steel-950/40"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-steel-800 bg-steel-950/50 text-accent">
+                    <CategoryIcon name={category.icon} />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold tracking-tight">{category.title}</h2>
+                    <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{category.description}</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-baseline justify-between text-[12px] text-muted-foreground">
+                    <span>
+                      {category.topic_count} topics · {category.lesson_count} lessons
                     </span>
-                    <div className="min-w-0">
-                      <h2 className="text-sm font-semibold tracking-tight">{category.title}</h2>
-                      <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{category.description}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-baseline justify-between text-[12px] text-muted-foreground">
-                      <span>
-                        {category.topic_count} topics · {category.lesson_count} lessons
+                    {signedIn ? (
+                      <span className="tabular-nums">
+                        {category.completed_lessons}/{category.lesson_count}
                       </span>
-                      <span className="tabular-nums">{percent}%</span>
-                    </div>
-                    <Meter value={percent} label={`${category.title} progress`} />
+                    ) : null}
                   </div>
-                </Link>
-              );
-            })}
+                  <Meter
+                    value={
+                      category.lesson_count
+                        ? Math.round((100 * category.completed_lessons) / category.lesson_count)
+                        : 0
+                    }
+                    label={`${category.title} progress`}
+                  />
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </SectionCard>

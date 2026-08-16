@@ -18,6 +18,28 @@ from app.users.models import User
 router = APIRouter(prefix="/api/v1/interviews", tags=["interviews"])
 
 
+@router.post("/preview", response_model=InterviewSessionOut)
+def start_preview_interview(db: Session = Depends(get_db)) -> InterviewSessionOut:
+    session = service.start_preview_session(db)
+    return service.serialize(db, session)
+
+
+@router.get("/preview/{session_id}", response_model=InterviewSessionOut)
+def get_preview_interview(session_id: UUID, db: Session = Depends(get_db)) -> InterviewSessionOut:
+    session = service.get_preview_session(db, session_id)
+    return service.serialize(db, session)
+
+
+@router.post("/preview/{session_id}/messages", response_model=InterviewSessionOut)
+def send_preview_interview_message(
+    session_id: UUID,
+    payload: InterviewMessageRequest,
+    db: Session = Depends(get_db),
+) -> InterviewSessionOut:
+    session = service.add_preview_message(db, session_id, payload.content)
+    return service.serialize(db, session)
+
+
 @router.post("", response_model=InterviewSessionOut)
 def start_interview(
     payload: StartInterviewRequest,
