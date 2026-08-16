@@ -21,6 +21,20 @@ def get_token_from_request(request: Request) -> str | None:
     return None
 
 
+def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User | None:
+    token = get_token_from_request(request)
+    if not token:
+        return None
+    try:
+        user_id: UUID = decode_access_token(token)
+    except Exception:
+        return None
+    user = db.get(User, user_id)
+    if user is None or not user.is_active:
+        return None
+    return user
+
+
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     token = get_token_from_request(request)
     if not token:

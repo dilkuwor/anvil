@@ -12,6 +12,7 @@ from app.learn.router import router as learn_router
 from app.problems.router import router as problems_router
 from app.progress.router import router as progress_router
 from app.submissions.router import router as submissions_router
+from app.users.router import router as users_router
 
 settings = get_settings()
 configure_logging(settings)
@@ -34,6 +35,7 @@ app.include_router(progress_router)
 app.include_router(interviews_router)
 app.include_router(learn_router)
 app.include_router(cheatsheets_router)
+app.include_router(users_router)
 
 
 @app.get("/health")

@@ -6,7 +6,25 @@ import { UserAvatar } from "@/components/settings/user-avatar";
 import { SectionCard } from "@/components/ui/section";
 import type { User } from "@/lib/api";
 
-export function ProfileCard({ user }: { user: User }) {
+export type PublicProfileUser = {
+  username: string;
+  display_name?: string | null;
+  country?: string | null;
+  linkedin_url?: string | null;
+  github_url?: string | null;
+  website_url?: string | null;
+  has_avatar?: boolean;
+};
+
+export function ProfileCard({
+  user,
+  publicView = false,
+  isOwner = false,
+}: {
+  user: User | PublicProfileUser;
+  publicView?: boolean;
+  isOwner?: boolean;
+}) {
   const name = user.display_name?.trim() || user.username;
   const links = [
     user.linkedin_url ? { href: user.linkedin_url, label: "LinkedIn" } : null,
@@ -17,15 +35,25 @@ export function ProfileCard({ user }: { user: User }) {
   return (
     <SectionCard>
       <div className="flex flex-col items-center text-center">
-        <UserAvatar user={user} size="xl" />
+        <UserAvatar
+          user={user}
+          size="xl"
+          src={
+            publicView && user.has_avatar
+              ? `/api/v1/users/${encodeURIComponent(user.username)}/avatar`
+              : undefined
+          }
+        />
         <h2 className="mt-4 text-base font-semibold tracking-tight">{name}</h2>
         <p className="mt-0.5 text-[13px] text-muted-foreground">@{user.username}</p>
       </div>
 
-      <dl className="mt-5 space-y-3 border-t border-steel-800 pt-4 text-[13px]">
-        <Row label="Email" value={user.email} />
-        {user.country ? <Row label="Country" value={user.country} /> : null}
-      </dl>
+      {user.country || (!publicView && "email" in user && user.email) ? (
+        <dl className="mt-5 space-y-3 border-t border-steel-800 pt-4 text-[13px]">
+          {!publicView && "email" in user && user.email ? <Row label="Email" value={user.email} /> : null}
+          {user.country ? <Row label="Country" value={user.country} /> : null}
+        </dl>
+      ) : null}
 
       {links.length ? (
         <ul className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[13px]">
@@ -39,12 +67,20 @@ export function ProfileCard({ user }: { user: User }) {
         </ul>
       ) : null}
 
-      <Link
-        href="/settings"
-        className="mt-5 block text-center text-[12px] text-muted-foreground hover:text-accent"
-      >
-        Edit profile
-      </Link>
+      {!publicView ? (
+        <div className="mt-5 space-y-2 text-center text-[12px]">
+          <Link href={`/u/${user.username}`} className="block text-muted-foreground hover:text-accent">
+            Public profile
+          </Link>
+          <Link href="/settings" className="block text-muted-foreground hover:text-accent">
+            Edit profile
+          </Link>
+        </div>
+      ) : isOwner ? (
+        <Link href="/settings" className="mt-5 block text-center text-[12px] text-muted-foreground hover:text-accent">
+          Edit profile
+        </Link>
+      ) : null}
     </SectionCard>
   );
 }

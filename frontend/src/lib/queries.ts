@@ -21,6 +21,7 @@ export const queryKeys = {
   learnRoadmap: (key: string) => ["learn", "roadmap", key] as const,
   cheatSheets: ["cheatsheets"] as const,
   cheatSheet: (slug: string) => ["cheatsheets", slug] as const,
+  publicProfile: (username: string) => ["public-profile", username] as const,
 };
 
 export const fetchers = {
