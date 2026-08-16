@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { PageLoader } from "@/components/ui/state";
 import { api, type SubmissionDetail, type SubmissionListResponse } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 import { formatRuntime, formatTimestamp, statusLabel } from "@/lib/utils";
@@ -25,7 +26,7 @@ export function SubmissionHistory({
     enabled: Boolean(openId),
   });
 
-  if (list.isLoading) return <p className="text-muted-foreground">Loading submissions…</p>;
+  if (list.isLoading) return <PageLoader variant="inline" />;
   if (!list.data?.items.length) return <p className="text-muted-foreground">No submissions yet.</p>;
 
   return (

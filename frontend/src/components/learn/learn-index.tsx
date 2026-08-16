@@ -9,7 +9,7 @@ import { CategoryIcon } from "@/components/learn/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Input } from "@/components/ui/input";
 import { SectionCard } from "@/components/ui/section";
-import { CardSkeleton, ErrorState } from "@/components/ui/state";
+import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { LearningCategoryCard, LearningProgressSummary, LearningSearchResponse } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
@@ -62,7 +62,7 @@ export function LearnIndex() {
 
         {searching ? (
           <div className="divide-y divide-steel-800">
-            {search.isLoading ? <p className="px-4 py-8 text-center text-sm text-muted-foreground">Searching…</p> : null}
+            {search.isLoading ? <PageLoader variant="inline" /> : null}
             {search.data && search.data.items.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">No matches for “{trimmed}”.</p>
             ) : null}

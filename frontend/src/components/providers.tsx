@@ -19,7 +19,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
               return failureCount < 2;
             },
             refetchOnWindowFocus: false,
-            staleTime: 15_000,
+            staleTime: 60_000,
+            gcTime: 10 * 60_000,
           },
         },
       }),

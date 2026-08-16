@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { UserAvatar } from "@/components/settings/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/ui/section";
+import { PageLoader } from "@/components/ui/state";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, type User } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
@@ -41,11 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   if (me.isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground" aria-busy="true">
-        Loading workspace…
-      </div>
-    );
+    return <PageLoader variant="screen" />;
   }
 
   if (me.isError) {

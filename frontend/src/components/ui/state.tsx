@@ -1,5 +1,29 @@
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+export function PageLoader({
+  variant = "page",
+}: {
+  variant?: "screen" | "page" | "inline";
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center",
+        variant === "screen" && "min-h-screen",
+        variant === "page" && "min-h-[16rem]",
+        variant === "inline" && "py-10",
+      )}
+      aria-busy="true"
+      aria-label="Loading"
+    >
+      <span className="relative inline-flex h-8 w-8">
+        <span className="absolute inset-0 rounded-full border-2 border-steel-800" />
+        <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-accent" />
+      </span>
+    </div>
+  );
+}
 
 export function EmptyState({ title, body }: { title: string; body: string }) {
   return (
@@ -23,12 +47,6 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   );
 }
 
-export function CardSkeleton({ rows = 3 }: { rows?: number }) {
-  return (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading">
-      {Array.from({ length: rows }).map((_, index) => (
-        <Skeleton key={index} className="h-16 w-full" />
-      ))}
-    </div>
-  );
+export function CardSkeleton({ rows = 3 }: { rows?: number } = {}) {
+  return <PageLoader key={rows} />;
 }
