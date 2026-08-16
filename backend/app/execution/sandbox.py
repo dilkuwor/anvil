@@ -77,6 +77,8 @@ def execute_java(
         timeout_seconds=settings.code_runner_timeout_seconds,
         memory_mb=settings.code_runner_memory_mb,
         cpus=settings.code_runner_cpus,
+        job_dir=settings.code_runner_job_dir,
+        host_job_dir=settings.code_runner_host_job_dir,
         submission_id=submission_id,
     )
 
@@ -91,6 +93,28 @@ def _execute_via_http(payload: dict, url: str, timeout: int) -> SandboxResult:
         return _internal_error("Unable to execute submission.")
 
 
+def _prepare_workdir(job_dir: str = "", host_job_dir: str = "") -> tuple[Path, Path]:
+    """Create a job workspace and the path the host Docker daemon should mount.
+
+    When the API runs inside Docker, tempfile paths like /tmp/ia-java-* exist only
+    inside the API container. The host dockerd bind-mounts from the host filesystem,
+    so jobs must live on a shared volume (CODE_RUNNER_JOB_DIR).
+    """
+    root = job_dir.strip()
+    host_root = (host_job_dir or job_dir).strip()
+    if root:
+        base = Path(root)
+        base.mkdir(parents=True, exist_ok=True)
+        workdir = Path(tempfile.mkdtemp(prefix="ia-java-", dir=base))
+    else:
+        workdir = Path(tempfile.mkdtemp(prefix="ia-java-"))
+    # Runner container is uid 1000; API may be root or another uid.
+    workdir.chmod(0o777)
+    if host_root and root and host_root != root:
+        return workdir, Path(host_root) / workdir.name
+    return workdir, workdir
+
+
 def _execute_via_docker(
     payload: dict,
     *,
@@ -99,8 +123,10 @@ def _execute_via_docker(
     memory_mb: int,
     cpus: float,
     submission_id: UUID | None,
+    job_dir: str = "",
+    host_job_dir: str = "",
 ) -> SandboxResult:
-    workdir = Path(tempfile.mkdtemp(prefix="ia-java-"))
+    workdir, mount_path = _prepare_workdir(job_dir, host_job_dir)
     try:
         _write_job(workdir, payload)
         cmd = [
@@ -129,13 +155,14 @@ def _execute_via_docker(
             "--workdir",
             "/workspace",
             "-v",
-            f"{workdir}:/workspace:rw",
+            f"{mount_path}:/workspace:rw",
             image,
         ]
         logger.info(
             "sandbox_start",
             submission_id=str(submission_id) if submission_id else None,
             image=image,
+            mount_path=str(mount_path),
         )
         completed = subprocess.run(
             cmd,

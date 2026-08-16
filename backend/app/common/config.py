@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     code_runner_timeout_seconds: int = 20
     code_runner_memory_mb: int = 256
     code_runner_cpus: float = 1.0
+    # Directory the API writes job files into. When the API itself runs in Docker,
+    # this must be a bind-mount that the host Docker daemon can also see.
+    code_runner_job_dir: str = ""
+    # Optional host path for `docker run -v`. Defaults to code_runner_job_dir.
+    code_runner_host_job_dir: str = ""
 
     ollama_base_url: str = "http://100.120.169.81:11434"
     ollama_model: str = "gemma3:4b"

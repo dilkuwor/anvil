@@ -20,10 +20,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       CODE_RUNNER_IMAGE: ${CODE_RUNNER_IMAGE:-yourdockerhub/interview-anvil-java-runner:local}
       CODE_RUNNER_URL: ${CODE_RUNNER_URL:-}
+      CODE_RUNNER_JOB_DIR: /var/tmp/interview-anvil-jobs
     ports:
       - "8000:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /var/tmp/interview-anvil-jobs:/var/tmp/interview-anvil-jobs
     restart: unless-stopped
 
   frontend:

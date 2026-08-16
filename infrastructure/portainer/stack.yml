@@ -1,11 +1,30 @@
-# Portainer stack sketch. Point image tags at Docker Hub SHA builds.
-# PostgreSQL is the existing external server — do not add a database service.
-
-version: "3.8"
+# Portainer → Stacks → Add stack → paste this file.
+# Images: dilrecycle/interview-anvil-{api,frontend,java-runner}
+#
+# PostgreSQL is external — do not add a database service.
+# The Java runner is not a long-running app. The API starts ephemeral
+# containers from dilrecycle/interview-anvil-java-runner when code is executed.
+#
+# Requires a rebuilt API image that includes the Docker CLI and
+# docker-entrypoint.sh (joins the host docker.sock group automatically).
+#
+# In Portainer, set these environment variables on the stack:
+#   DATABASE_HOST
+#   DATABASE_USER
+#   DATABASE_PASSWORD
+#   JWT_SECRET          (long random string)
+#   CORS_ORIGINS        (public site origin, e.g. https://interview.example.com)
+# Optional:
+#   DATABASE_PORT       (default 5432)
+#   DATABASE_NAME       (default interview_anvil)
+#   OLLAMA_BASE_URL
+#   OLLAMA_MODEL
+#   COOKIE_SECURE       (true if the site is served over HTTPS)
 
 services:
   api:
-    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-api:${IMAGE_TAG:-latest}
+    image: dilrecycle/interview-anvil-api:latest
+    pull_policy: always
     environment:
       APP_ENV: production
       LOG_LEVEL: INFO
@@ -15,19 +34,51 @@ services:
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-      CODE_RUNNER_IMAGE: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-java-runner:${IMAGE_TAG:-latest}
-      COOKIE_SECURE: "true"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+      CODE_RUNNER_IMAGE: dilrecycle/interview-anvil-java-runner:latest
+      CODE_RUNNER_TIMEOUT_SECONDS: 20
+      CODE_RUNNER_MEMORY_MB: 256
+      CODE_RUNNER_CPUS: "1"
+      # Same path inside the API container and on the host so `docker run -v`
+      # from the mounted socket can see the job files.
+      CODE_RUNNER_JOB_DIR: /var/tmp/interview-anvil-jobs
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://100.120.169.81:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:4b}
+      INTERVIEW_DURATION_SECONDS: ${INTERVIEW_DURATION_SECONDS:-2700}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /var/tmp/interview-anvil-jobs:/var/tmp/interview-anvil-jobs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "8000:8000"
+      - "8880:8000"
+    depends_on:
+      runner-image:
+        condition: service_completed_successfully
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
-    image: ${DOCKERHUB_NAMESPACE:-yourdockerhub}/interview-anvil-frontend:${IMAGE_TAG:-latest}
+    image: dilrecycle/interview-anvil-frontend:latest
+    pull_policy: always
     ports:
-      - "3000:3000"
+      - "3333:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
+
+  # Pulls the runner image onto the host, then exits. The API starts
+  # ephemeral containers from that cached image on Run/Submit.
+  runner-image:
+    image: dilrecycle/interview-anvil-java-runner:latest
+    pull_policy: always
+    entrypoint: ["true"]
+    restart: "no"

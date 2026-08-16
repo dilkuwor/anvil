@@ -17,7 +17,7 @@ Browser  →  Next.js :3000  →  FastAPI :8000  →  PostgreSQL 100.95.177.124:
 
 Next.js proxies `/api/*` to FastAPI so auth cookies stay first-party on the app origin.
 
-FastAPI never executes user Java in-process. Each run/submit writes a temporary workspace and starts an ephemeral Docker container:
+FastAPI never executes user Java in-process. Each run/submit writes a temporary workspace and starts an ephemeral Docker container. When the API itself is a container (Portainer), that workspace must live on a host bind-mount (`CODE_RUNNER_JOB_DIR`) so the host Docker daemon can see the files. The API image ships a Docker CLI; its entrypoint joins the host `docker.sock` group and then drops to uid 1000.
 
 - no network
 - memory / CPU / PID limits
