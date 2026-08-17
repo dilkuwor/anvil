@@ -70,12 +70,11 @@ def add_preview_message(db: Session, session_id: UUID, content: str) -> Intervie
     session.candidate_turns += 1
     _add_event(session, InterviewEventType.MESSAGE, {"role": "CANDIDATE", "preview": True})
     current = session.phase
-    reply = _ask_interviewer(
+    reply = _reply_after_candidate(
         problem,
         session,
+        text,
         event_note=f"Candidate just spoke. Current phase: {current}. This is a short public preview.",
-        fallback=_fallback_after_message(problem, current),
-        last_candidate_text=text,
     )
     _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
     _advance_after_candidate(session, current)
@@ -131,12 +130,11 @@ def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content:
         _complete(db, session, problem)
         return session
 
-    reply = _ask_interviewer(
+    reply = _reply_after_candidate(
         problem,
         session,
+        text,
         event_note=f"Candidate just spoke. Current phase: {current}.",
-        fallback=_fallback_after_message(problem, current),
-        last_candidate_text=text,
     )
     _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
     if current == InterviewPhase.FOLLOW_UP.value:
@@ -354,7 +352,8 @@ def _expire_if_needed(db: Session, session: InterviewSession) -> None:
 
 
 def _advance_after_candidate(session: InterviewSession, phase_before: str) -> None:
-    if phase_before == InterviewPhase.UNDERSTANDING.value:
+    # First candidate turn stays on requirements; the problem was just handed over.
+    if phase_before == InterviewPhase.UNDERSTANDING.value and session.candidate_turns >= 2:
         session.phase = InterviewPhase.APPROACH.value
     elif phase_before == InterviewPhase.APPROACH.value:
         session.phase = InterviewPhase.CODING.value
@@ -639,16 +638,44 @@ def _progressive_hint(problem: Problem, n: int) -> str | None:
     return None
 
 
-def _fallback_intro(problem: Problem) -> str:
-    return (
-        f"Let's work through {problem.title}. Take a moment to understand the problem. "
-        "When you're ready, explain it back to me in your own words."
+READY_REQUIREMENTS_PROMPT = (
+    "Great. What questions do you have about the requirements or constraints?"
+)
+
+
+def build_opening_messages(problem: Problem) -> list[str]:
+    """Deterministic opening. The problem is shown in the workspace, not pasted into chat."""
+    del problem  # title is visible in the problem pane
+    return [
+        (
+            "Today we'll work through a coding problem. I'll give you the problem first. "
+            "Take a moment to read it, and let me know when you're ready."
+        )
+    ]
+
+
+def _reply_after_candidate(problem: Problem, session: InterviewSession, text: str, *, event_note: str) -> str:
+    if session.phase == InterviewPhase.UNDERSTANDING.value and session.candidate_turns == 1:
+        return READY_REQUIREMENTS_PROMPT
+    return _ask_interviewer(
+        problem,
+        session,
+        event_note=event_note,
+        fallback=_fallback_after_message(problem, session.phase),
+        last_candidate_text=text,
     )
+
+
+def _fallback_intro(problem: Problem) -> str:
+    return build_opening_messages(problem)[0]
 
 
 def _fallback_after_message(problem: Problem, phase: str) -> str:
     if phase == InterviewPhase.UNDERSTANDING.value:
-        return "Good. What approach would you consider, and why that data structure?"
+        return (
+            "Any questions on the requirements or constraints? "
+            "If not, walk me through the problem in your own words."
+        )
     if phase == InterviewPhase.APPROACH.value:
         return (
             "That sounds workable. What edge cases should we watch for? "
@@ -772,13 +799,8 @@ def _open_new_session(
     db.add(session)
     db.flush()
     _add_event(session, InterviewEventType.MESSAGE, {"kind": "start", "preview": is_preview})
-    intro = _ask_interviewer(
-        problem,
-        session,
-        event_note="The interview is starting. Give your opening.",
-        fallback=_fallback_intro(problem),
-    )
-    _add_message(session, InterviewMessageRole.INTERVIEWER, intro)
+    for text in build_opening_messages(problem):
+        _add_message(session, InterviewMessageRole.INTERVIEWER, text)
     session.phase = InterviewPhase.UNDERSTANDING.value
     db.commit()
     db.refresh(session)

@@ -87,9 +87,10 @@ export function InterviewerPanel({
                 {interviewer ? "Interviewer" : "You"}
               </div>
               {interviewer ? (
-                <blockquote className="mt-1.5 text-sm leading-7 text-foreground">
-                  “{message.content.replace(/^["“]|["”]$/g, "")}”
-                </blockquote>
+                <InterviewerSpeech
+                  content={message.content}
+                  problemTitle={session.problem_title}
+                />
               ) : (
                 <p className="mt-1.5 text-sm leading-7 text-foreground/90">{message.content}</p>
               )}
@@ -139,4 +140,28 @@ export function InterviewerPanel({
       </div>
     </section>
   );
+}
+
+function InterviewerSpeech({ content, problemTitle }: { content: string; problemTitle: string }) {
+  const text = content.replace(/^["“]|["”]$/g, "");
+  const lines = text.split("\n");
+  const isHandout = Boolean(problemTitle) && lines[0]?.trim() === problemTitle;
+  if (isHandout) {
+    const rest = lines.slice(1).join("\n").trim();
+    return (
+      <div className="mt-1.5 rounded-xl border border-steel-800 bg-background px-4 py-3">
+        <h3 className="text-sm font-semibold tracking-tight">{lines[0].trim()}</h3>
+        {rest ? (
+          <div className="mt-2 space-y-2 text-sm leading-7 text-foreground/90">
+            {rest.split("\n\n").map((paragraph) => (
+              <p key={paragraph.slice(0, 48)} className="whitespace-pre-wrap">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+  return <blockquote className="mt-1.5 text-sm leading-7 text-foreground">“{text}”</blockquote>;
 }

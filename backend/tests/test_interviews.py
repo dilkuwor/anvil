@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from app.interviews import service
+from app.interviews.service import build_opening_messages
 from app.interviews.models import InterviewSession
 from app.problems.models import Problem, Tag
 
@@ -65,15 +66,28 @@ def test_start_message_run_submit_end_flow(auth_client, db, monkeypatch):
     assert body["phase_label"] == "Understanding"
     assert body["remaining_seconds"] > 2600
     assert body["messages"][0]["role"] == "INTERVIEWER"
-    assert body["messages"][0]["content"]
+    assert "coding problem" in body["messages"][0]["content"]
+    assert "let me know when you're ready" in body["messages"][0]["content"]
+    assert len(body["messages"]) == 1
+    assert "Group strings" not in body["messages"][0]["content"]
     session_id = body["id"]
 
     again = auth_client.post("/api/v1/interviews", json={"problem_id": str(problem.id)})
     assert again.json()["id"] == session_id
 
+    ready = auth_client.post(
+        f"/api/v1/interviews/{session_id}/messages",
+        json={"content": "I'm ready."},
+    )
+    assert ready.status_code == 200
+    assert ready.json()["phase"] == "UNDERSTANDING"
+    assert ready.json()["messages"][-1]["content"] == (
+        "Great. What questions do you have about the requirements or constraints?"
+    )
+
     understanding = auth_client.post(
         f"/api/v1/interviews/{session_id}/messages",
-        json={"content": "I need to group strings that are anagrams of each other."},
+        json={"content": "The input is a list of strings and we return the groups."},
     )
     assert understanding.status_code == 200
     assert understanding.json()["phase"] == "APPROACH"
@@ -151,6 +165,11 @@ def test_problem_context_omits_secret_solution():
     assert "Public statement" in context
     assert "DO_NOT_LEAK" not in context
     assert "hidden" not in context.lower()
+    opening = build_opening_messages(problem)
+    assert len(opening) == 1
+    assert "let me know when you're ready" in opening[0]
+    assert "Public statement" not in opening[0]
+    assert "DO_NOT_LEAK" not in opening[0]
 
 
 def _seed_pair_target(db) -> Problem:

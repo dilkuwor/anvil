@@ -152,7 +152,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     onSuccess: (data) => {
       cacheSession(data);
       setInterviewMode(true);
-      setShowProblem(false);
+      setShowProblem(true);
     },
     onError: () => toast.error("Unable to start mock interview."),
   });
@@ -196,7 +196,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     onSuccess: (data) => {
       cacheSession(data);
       setInterviewMode(true);
-      setShowProblem(false);
+      setShowProblem(true);
     },
     onError: () => toast.error("Unable to start another mock interview."),
   });
@@ -408,7 +408,15 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       </section>
     ) : null;
 
-  const left = interviewMode && !showProblem && interviewer ? interviewer : prompt;
+  const interviewLeft =
+    interviewer && showProblem ? (
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        <div className="min-h-0 min-w-0 flex-[1.15]">{interviewer}</div>
+        <div className="min-h-0 min-w-0 flex-1">{prompt}</div>
+      </div>
+    ) : interviewer;
+
+  const left = interviewMode && interviewLeft ? interviewLeft : prompt;
 
   return (
     <div className="flex h-full min-h-[calc(100vh-6rem)] flex-col gap-3 xl:min-h-0 xl:flex-1">
