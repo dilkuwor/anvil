@@ -1,4 +1,4 @@
-"""Interview session state machine. Gemma writes interviewer lines only."""
+"""Interview session state machine. The agent writes interviewer lines only."""
 
 from __future__ import annotations
 
@@ -12,7 +12,10 @@ from app.common.config import get_settings
 from app.common.enums import InterviewEventType, InterviewMessageRole, InterviewPhase
 from app.common.errors import AppError, ForbiddenError, NotFoundError
 from app.interviews import ollama
+from app.interviews.agent import InterviewContext, InterviewKind, MockInterviewAgent, ProblemSnapshot, SandboxSnapshot
+from app.interviews.providers import get_llm_provider_for_user
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession
+from app.interviews.signals import empty_signals, normalize_signals
 from app.interviews.schemas import (
     InterviewFeedbackOut,
     InterviewObjectiveOut,
@@ -30,35 +33,6 @@ PHASE_LABELS = {
     InterviewPhase.FOLLOW_UP.value: "Follow-up",
     InterviewPhase.FEEDBACK.value: "Feedback",
 }
-
-PHASE_GUIDANCE = {
-    InterviewPhase.INTRO.value: (
-        "Open the interview. Name the problem. Ask the candidate to explain it in their own words. "
-        "Do not restate the full problem statement."
-    ),
-    InterviewPhase.UNDERSTANDING.value: (
-        "They are explaining the problem. Acknowledge briefly. Ask one question about constraints "
-        "or an edge case if they skipped it, then ask what approach they would consider."
-    ),
-    InterviewPhase.APPROACH.value: (
-        "They are describing an approach. Ask why they chose a data structure or how they handle one "
-        "edge case. If the approach is workable, tell them to implement it. Never write the algorithm."
-    ),
-    InterviewPhase.CODING.value: (
-        "They are implementing. Do not write code. Ask a short clarifying question or invite them "
-        "to run their tests when ready."
-    ),
-    InterviewPhase.TESTING.value: (
-        "Sample tests have been run. Use the authoritative result given to you. Ask about complexity "
-        "or a remaining edge case. Do not contradict the test result."
-    ),
-    InterviewPhase.FOLLOW_UP.value: (
-        "The submission result is authoritative. Ask one follow-up: time/space complexity, a tradeoff, "
-        "or an alternative. Keep it concise."
-    ),
-    InterviewPhase.FEEDBACK.value: "The interview is over. Do not continue chatting.",
-}
-
 
 PREVIEW_PROBLEM_SLUG = "pair-target"
 PREVIEW_TURN_LIMIT = 4
@@ -101,6 +75,7 @@ def add_preview_message(db: Session, session_id: UUID, content: str) -> Intervie
         session,
         event_note=f"Candidate just spoke. Current phase: {current}. This is a short public preview.",
         fallback=_fallback_after_message(problem, current),
+        last_candidate_text=text,
     )
     _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
     _advance_after_candidate(session, current)
@@ -150,6 +125,7 @@ def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content:
             session,
             event_note="They answered your last follow-up. Close briefly; feedback is next.",
             fallback="That's a solid wrap-up. I'll share feedback now.",
+            last_candidate_text=text,
         )
         _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
         _complete(db, session, problem)
@@ -160,6 +136,7 @@ def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content:
         session,
         event_note=f"Candidate just spoke. Current phase: {current}.",
         fallback=_fallback_after_message(problem, current),
+        last_candidate_text=text,
     )
     _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
     if current == InterviewPhase.FOLLOW_UP.value:
@@ -189,6 +166,7 @@ def request_hint(db: Session, session_id: UUID, user_id: UUID) -> InterviewSessi
                 "Do not give the algorithm or any code."
             ),
             fallback="Think about what stays the same for every string that belongs in the same group.",
+            allow_hint_nudge=True,
         )
     _add_message(session, InterviewMessageRole.INTERVIEWER, hint)
     db.commit()
@@ -250,7 +228,13 @@ def record_execution_event(
         InterviewEventType(event_type),
         {"status": status, "passed": passed, "total": total, "runtime_ms": runtime_ms, "memory_kb": memory_kb},
     )
-    reply = _ask_interviewer(problem, session, event_note=note, fallback=fallback)
+    reply = _ask_interviewer(
+        problem,
+        session,
+        event_note=note,
+        fallback=fallback,
+        last_event=event_type,
+    )
     _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
     if accepted and event_type == InterviewEventType.SUBMIT.value:
         session.followups_asked += 1
@@ -376,33 +360,89 @@ def _advance_after_candidate(session: InterviewSession, phase_before: str) -> No
         session.phase = InterviewPhase.CODING.value
 
 
-def _ask_interviewer(problem: Problem, session: InterviewSession, *, event_note: str, fallback: str) -> str:
-    system = _system_prompt(problem, session)
-    transcript = _transcript(session)
-    try:
-        return ollama.interviewer_reply(system, transcript, event_note)
-    except Exception:
-        return fallback
+def _agent(session: InterviewSession) -> MockInterviewAgent:
+    from sqlalchemy.orm import object_session
+
+    from app.users.models import User
+
+    db = object_session(session)
+    user = db.get(User, session.user_id) if db is not None and session.user_id else None
+    return MockInterviewAgent(get_llm_provider_for_user(user), kind=InterviewKind.CODING)
 
 
-def _system_prompt(problem: Problem, session: InterviewSession) -> str:
-    return (
-        "You are a live technical interviewer at InterviewAnvil. Speak like a senior engineer "
-        "sitting beside the candidate — not like a chatbot, tutor, or coding assistant.\n"
-        "Rules:\n"
-        "- Ask exactly one question at a time.\n"
-        "- Keep replies to 1–3 short sentences.\n"
-        "- Encourage the candidate to explain reasoning.\n"
-        "- Never write solution code or an optimal algorithm.\n"
-        "- Never invent constraints or hidden test cases.\n"
-        "- Never reveal hidden tests or expected outputs that were not already shown.\n"
-        "- Give only a small nudge if they ask for a hint.\n"
-        "- Do not decide whether code is correct; trust the authoritative execution result when given.\n"
-        f"Current phase: {PHASE_LABELS.get(session.phase, session.phase)}. {PHASE_GUIDANCE[session.phase]}\n"
-        f"Hints used: {session.hints_used}. Candidate turns: {session.candidate_turns}.\n\n"
-        "Problem (public statement only):\n"
-        f"{build_problem_context(problem)}"
+def _interview_context(
+    problem: Problem,
+    session: InterviewSession,
+    *,
+    event_note: str,
+    fallback: str,
+    last_candidate_text: str = "",
+    allow_hint_nudge: bool = False,
+    last_event: str | None = None,
+) -> InterviewContext:
+    return InterviewContext(
+        kind=InterviewKind.CODING,
+        phase=session.phase,
+        problem=ProblemSnapshot(
+            title=problem.title,
+            difficulty=problem.difficulty,
+            description=problem.description,
+            constraints=problem.constraints,
+            input_format=problem.input_format,
+            output_format=problem.output_format,
+            examples=list(problem.examples or []),
+            tags=[tag.name for tag in (problem.tags or [])],
+            public_context=build_problem_context(problem),
+        ),
+        transcript=_transcript(session),
+        signals=normalize_signals(session.signals),
+        sandbox=SandboxSnapshot(
+            status=session.last_status,
+            passed=session.last_run_passed,
+            total=session.last_run_total,
+            runtime_ms=session.last_runtime_ms,
+            memory_kb=session.last_memory_kb,
+            accepted=bool(session.accepted),
+            run_count=session.run_count,
+            submit_count=session.submit_count,
+            last_event=last_event,
+        ),
+        hints_used=session.hints_used,
+        wrong_attempts=session.wrong_attempts,
+        remaining_seconds=remaining_seconds(session),
+        candidate_turns=session.candidate_turns,
+        followups_asked=session.followups_asked,
+        is_preview=bool(session.is_preview),
+        event_note=event_note,
+        fallback=fallback,
+        last_candidate_text=last_candidate_text,
+        allow_hint_nudge=allow_hint_nudge,
     )
+
+
+def _ask_interviewer(
+    problem: Problem,
+    session: InterviewSession,
+    *,
+    event_note: str,
+    fallback: str,
+    last_candidate_text: str = "",
+    allow_hint_nudge: bool = False,
+    last_event: str | None = None,
+) -> str:
+    turn = _agent(session).respond(
+        _interview_context(
+            problem,
+            session,
+            event_note=event_note,
+            fallback=fallback,
+            last_candidate_text=last_candidate_text,
+            allow_hint_nudge=allow_hint_nudge,
+            last_event=last_event,
+        )
+    )
+    session.signals = turn.signals
+    return turn.reply
 
 
 def _transcript(session: InterviewSession) -> list[dict[str, str]]:
@@ -474,48 +514,51 @@ def _objective(session: InterviewSession) -> dict:
 
 def _ai_scores(problem: Problem, session: InterviewSession, objective: dict) -> dict:
     fallback = _heuristic_scores(session)
-    prompt = (
-        "Score this mock interview. Return JSON only with keys: "
-        "understanding, approach, coding, communication, reasoning, complexity, follow_up "
-        "(numbers 1-10), strengths (2-3 short strings), improvements (2-3 short strings), summary "
-        "(2-4 sentences in the interviewer's voice).\n"
-        "Do not score correctness — that is measured by tests.\n"
-        f"Problem: {problem.title} ({problem.difficulty}).\n"
-        f"Objective: accepted={bool(session.accepted)}, last_tests={session.last_run_passed}/"
-        f"{session.last_run_total}, submissions={session.submit_count}, "
-        f"wrong_attempts={session.wrong_attempts}, hints={session.hints_used}, "
-        f"candidate_turns={session.candidate_turns}, followups={session.followups_asked}.\n"
-        f"Transcript:\n{_plain_transcript(session)}"
+    scored = _agent(session).evaluate(
+        problem_title=problem.title,
+        difficulty=problem.difficulty,
+        transcript=_plain_transcript(session),
+        signals=normalize_signals(session.signals),
+        objective=objective,
+        heuristic=fallback,
+        accepted=bool(session.accepted),
+        last_run_passed=session.last_run_passed,
+        last_run_total=session.last_run_total,
+        submissions=session.submit_count,
+        wrong_attempts=session.wrong_attempts,
+        hints_used=session.hints_used,
+        candidate_turns=session.candidate_turns,
+        followups_asked=session.followups_asked,
     )
-    try:
-        data = ollama.evaluate_interview(
-            "You evaluate a completed technical interview. Return JSON only. No markdown.",
-            prompt,
-        )
-        return {
-            "understanding": _clamp(data.get("understanding"), fallback["understanding"]),
-            "approach": _clamp(data.get("approach"), fallback["approach"]),
-            "coding": _clamp(data.get("coding"), fallback["coding"]),
-            "communication": _clamp(data.get("communication"), fallback["communication"]),
-            "reasoning": _clamp(data.get("reasoning"), fallback["reasoning"]),
-            "complexity": _clamp(data.get("complexity"), fallback["complexity"]),
-            "follow_up": _clamp(data.get("follow_up"), fallback["follow_up"]),
-            "strengths": [str(item) for item in (data.get("strengths") or []) if str(item).strip()],
-            "improvements": [str(item) for item in (data.get("improvements") or []) if str(item).strip()],
-            "summary": str(data.get("summary") or "").strip(),
-        }
-    except Exception:
-        return fallback
+    return {
+        "understanding": _clamp(scored.get("understanding"), fallback["understanding"]),
+        "approach": _clamp(scored.get("approach"), fallback["approach"]),
+        "coding": _clamp(scored.get("coding"), fallback["coding"]),
+        "communication": _clamp(scored.get("communication"), fallback["communication"]),
+        "reasoning": _clamp(scored.get("reasoning"), fallback["reasoning"]),
+        "complexity": _clamp(scored.get("complexity"), fallback["complexity"]),
+        "follow_up": _clamp(scored.get("follow_up"), fallback["follow_up"]),
+        "strengths": [str(item) for item in (scored.get("strengths") or []) if str(item).strip()],
+        "improvements": [str(item) for item in (scored.get("improvements") or []) if str(item).strip()],
+        "summary": str(scored.get("summary") or "").strip(),
+    }
 
 
 def _heuristic_scores(session: InterviewSession) -> dict:
+    signals = normalize_signals(session.signals)
     understood = 8.0 if session.candidate_turns else 4.0
     approach = 8.0 if session.candidate_turns >= 2 else 5.5
     coding = 8.5 if session.accepted else (6.0 if session.run_count else 4.5)
     communication = min(9.0, 5.5 + session.candidate_turns * 0.6)
     reasoning = min(9.0, 5.0 + session.candidate_turns * 0.5)
-    complexity = 7.5 if session.followups_asked else 5.5
+    complexity = 7.5 if session.followups_asked or signals.get("complexity") == "demonstrated" else 5.5
     follow_up = 7.5 if session.followups_asked >= 2 else (6.0 if session.followups_asked else 4.5)
+    if signals.get("requirements") == "demonstrated":
+        understood = max(understood, 8.0)
+    if signals.get("approach") == "demonstrated":
+        approach = max(approach, 8.0)
+    if signals.get("reasoning") == "demonstrated":
+        reasoning = max(reasoning, 7.5)
     if session.hints_used >= 2:
         approach = max(4.0, approach - 1)
         reasoning = max(4.0, reasoning - 0.5)
@@ -723,6 +766,7 @@ def _open_new_session(
         phase=InterviewPhase.INTRO.value,
         duration_seconds=settings.interview_duration_seconds,
         is_preview=is_preview,
+        signals=empty_signals(),
         started_at=_now(),
     )
     db.add(session)

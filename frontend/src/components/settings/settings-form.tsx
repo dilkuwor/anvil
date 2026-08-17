@@ -217,7 +217,97 @@ function ProfileEditor({ user }: { user: User }) {
           </Button>
         </div>
       </form>
+
+      <LlmSettings user={current} />
     </div>
+  );
+}
+
+function LlmSettings({ user }: { user: User }) {
+  const queryClient = useQueryClient();
+  const [provider, setProvider] = useState(user.llm_provider ?? "");
+  const [apiKey, setApiKey] = useState("");
+
+  const save = useMutation({
+    mutationFn: () =>
+      api.patch<User>("/api/v1/auth/me/llm", {
+        provider: provider || null,
+        api_key: apiKey.trim() || null,
+      }),
+    onSuccess: (next) => {
+      queryClient.setQueryData(queryKeys.me, next);
+      setApiKey("");
+      toast.success("AI provider settings saved.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : "Unable to save AI settings.");
+    },
+  });
+
+  const clearKey = useMutation({
+    mutationFn: () => api.patch<User>("/api/v1/auth/me/llm", { clear_api_key: true }),
+    onSuccess: (next) => {
+      queryClient.setQueryData(queryKeys.me, next);
+      setApiKey("");
+      toast.success("API key removed.");
+    },
+    onError: () => toast.error("Unable to remove API key."),
+  });
+
+  const paid = provider === "openai" || provider === "gemini";
+  const current = (queryClient.getQueryData<User>(queryKeys.me) ?? user) as User;
+
+  return (
+    <SectionCard>
+      <SectionTitle>Interview AI</SectionTitle>
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        Platform default uses the shared Ollama interviewer. Paid providers need your own API key, stored only for
+        your account.
+      </p>
+      <form
+        className="mt-5 space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+      >
+        <Field label="Provider">
+          <select className="select-field" value={provider} onChange={(event) => setProvider(event.target.value)}>
+            <option value="">Platform default</option>
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Google Gemini</option>
+          </select>
+        </Field>
+        {paid ? (
+          <Field
+            label="API key"
+            hint={
+              current.has_llm_api_key
+                ? `Saved key ${current.llm_api_key_hint ?? "••••"}. Leave blank to keep it.`
+                : "Required for this provider. The full key is never shown again."
+            }
+          >
+            <Input
+              type="password"
+              autoComplete="off"
+              placeholder={current.has_llm_api_key ? "••••••••••••" : provider === "gemini" ? "AIza…" : "sk-…"}
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+            />
+          </Field>
+        ) : null}
+        <div className="flex flex-wrap justify-end gap-2">
+          {current.has_llm_api_key ? (
+            <Button type="button" variant="ghost" size="sm" disabled={clearKey.isPending} onClick={() => clearKey.mutate()}>
+              {clearKey.isPending ? "Removing…" : "Remove key"}
+            </Button>
+          ) : null}
+          <Button type="submit" disabled={save.isPending}>
+            {save.isPending ? "Saving…" : "Save AI settings"}
+          </Button>
+        </div>
+      </form>
+    </SectionCard>
   );
 }
 

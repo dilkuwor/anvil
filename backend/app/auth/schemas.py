@@ -30,6 +30,9 @@ class UserOut(BaseModel):
     country: str | None = None
     display_name: str | None = None
     has_avatar: bool = False
+    llm_provider: str | None = None
+    has_llm_api_key: bool = False
+    llm_api_key_hint: str | None = None
 
 
 class UpdateProfileRequest(BaseModel):
@@ -55,3 +58,16 @@ class UpdateProfileRequest(BaseModel):
         if not (value.startswith("https://") or value.startswith("http://")):
             raise ValueError("Enter a valid URL starting with http:// or https://")
         return value
+
+
+class UpdateLlmSettingsRequest(BaseModel):
+    provider: str | None = Field(default=None, max_length=40)
+    api_key: str | None = Field(default=None, min_length=8, max_length=512)
+    clear_api_key: bool = False
+
+    @field_validator("provider", "api_key", mode="before")
+    @classmethod
+    def empty_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value.strip() if isinstance(value, str) else value

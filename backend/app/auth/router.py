@@ -2,13 +2,15 @@ from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth.schemas import LoginRequest, RegisterRequest, UpdateProfileRequest, UserOut
+from app.auth.schemas import LoginRequest, RegisterRequest, UpdateLlmSettingsRequest, UpdateProfileRequest, UserOut
 from app.common.config import get_settings
 from app.common.database import get_db
 from app.common.deps import get_current_user, get_optional_user
 from app.common.enums import UserRole
 from app.common.errors import AppError, ConflictError, NotFoundError, UnauthorizedError
+from app.common.secrets import encrypt_secret, secret_hint
 from app.common.security import create_access_token, hash_password, verify_password
+from app.interviews.providers import normalize_provider_name
 from app.users.models import User
 
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -80,6 +82,29 @@ def logout(response: Response) -> dict:
 
 @router.get("/me", response_model=UserOut | None)
 def me(current_user: User | None = Depends(get_optional_user)) -> User | None:
+    return current_user
+
+
+@router.patch("/me/llm", response_model=UserOut)
+def update_my_llm_settings(
+    payload: UpdateLlmSettingsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if "provider" in payload.model_fields_set:
+        try:
+            current_user.llm_provider = normalize_provider_name(payload.provider)
+        except ValueError as exc:
+            raise AppError(str(exc), status_code=422, code="invalid_llm_provider") from exc
+    if payload.clear_api_key:
+        current_user.llm_api_key_encrypted = None
+        current_user.llm_api_key_hint = None
+    elif payload.api_key:
+        current_user.llm_api_key_encrypted = encrypt_secret(payload.api_key)
+        current_user.llm_api_key_hint = secret_hint(payload.api_key)
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 

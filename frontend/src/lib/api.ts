@@ -129,6 +129,9 @@ export type User = {
   country?: string | null;
   display_name?: string | null;
   has_avatar?: boolean;
+  llm_provider?: string | null;
+  has_llm_api_key?: boolean;
+  llm_api_key_hint?: string | null;
 };
 
 export type UpdateProfileRequest = {

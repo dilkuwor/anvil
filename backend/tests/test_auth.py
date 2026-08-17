@@ -54,6 +54,46 @@ def test_protected_route_requires_auth(client):
     assert response.status_code == 401
 
 
+def test_user_can_save_and_clear_llm_api_key(auth_client, db):
+    from uuid import UUID
+
+    from app.users.models import User
+
+    saved = auth_client.patch(
+        "/api/v1/auth/me/llm",
+        json={"provider": "openai", "api_key": "sk-test-secret-key-1234"},
+    )
+    assert saved.status_code == 200
+    body = saved.json()
+    assert body["llm_provider"] == "openai"
+    assert body["has_llm_api_key"] is True
+    assert body["llm_api_key_hint"] == "••••1234"
+    assert "sk-test" not in str(body)
+    assert "llm_api_key_encrypted" not in body
+
+    user = db.get(User, UUID(body["id"]))
+    assert user is not None
+    assert user.llm_api_key_encrypted
+    assert "sk-test-secret-key-1234" not in user.llm_api_key_encrypted
+
+    me = auth_client.get("/api/v1/auth/me").json()
+    assert me["has_llm_api_key"] is True
+    assert "sk-test" not in str(me)
+
+    gemini = auth_client.patch(
+        "/api/v1/auth/me/llm",
+        json={"provider": "gemini", "api_key": "AIza-test-gemini-key-9876"},
+    )
+    assert gemini.status_code == 200
+    assert gemini.json()["llm_provider"] == "gemini"
+    assert gemini.json()["llm_api_key_hint"] == "••••9876"
+
+    cleared = auth_client.patch("/api/v1/auth/me/llm", json={"provider": "", "clear_api_key": True})
+    assert cleared.status_code == 200
+    assert cleared.json()["has_llm_api_key"] is False
+    assert cleared.json()["llm_provider"] is None
+
+
 def test_update_profile(auth_client):
     updated = auth_client.patch(
         "/api/v1/auth/me",
