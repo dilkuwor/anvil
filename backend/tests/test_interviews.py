@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from app.interviews import service
 from app.interviews.service import build_opening_messages
-from app.interviews.models import InterviewSession
+from app.interviews.models import InterviewMessage, InterviewSession
 from app.problems.models import Problem, Tag
 
 
@@ -191,6 +191,25 @@ def _seed_pair_target(db) -> Problem:
     db.add(problem)
     db.commit()
     return problem
+
+
+def test_problem_statement_is_not_returned_in_chat(auth_client, db, monkeypatch):
+    problem = _seed_problem(db)
+    monkeypatch.setattr(service.ollama, "interviewer_reply", lambda *args, **kwargs: "What would you try first?")
+    started = auth_client.post("/api/v1/interviews", json={"problem_id": str(problem.id)}).json()
+    session = db.get(InterviewSession, UUID(started["id"]))
+    assert session is not None
+    session.messages.append(
+        InterviewMessage(
+            session_id=session.id,
+            role="INTERVIEWER",
+            content=f"{problem.title}\n{problem.description}\n\nConstraints:\n{problem.constraints}",
+        )
+    )
+    db.commit()
+    detail = auth_client.get(f"/api/v1/interviews/{started['id']}").json()
+    assert all("Constraints:" not in item["content"] or item["content"].split("\n", 1)[0] != problem.title for item in detail["messages"])
+    assert all(not item["content"].startswith(problem.title + "\n") for item in detail["messages"])
 
 
 def test_preview_interview_is_public_and_limited(client, db, monkeypatch):

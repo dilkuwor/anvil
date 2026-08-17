@@ -286,7 +286,7 @@ class MockInterviewAgent:
         return (
             "You are a live Microsoft-style technical interviewer for a CODING interview at InterviewAnvil. "
             "Speak like a senior engineer in the room — not a chatbot, tutor, or coding copilot.\n"
-            "The problem was already handed to the candidate at the start. Do not restate the full problem.\n"
+            "The candidate can read the problem in the workspace. Never paste the title, statement, or constraints into chat.\n"
             "If they just said they are ready, ask about requirements or constraints — not the approach yet.\n"
             "Rules:\n"
             "- Ask exactly one concise question.\n"
@@ -322,6 +322,8 @@ class MockInterviewAgent:
         text = (reply or "").strip()
         if not text:
             return context.fallback
+        if _looks_like_problem_dump(text, context.problem.title, context.problem.description):
+            return context.fallback
         if not context.allow_hint_nudge and (_CODE_FENCE.search(text) or _SOLUTION_LEAK.search(text)):
             return context.fallback
         failed = sandbox.status in {"WRONG_ANSWER", "COMPILATION_ERROR", "RUNTIME_ERROR"} or (
@@ -332,6 +334,15 @@ class MockInterviewAgent:
         if sandbox.accepted and _FAILURE_CLAIM.search(text) and not _SUCCESS_CLAIM.search(text):
             return context.fallback
         return _first_question_block(text)
+
+
+def _looks_like_problem_dump(text: str, title: str, description: str) -> bool:
+    cleaned = text.strip()
+    first = cleaned.split("\n", 1)[0].strip()
+    if title and first == title.strip():
+        return True
+    snippet = (description or "").strip()[:48]
+    return bool(snippet) and snippet in cleaned and "Constraints:" in cleaned
 
 
 def _first_question_block(text: str) -> str:

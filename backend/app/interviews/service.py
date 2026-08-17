@@ -275,7 +275,11 @@ def to_out(session: InterviewSession, problem: Problem | None = None) -> Intervi
         title = session.problem.title
         slug = session.problem.slug
         difficulty = session.problem.difficulty
-    messages = _sorted_messages(session)
+    messages = [
+        message
+        for message in _sorted_messages(session)
+        if not _is_problem_handout(message.content, problem)
+    ]
     return InterviewSessionOut(
         id=session.id,
         problem_id=session.problem_id,
@@ -735,6 +739,16 @@ def _feedback_out(raw: dict) -> InterviewFeedbackOut:
         improvements=list(raw.get("improvements") or []),
         summary=str(raw.get("summary") or ""),
     )
+
+
+def _is_problem_handout(content: str, problem: Problem | None) -> bool:
+    if problem is None or not content:
+        return False
+    text = content.strip()
+    first = text.split("\n", 1)[0].strip()
+    if first != problem.title.strip():
+        return False
+    return "Constraints:" in text or (problem.description or "")[:48] in text
 
 
 def _sorted_messages(session: InterviewSession) -> list[InterviewMessage]:

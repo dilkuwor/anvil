@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { Breadcrumbs, PageHeader } from "@/components/layout/page-header";
+import { ListenButton } from "@/components/tts/listen-button";
 import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
@@ -14,6 +15,7 @@ import {
   type CheatSheetDetail,
 } from "@/lib/cheatsheets";
 import { queryKeys } from "@/lib/queries";
+import { cheatSheetSpeech } from "@/lib/tts";
 import { cn } from "@/lib/utils";
 
 export function CheatSheetView({ slug }: { slug: string }) {
@@ -70,7 +72,14 @@ function CheatSheetBody({ data }: { data: CheatSheetDetail }) {
         <PageHeader
           title={`${data.title} Cheat Sheet`}
           description={data.description}
-          meta={`${data.section_count} sections · ~${data.estimated_minutes} min`}
+          meta={
+            <div className="flex flex-wrap items-center gap-2">
+              <span>
+                {data.section_count} sections · ~{data.estimated_minutes} min
+              </span>
+              <ListenButton text={cheatSheetSpeech(data)} />
+            </div>
+          }
         />
       </div>
 

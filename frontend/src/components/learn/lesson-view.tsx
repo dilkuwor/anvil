@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { AskAiButton, AskAiController, AskAiPanel } from "@/components/learn/ask-ai-panel";
 import { LessonMarkdown } from "@/components/learn/markdown";
+import { ListenButton } from "@/components/tts/listen-button";
 import { Breadcrumbs } from "@/components/layout/page-header";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { LearningLessonDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
+import { lessonSpeech } from "@/lib/tts";
 import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { useSession, type AuthPromptKind } from "@/lib/session";
 
@@ -66,13 +68,23 @@ export function LessonView({ slug }: { slug: string }) {
                 {data.category_title} · {data.topic_title} · {data.estimated_minutes} min read
               </p>
             </div>
-            {signedIn ? (
-              <AskAiButton />
-            ) : (
-              <Button size="sm" variant="secondary" onClick={() => setAuthPrompt("ask-ai")}>
-                Ask AI
-              </Button>
-            )}
+            <div className="flex items-center gap-1.5">
+              <ListenButton
+                text={lessonSpeech({
+                  title: data.title,
+                  short_description: data.short_description,
+                  content: data.content,
+                  takeaways: data.takeaways,
+                })}
+              />
+              {signedIn ? (
+                <AskAiButton />
+              ) : (
+                <Button size="sm" variant="secondary" onClick={() => setAuthPrompt("ask-ai")}>
+                  Ask AI
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

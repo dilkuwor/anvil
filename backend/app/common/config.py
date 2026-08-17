@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_model: str = "openai/gpt-4o-mini"
     openrouter_referer: str = "https://interviewanvil.local"
+    tts_base_url: str = "http://100.120.169.81:8091"
+    tts_voice: str = "af_heart"
+    tts_language: str = "English"
 
     @field_validator("cookie_samesite")
     @classmethod
