@@ -14,8 +14,9 @@ logger = get_logger(__name__)
 class GeminiProvider(LLMProvider):
     name = "gemini"
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self.api_key = (api_key or "").strip() or None
+        self.model = (model or "").strip() or None
 
     def complete(self, system: str, transcript: list[dict[str, str]], user_turn: str) -> str:
         contents = _to_gemini_contents([*transcript, {"role": "user", "content": user_turn}])
@@ -34,7 +35,7 @@ class GeminiProvider(LLMProvider):
         api_key = self.api_key or (settings.gemini_api_key or "").strip()
         if not api_key:
             raise RuntimeError("A Gemini API key is required. Add one in Settings.")
-        model = settings.gemini_model.strip() or "gemini-2.5-flash"
+        model = self.model or settings.gemini_model.strip() or "gemini-2.5-flash"
         url = f"{settings.gemini_base_url.rstrip('/')}/models/{model}:generateContent"
         generation: dict = {"temperature": 0.45}
         if json_mode:

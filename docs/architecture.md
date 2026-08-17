@@ -62,7 +62,7 @@ A mock interview is a timed session bound to one problem. The editor stays the s
 
 `app/interviews/agent.py` (`MockInterviewAgent`) chooses the next question. The service still owns phase transitions, timers, and completion. The agent records structured signals (`requirements`, `approach`, `complexity`, `edge_cases`, `communication`, `testing`, `reasoning`) as `missing` / `partial` / `demonstrated` and probes whatever is still missing. It implements **CODING** interviews first; `SYSTEM_DESIGN` is reserved and must not be constructed yet.
 
-The agent depends only on `LLMProvider`. Concrete backends live under `app/interviews/providers/` (`OllamaProvider`, `OpenAIProvider`, `GeminiProvider`). `INTERVIEW_LLM_PROVIDER` is the platform default (usually `ollama`). A signed-in user can pick a paid provider and save their own API key on Settings; the key is encrypted at rest and never returned to the client. Adding a vendor means a new provider class — not a change to the agent or the phase machine.
+The agent depends only on `LLMProvider`. Concrete backends live under `app/interviews/providers/` (`OllamaProvider`, `OpenAIProvider`, `GeminiProvider`, `OpenRouterProvider`). `INTERVIEW_LLM_PROVIDER` is the platform default (usually `ollama`). A signed-in user can pick a paid provider and save an API key and optional model slug per provider in `user_llm_keys`. Switching providers reuses a stored key and model when they exist. An empty model falls back to the server env default (`OPENROUTER_MODEL`, `OPENAI_MODEL`, `GEMINI_MODEL`). Keys are encrypted at rest and never returned to the client. Adding a vendor means a new provider class — not a change to the agent or the phase machine.
 
 ### Surfaces
 

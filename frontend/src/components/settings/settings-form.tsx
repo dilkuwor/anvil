@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -227,12 +227,15 @@ function LlmSettings({ user }: { user: User }) {
   const queryClient = useQueryClient();
   const [provider, setProvider] = useState(user.llm_provider ?? "");
   const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState("");
+  const paid = provider === "openai" || provider === "gemini" || provider === "openrouter";
 
   const save = useMutation({
     mutationFn: () =>
       api.patch<User>("/api/v1/auth/me/llm", {
         provider: provider || null,
         api_key: apiKey.trim() || null,
+        model: paid ? model.trim() || null : undefined,
       }),
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.me, next);
@@ -245,7 +248,8 @@ function LlmSettings({ user }: { user: User }) {
   });
 
   const clearKey = useMutation({
-    mutationFn: () => api.patch<User>("/api/v1/auth/me/llm", { clear_api_key: true }),
+    mutationFn: () =>
+      api.patch<User>("/api/v1/auth/me/llm", { provider: provider || null, clear_api_key: true }),
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.me, next);
       setApiKey("");
@@ -254,15 +258,19 @@ function LlmSettings({ user }: { user: User }) {
     onError: () => toast.error("Unable to remove API key."),
   });
 
-  const paid = provider === "openai" || provider === "gemini";
   const current = (queryClient.getQueryData<User>(queryKeys.me) ?? user) as User;
+  const savedKey = (current.llm_keys ?? []).find((item) => item.provider === provider);
+
+  useEffect(() => {
+    setModel(savedKey?.model ?? "");
+  }, [provider, savedKey?.model]);
 
   return (
     <SectionCard>
       <SectionTitle>Interview AI</SectionTitle>
       <p className="mt-1 text-[13px] text-muted-foreground">
-        Platform default uses the shared Ollama interviewer. Paid providers need your own API key, stored only for
-        your account.
+        Platform default uses the shared Ollama interviewer. Paid providers need your own API key. Each provider keeps
+        its own key, so switching models does not erase the others.
       </p>
       <form
         className="mt-5 space-y-4"
@@ -276,28 +284,55 @@ function LlmSettings({ user }: { user: User }) {
             <option value="">Platform default</option>
             <option value="openai">OpenAI</option>
             <option value="gemini">Google Gemini</option>
+            <option value="openrouter">OpenRouter</option>
           </select>
         </Field>
         {paid ? (
           <Field
             label="API key"
             hint={
-              current.has_llm_api_key
-                ? `Saved key ${current.llm_api_key_hint ?? "••••"}. Leave blank to keep it.`
+              savedKey
+                ? `Saved key ${savedKey.hint}. Leave blank to keep it.`
                 : "Required for this provider. The full key is never shown again."
             }
           >
             <Input
               type="password"
               autoComplete="off"
-              placeholder={current.has_llm_api_key ? "••••••••••••" : provider === "gemini" ? "AIza…" : "sk-…"}
+              placeholder={
+                savedKey
+                  ? "••••••••••••"
+                  : provider === "gemini"
+                    ? "AIza…"
+                    : provider === "openrouter"
+                      ? "sk-or-…"
+                      : "sk-…"
+              }
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
             />
           </Field>
         ) : null}
+        {paid ? (
+          <Field
+            label="Model"
+            hint="Leave blank to use the server default. OpenRouter example: nvidia/nemotron-3.5-lightning:free"
+          >
+            <Input
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              placeholder={
+                provider === "openrouter"
+                  ? "nvidia/nemotron-3.5-lightning:free"
+                  : provider === "gemini"
+                    ? "gemini-2.5-flash"
+                    : "gpt-4o-mini"
+              }
+            />
+          </Field>
+        ) : null}
         <div className="flex flex-wrap justify-end gap-2">
-          {current.has_llm_api_key ? (
+          {savedKey ? (
             <Button type="button" variant="ghost" size="sm" disabled={clearKey.isPending} onClick={() => clearKey.mutate()}>
               {clearKey.isPending ? "Removing…" : "Remove key"}
             </Button>

@@ -73,8 +73,10 @@ def test_user_can_save_and_clear_llm_api_key(auth_client, db):
 
     user = db.get(User, UUID(body["id"]))
     assert user is not None
-    assert user.llm_api_key_encrypted
-    assert "sk-test-secret-key-1234" not in user.llm_api_key_encrypted
+    openai_row = user.llm_key_for("openai")
+    assert openai_row is not None
+    assert "sk-test-secret-key-1234" not in openai_row.api_key_encrypted
+    assert {item["provider"] for item in body["llm_keys"]} == {"openai"}
 
     me = auth_client.get("/api/v1/auth/me").json()
     assert me["has_llm_api_key"] is True
@@ -87,11 +89,43 @@ def test_user_can_save_and_clear_llm_api_key(auth_client, db):
     assert gemini.status_code == 200
     assert gemini.json()["llm_provider"] == "gemini"
     assert gemini.json()["llm_api_key_hint"] == "••••9876"
+    assert {item["provider"] for item in gemini.json()["llm_keys"]} == {"openai", "gemini"}
 
-    cleared = auth_client.patch("/api/v1/auth/me/llm", json={"provider": "", "clear_api_key": True})
+    back = auth_client.patch("/api/v1/auth/me/llm", json={"provider": "openai"})
+    assert back.status_code == 200
+    assert back.json()["llm_provider"] == "openai"
+    assert back.json()["llm_api_key_hint"] == "••••1234"
+
+    routed = auth_client.patch(
+        "/api/v1/auth/me/llm",
+        json={
+            "provider": "openrouter",
+            "api_key": "sk-or-test-key-5555",
+            "model": "nvidia/nemotron-3.5-lightning:free",
+        },
+    )
+    assert routed.status_code == 200
+    assert routed.json()["llm_provider"] == "openrouter"
+    assert routed.json()["llm_api_key_hint"] == "••••5555"
+    openrouter_key = next(item for item in routed.json()["llm_keys"] if item["provider"] == "openrouter")
+    assert openrouter_key["model"] == "nvidia/nemotron-3.5-lightning:free"
+
+    switched = auth_client.patch("/api/v1/auth/me/llm", json={"provider": "openai"})
+    assert switched.json()["llm_provider"] == "openai"
+    back_or = auth_client.patch("/api/v1/auth/me/llm", json={"provider": "openrouter"})
+    assert back_or.json()["llm_keys"]
+    stored = next(item for item in back_or.json()["llm_keys"] if item["provider"] == "openrouter")
+    assert stored["model"] == "nvidia/nemotron-3.5-lightning:free"
+
+    cleared = auth_client.patch(
+        "/api/v1/auth/me/llm",
+        json={"provider": "openrouter", "clear_api_key": True},
+    )
     assert cleared.status_code == 200
+    assert cleared.json()["llm_provider"] == "openrouter"
     assert cleared.json()["has_llm_api_key"] is False
-    assert cleared.json()["llm_provider"] is None
+    leftover = {item["provider"] for item in cleared.json()["llm_keys"]}
+    assert leftover == {"openai", "gemini"}
 
 
 def test_update_profile(auth_client):

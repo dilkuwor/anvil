@@ -13,7 +13,7 @@ from app.learn.models import (
 from app.problems.models import Problem, ProblemTag, Tag, TestCase
 from app.progress.models import Activity, UserProblemProgress
 from app.submissions.models import Submission, SubmissionTestResult
-from app.users.models import User
+from app.users.models import User, UserLlmKey
 
 __all__ = [
     "CheatSheet",
@@ -37,5 +37,6 @@ __all__ = [
     "Tag",
     "TestCase",
     "User",
+    "UserLlmKey",
     "UserProblemProgress",
 ]

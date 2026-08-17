@@ -132,6 +132,7 @@ export type User = {
   llm_provider?: string | null;
   has_llm_api_key?: boolean;
   llm_api_key_hint?: string | null;
+  llm_keys?: { provider: string; hint: string; model?: string | null }[];
 };
 
 export type UpdateProfileRequest = {

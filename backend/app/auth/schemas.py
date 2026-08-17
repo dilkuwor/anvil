@@ -15,8 +15,16 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 
-class UserOut(BaseModel):
+class LlmKeyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+    provider: str
+    hint: str = Field(validation_alias="api_key_hint", serialization_alias="hint")
+    model: str | None = None
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: UUID
     email: EmailStr
@@ -33,6 +41,7 @@ class UserOut(BaseModel):
     llm_provider: str | None = None
     has_llm_api_key: bool = False
     llm_api_key_hint: str | None = None
+    llm_keys: list[LlmKeyOut] = Field(default_factory=list)
 
 
 class UpdateProfileRequest(BaseModel):
@@ -63,9 +72,10 @@ class UpdateProfileRequest(BaseModel):
 class UpdateLlmSettingsRequest(BaseModel):
     provider: str | None = Field(default=None, max_length=40)
     api_key: str | None = Field(default=None, min_length=8, max_length=512)
+    model: str | None = Field(default=None, max_length=200)
     clear_api_key: bool = False
 
-    @field_validator("provider", "api_key", mode="before")
+    @field_validator("provider", "api_key", "model", mode="before")
     @classmethod
     def empty_to_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():

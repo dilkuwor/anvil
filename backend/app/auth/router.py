@@ -11,7 +11,7 @@ from app.common.errors import AppError, ConflictError, NotFoundError, Unauthoriz
 from app.common.secrets import encrypt_secret, secret_hint
 from app.common.security import create_access_token, hash_password, verify_password
 from app.interviews.providers import normalize_provider_name
-from app.users.models import User
+from app.users.models import User, UserLlmKey
 
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_AVATAR_BYTES = 1_000_000
@@ -91,17 +91,35 @@ def update_my_llm_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> User:
+    selected = current_user.llm_provider
     if "provider" in payload.model_fields_set:
         try:
-            current_user.llm_provider = normalize_provider_name(payload.provider)
+            selected = normalize_provider_name(payload.provider)
         except ValueError as exc:
             raise AppError(str(exc), status_code=422, code="invalid_llm_provider") from exc
+        current_user.llm_provider = selected
+    key_provider = selected
     if payload.clear_api_key:
-        current_user.llm_api_key_encrypted = None
-        current_user.llm_api_key_hint = None
-    elif payload.api_key:
-        current_user.llm_api_key_encrypted = encrypt_secret(payload.api_key)
-        current_user.llm_api_key_hint = secret_hint(payload.api_key)
+        if key_provider:
+            row = current_user.llm_key_for(key_provider)
+            if row is not None:
+                db.delete(row)
+    elif payload.api_key and key_provider:
+        row = current_user.llm_key_for(key_provider)
+        if row is None:
+            row = UserLlmKey(user_id=current_user.id, provider=key_provider)
+            current_user.llm_keys.append(row)
+        row.api_key_encrypted = encrypt_secret(payload.api_key)
+        row.api_key_hint = secret_hint(payload.api_key)
+    if "model" in payload.model_fields_set and key_provider and not payload.clear_api_key:
+        row = current_user.llm_key_for(key_provider)
+        if row is None:
+            raise AppError(
+                "Save an API key for this provider before choosing a model.",
+                status_code=422,
+                code="llm_api_key_required",
+            )
+        row.model = payload.model
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
