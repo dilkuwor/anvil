@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookOpen, CircleCheck, CircleHelp, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -66,14 +67,27 @@ export function LessonView({ slug }: { slug: string }) {
               { label: data.title },
             ]}
           />
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-lg font-semibold tracking-tight">{data.title}</h1>
-              <p className="mt-0.5 text-[13px] text-muted-foreground">
-                {data.category_title} · {data.topic_title} · {data.estimated_minutes} min read
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h1 className="min-w-0 text-lg font-semibold tracking-tight">{data.title}</h1>
+            <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 text-accent" aria-hidden />
+                {data.category_title}
+              </span>
+              <span aria-hidden>·</span>
+              <span>{data.topic_title}</span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-accent" aria-hidden />
+                {data.estimated_minutes} min read
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <SectionCard className="min-w-0">
+            <div className="mb-5 flex flex-wrap items-center justify-end gap-1.5 border-b border-steel-800 pb-4">
               <ListenButton
                 text={lessonSpeech({
                   title: data.title,
@@ -85,16 +99,12 @@ export function LessonView({ slug }: { slug: string }) {
               {signedIn ? (
                 <AskAiButton />
               ) : (
-                <Button size="sm" variant="secondary" onClick={() => setAuthPrompt("ask-ai")}>
+                <Button size="sm" onClick={() => setAuthPrompt("ask-ai")}>
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden />
                   Ask AI
                 </Button>
               )}
             </div>
-          </div>
-        </div>
-
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-          <SectionCard className="min-w-0">
             {signedIn ? <AskAiPanel /> : null}
             <LessonMarkdown content={data.content} />
           </SectionCard>
@@ -125,9 +135,12 @@ export function LessonView({ slug }: { slug: string }) {
             {data.takeaways.length ? (
               <SectionCard>
                 <SectionTitle>Key takeaways</SectionTitle>
-                <ul className="mt-3 space-y-1.5 text-[13px] leading-6">
+                <ul className="mt-3 space-y-2 text-[13px] leading-6">
                   {data.takeaways.map((item) => (
-                    <li key={item}>• {item}</li>
+                    <li key={item} className="flex items-start gap-2">
+                      <CircleCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" strokeWidth={2.25} aria-hidden />
+                      <span>{item}</span>
+                    </li>
                   ))}
                 </ul>
               </SectionCard>
@@ -136,9 +149,12 @@ export function LessonView({ slug }: { slug: string }) {
             {data.interview_questions.length ? (
               <SectionCard>
                 <SectionTitle>Interview questions</SectionTitle>
-                <ul className="mt-3 space-y-1.5 text-[13px] leading-6">
+                <ul className="mt-3 space-y-2 text-[13px] leading-6">
                   {data.interview_questions.map((item) => (
-                    <li key={item}>• {item}</li>
+                    <li key={item} className="flex items-start gap-2">
+                      <CircleHelp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+                      <span>{item}</span>
+                    </li>
                   ))}
                 </ul>
               </SectionCard>

@@ -1,5 +1,42 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Bookmark,
+  Briefcase,
+  Code2,
+  GraduationCap,
+  Lightbulb,
+  Scale,
+  TriangleAlert,
+  Workflow,
+} from "lucide-react";
+
 function escapeHtml(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+const HEADING_ICONS: Record<string, LucideIcon> = {
+  "why it matters": Lightbulb,
+  "how it works": Workflow,
+  example: Code2,
+  "common use cases": Briefcase,
+  "use cases": Briefcase,
+  tradeoffs: Scale,
+  "common mistakes": TriangleAlert,
+  "interview tip": GraduationCap,
+};
+
+function headingIcon(title: string): LucideIcon {
+  return HEADING_ICONS[title.trim().toLowerCase()] ?? Bookmark;
+}
+
+function LessonHeading({ title }: { title: string }) {
+  const Icon = headingIcon(title);
+  return (
+    <h2 className="flex items-center gap-2 pt-2 text-[15px] font-semibold tracking-tight">
+      <Icon className="h-4 w-4 shrink-0 text-accent" strokeWidth={2.25} aria-hidden />
+      {title}
+    </h2>
+  );
 }
 
 function inline(text: string): string {
@@ -18,24 +55,17 @@ export function LessonMarkdown({
 }) {
   const blocks = content.replaceAll("\r\n", "\n").trim().split(/\n{2,}/);
   const skipFirstTitle = skipLeadingTitle && Boolean(blocks[0]?.startsWith("# "));
+  let leadUsed = false;
   return (
-    <div className="max-w-3xl space-y-4 text-sm leading-7 text-foreground">
+    <div className="w-full space-y-5 text-sm leading-7 text-foreground">
       {blocks.map((block, index) => {
         if (index === 0 && skipFirstTitle) return null;
         const lines = block.split("\n");
         if (lines[0].startsWith("# ")) {
-          return (
-            <h2 key={index} className="text-lg font-semibold tracking-tight">
-              {lines[0].slice(2)}
-            </h2>
-          );
+          return <LessonHeading key={index} title={lines[0].slice(2)} />;
         }
         if (lines[0].startsWith("## ")) {
-          return (
-            <h2 key={index} className="pt-1 text-[15px] font-semibold tracking-tight">
-              {lines[0].slice(3)}
-            </h2>
-          );
+          return <LessonHeading key={index} title={lines[0].slice(3)} />;
         }
         if (lines.every((line) => line.startsWith("- "))) {
           return (
@@ -46,7 +76,18 @@ export function LessonMarkdown({
             </ul>
           );
         }
-        return <p key={index} dangerouslySetInnerHTML={{ __html: inline(lines.join(" ")) }} />;
+        const html = inline(lines.join(" "));
+        if (!leadUsed) {
+          leadUsed = true;
+          return (
+            <p
+              key={index}
+              className="w-full rounded-xl border border-accent/15 bg-accent/[0.06] px-3.5 py-3 text-[15px] leading-7 text-foreground"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          );
+        }
+        return <p key={index} className="text-foreground/90" dangerouslySetInnerHTML={{ __html: html }} />;
       })}
     </div>
   );
