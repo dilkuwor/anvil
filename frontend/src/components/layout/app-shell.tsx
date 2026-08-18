@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { DesktopNav, MobileNav } from "@/components/layout/site-nav";
 import { UserAvatar } from "@/components/settings/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/ui/section";
@@ -13,14 +14,6 @@ import { Button } from "@/components/ui/button";
 import { api, fetchCurrentUser } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-
-const PUBLIC_NAV = [
-  { href: "/problems", label: "Problems" },
-  { href: "/system-design", label: "System Design" },
-  { href: "/roadmap", label: "Roadmap" },
-  { href: "/learn", label: "Learn" },
-  { href: "/cheatsheets", label: "Cheat Sheets" },
-];
 
 const PRIVATE_PREFIXES = ["/dashboard", "/settings", "/system-design/interview"];
 
@@ -72,43 +65,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  const nav = PUBLIC_NAV;
-
   return (
     <div className="flex h-dvh min-h-0 flex-col">
-      <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
         <div
           className={cn(
-            "flex h-12 items-center justify-between",
+            "relative flex h-12 items-center justify-between gap-3",
             wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content",
           )}
         >
           <div className="flex min-w-0 items-center gap-5">
             <Link href={signedIn ? "/dashboard" : "/"} className="shrink-0 text-sm">
-              <BrandMark compact />
+              <BrandMark compact wordmarkClassName="max-md:sr-only" />
             </Link>
-            <nav className="flex items-center gap-0.5 overflow-x-auto" aria-label="Primary">
-              {nav.map((item) => {
-                const active = pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "rounded-md px-2.5 py-1 text-[13px] hover:text-foreground",
-                      active ? "font-medium text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+            <DesktopNav pathname={pathname} />
           </div>
-          <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+            <ThemeToggle />
             {signedIn && me.data ? (
-              <>
-                <ThemeToggle />
+              <div className="hidden items-center gap-1.5 md:flex">
                 <Link
                   href="/settings"
                   className={cn(
@@ -122,18 +97,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
                   Log out
                 </Button>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="hidden items-center gap-1.5 md:flex">
                 <Button asChild size="sm" variant="ghost">
                   <Link href={`/login?next=${encodeURIComponent(pathname)}`}>Log in</Link>
                 </Button>
                 <Button asChild size="sm">
                   <Link href={`/register?next=${encodeURIComponent(pathname)}`}>Register</Link>
                 </Button>
-                <ThemeToggle />
-              </>
+              </div>
             )}
+            <MobileNav
+              signedIn={signedIn}
+              user={me.data}
+              nextPath={pathname}
+              onLogout={signedIn ? () => logout.mutate() : undefined}
+              loggingOut={logout.isPending}
+            />
           </div>
         </div>
       </header>
