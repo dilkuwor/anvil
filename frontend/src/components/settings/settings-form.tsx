@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -225,10 +225,19 @@ function ProfileEditor({ user }: { user: User }) {
 
 function LlmSettings({ user }: { user: User }) {
   const queryClient = useQueryClient();
+  const current = (queryClient.getQueryData<User>(queryKeys.me) ?? user) as User;
   const [provider, setProvider] = useState(user.llm_provider ?? "");
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("");
+  const [model, setModel] = useState(
+    () => (user.llm_keys ?? []).find((item) => item.provider === (user.llm_provider ?? ""))?.model ?? "",
+  );
   const paid = provider === "openai" || provider === "gemini" || provider === "openrouter";
+  const savedKey = (current.llm_keys ?? []).find((item) => item.provider === provider);
+
+  function selectProvider(next: string) {
+    setProvider(next);
+    setModel((current.llm_keys ?? []).find((item) => item.provider === next)?.model ?? "");
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -258,13 +267,6 @@ function LlmSettings({ user }: { user: User }) {
     onError: () => toast.error("Unable to remove API key."),
   });
 
-  const current = (queryClient.getQueryData<User>(queryKeys.me) ?? user) as User;
-  const savedKey = (current.llm_keys ?? []).find((item) => item.provider === provider);
-
-  useEffect(() => {
-    setModel(savedKey?.model ?? "");
-  }, [provider, savedKey?.model]);
-
   return (
     <SectionCard>
       <SectionTitle>Interview AI</SectionTitle>
@@ -280,7 +282,7 @@ function LlmSettings({ user }: { user: User }) {
         }}
       >
         <Field label="Provider">
-          <select className="select-field" value={provider} onChange={(event) => setProvider(event.target.value)}>
+          <select className="select-field" value={provider} onChange={(event) => selectProvider(event.target.value)}>
             <option value="">Platform default</option>
             <option value="openai">OpenAI</option>
             <option value="gemini">Google Gemini</option>
