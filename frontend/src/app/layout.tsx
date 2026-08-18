@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "InterviewAnvil",
   description: "Java coding practice for software engineering interviews.",
+  icons: {
+    icon: [{ url: "/logo.png", type: "image/png" }],
+    apple: "/logo.png",
+    shortcut: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
