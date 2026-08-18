@@ -9,7 +9,6 @@ import { LearnStatus } from "@/components/learn/learn-status";
 import { Breadcrumbs, PageHeader } from "@/components/layout/page-header";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
-import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
@@ -34,16 +33,7 @@ export function TopicView({ slug }: { slug: string }) {
 
   const data = topic.data;
   const isDesignCatalog = data.slug === DESIGN_LEARN_TOPIC;
-  const practiceHref = isDesignCatalog
-    ? "/system-design/problems"
-    : data.practice_tag
-      ? `/problems?tag=${data.practice_tag}`
-      : "/problems";
-  const mockHref = isDesignCatalog
-    ? "/system-design/interview"
-    : data.related_problems[0]
-      ? `/problems/${data.related_problems[0].slug}`
-      : practiceHref;
+  const showRelated = data.related_problems.length > 0;
 
   return (
     <div className="space-y-5">
@@ -75,7 +65,7 @@ export function TopicView({ slug }: { slug: string }) {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className={showRelated ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]" : undefined}>
         {isDesignCatalog ? (
           <DesignProblemsCatalog lessons={data.lessons} />
         ) : (
@@ -103,20 +93,8 @@ export function TopicView({ slug }: { slug: string }) {
           </SectionCard>
         )}
 
-        <aside className="space-y-4">
-          <SectionCard>
-            <SectionTitle>Next step</SectionTitle>
-            <div className="mt-3 flex flex-col gap-2">
-              <Button asChild size="sm">
-                <Link href={practiceHref}>{isDesignCatalog ? "Open Simulator" : "Practice Problems"}</Link>
-              </Button>
-              <Button asChild size="sm" variant="secondary">
-                <Link href={mockHref}>Mock Interview</Link>
-              </Button>
-            </div>
-          </SectionCard>
-
-          {data.related_problems.length ? (
+        {showRelated ? (
+          <aside className="space-y-4">
             <SectionCard className="p-0">
               <div className="px-5 pt-5">
                 <SectionTitle>Related problems</SectionTitle>
@@ -135,8 +113,8 @@ export function TopicView({ slug }: { slug: string }) {
                 ))}
               </ul>
             </SectionCard>
-          ) : null}
-        </aside>
+          </aside>
+        ) : null}
       </div>
     </div>
   );

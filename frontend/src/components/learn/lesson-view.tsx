@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -15,22 +14,14 @@ import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
-import type { LearningLessonDetail } from "@/lib/learn";
+import type { LearningLessonDetail, LearningTopicDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
-import {
-  applyScenarioWorkload,
-  scenarioByLearnSlug,
-  useStartDesignInterview,
-  useSystemDesignCatalog,
-} from "@/lib/system-design-catalog";
-import { newDesign, saveCurrent } from "@/system-design/state/persist";
 import { lessonSpeech } from "@/lib/tts";
 import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { useSession, type AuthPromptKind } from "@/lib/session";
 
 export function LessonView({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const { signedIn } = useSession();
   const [authPrompt, setAuthPrompt] = useState<AuthPromptKind | null>(null);
   const lesson = useQuery({
@@ -50,8 +41,11 @@ export function LessonView({ slug }: { slug: string }) {
     },
     onError: () => toast.error("Unable to update progress."),
   });
-  const catalog = useSystemDesignCatalog();
-  const interview = useStartDesignInterview();
+  const topic = useQuery({
+    queryKey: queryKeys.learnTopic(lesson.data?.topic_slug ?? ""),
+    queryFn: () => api.get<LearningTopicDetail>(`/api/v1/learn/topics/${lesson.data!.topic_slug}`),
+    enabled: Boolean(lesson.data?.topic_slug && lesson.data.related_problems.length > 0),
+  });
 
   if (lesson.isLoading) return <CardSkeleton rows={8} />;
   if (lesson.isError || !lesson.data) {
@@ -60,7 +54,6 @@ export function LessonView({ slug }: { slug: string }) {
 
   const data = lesson.data;
   const firstProblem = data.related_problems[0];
-  const designProblem = scenarioByLearnSlug(catalog.data, data.slug);
 
   const page = (
       <div className="space-y-5">
@@ -107,6 +100,28 @@ export function LessonView({ slug }: { slug: string }) {
           </SectionCard>
 
           <aside className="space-y-4 xl:sticky xl:top-16">
+            {firstProblem ? (
+              <SectionCard>
+                <SectionTitle>Next step</SectionTitle>
+                <div className="mt-3 flex flex-col gap-2">
+                  <Button asChild size="sm">
+                    <Link
+                      href={
+                        topic.data?.practice_tag
+                          ? `/problems?tag=${topic.data.practice_tag}`
+                          : `/problems/${firstProblem.slug}`
+                      }
+                    >
+                      Practice Problems
+                    </Link>
+                  </Button>
+                  <Button asChild size="sm" variant="secondary">
+                    <Link href={`/problems/${firstProblem.slug}`}>Mock Interview</Link>
+                  </Button>
+                </div>
+              </SectionCard>
+            ) : null}
+
             {data.takeaways.length ? (
               <SectionCard>
                 <SectionTitle>Key takeaways</SectionTitle>
@@ -129,38 +144,6 @@ export function LessonView({ slug }: { slug: string }) {
               </SectionCard>
             ) : null}
 
-            {designProblem ? (
-              <SectionCard>
-                <SectionTitle>Practice this design</SectionTitle>
-                <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
-                  Open this prompt in the simulator or sit the mock interview.
-                </p>
-                <div className="mt-3 flex flex-col gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      if (designProblem.sample_slug) {
-                        router.push(`/system-design/simulator?sample=${designProblem.sample_slug}`);
-                        return;
-                      }
-                      saveCurrent(applyScenarioWorkload(newDesign(designProblem.title), designProblem));
-                      router.push(`/system-design/simulator?problem=${designProblem.slug}`);
-                    }}
-                  >
-                    {designProblem.sample_slug ? "Load sample" : "Simulate"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={interview.startingSlug === designProblem.slug}
-                    onClick={() => interview.startInterview(designProblem.slug)}
-                  >
-                    {interview.startingSlug === designProblem.slug ? "Starting…" : "Mock Interview"}
-                  </Button>
-                </div>
-              </SectionCard>
-            ) : null}
-
             {data.related_problems.length ? (
               <SectionCard className="p-0">
                 <div className="px-5 pt-5">
@@ -179,16 +162,6 @@ export function LessonView({ slug }: { slug: string }) {
                     </li>
                   ))}
                 </ul>
-                <div className="flex flex-col gap-2 border-t border-steel-800 p-3">
-                  {firstProblem ? (
-                    <Button asChild size="sm">
-                      <Link href={`/problems/${firstProblem.slug}`}>Practice {firstProblem.title}</Link>
-                    </Button>
-                  ) : null}
-                  <Button asChild size="sm" variant="secondary">
-                    <Link href={firstProblem ? `/problems/${firstProblem.slug}` : "/problems"}>Mock Interview</Link>
-                  </Button>
-                </div>
               </SectionCard>
             ) : null}
           </aside>
@@ -226,7 +199,6 @@ export function LessonView({ slug }: { slug: string }) {
           </div>
         </div>
       {authPrompt ? <AuthPrompt kind={authPrompt} onClose={() => setAuthPrompt(null)} /> : null}
-      {interview.authOpen ? <AuthPrompt kind="mock" onClose={interview.closeAuth} /> : null}
       </div>
   );
 
