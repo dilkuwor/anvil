@@ -38,7 +38,7 @@ function Sparkline({ points, className }: { points: readonly number[]; className
 
 function TrafficEdge() {
   return (
-    <div className="relative mx-0.5 flex h-10 min-w-5 flex-1 items-center" aria-hidden>
+    <div className="relative mx-px flex h-10 min-w-2 flex-1 items-center sm:mx-0.5 sm:min-w-5" aria-hidden>
       <div className="h-px w-full bg-steel-600" />
       <span className="absolute right-0 -mt-px border-y-[4px] border-l-[6px] border-y-transparent border-l-steel-500" />
       {[0, 1, 2].map((index) => (
@@ -54,36 +54,36 @@ function TrafficEdge() {
 
 export function HeroDesignFloat() {
   return (
-    <Link href="/system-design" className="group relative mx-auto block w-full max-w-[38rem] lg:ml-auto lg:mr-0" aria-label="Open System Design">
-      <article className="relative rounded-2xl border border-black/[0.06] bg-[rgba(255,255,255,0.48)] px-3.5 py-4 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.35)] transition duration-300 group-hover:border-black/12 group-hover:bg-[rgba(255,255,255,0.82)] dark:border-white/[0.07] dark:bg-[rgba(30,30,34,0.42)] dark:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)] dark:group-hover:border-white/12 dark:group-hover:bg-[rgba(30,30,34,0.78)]">
+    <Link href="/system-design" className="group relative mx-auto block w-full min-w-0 max-w-[38rem] lg:ml-auto lg:mr-0" aria-label="Open System Design">
+      <article className="relative overflow-hidden rounded-2xl border border-black/[0.06] bg-[rgba(255,255,255,0.48)] px-3 py-4 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.35)] transition duration-300 group-hover:border-black/12 group-hover:bg-[rgba(255,255,255,0.82)] dark:border-white/[0.07] dark:bg-[rgba(30,30,34,0.42)] dark:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)] dark:group-hover:border-white/12 dark:group-hover:bg-[rgba(30,30,34,0.78)] sm:px-3.5">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-accent">System Design</p>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-steel-700 px-2 py-0.5 text-[10px] text-muted-foreground">
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-steel-700 px-2 py-0.5 text-[10px] text-muted-foreground">
             <span className="hero-live-dot h-1.5 w-1.5 rounded-full bg-success motion-reduce:animate-none" />
             Live Simulation
           </span>
         </div>
 
-        <div className="mt-3.5 flex items-start">
+        <div className="mt-3.5 flex min-w-0 items-start">
           {NODES.map((node, index) => (
             <Fragment key={node.id}>
               {index > 0 ? <TrafficEdge /> : null}
-              <div className="flex w-[4.15rem] shrink-0 flex-col items-center">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-accent/70 text-accent">
+              <div className="flex min-w-0 flex-1 flex-col items-center sm:w-[4.15rem] sm:flex-none">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-accent/70 text-accent sm:h-10 sm:w-10">
                   <node.Icon className="h-4 w-4" strokeWidth={1.75} />
                 </span>
-                <span className="mt-1.5 text-center text-[8px] leading-tight text-muted-foreground">{node.label}</span>
+                <span className="mt-1.5 max-w-full text-center text-[8px] leading-tight text-muted-foreground">{node.label}</span>
               </div>
             </Fragment>
           ))}
         </div>
 
-        <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-steel-800 pt-5">
+        <dl className="mt-5 grid grid-cols-3 gap-1.5 border-t border-steel-800 pt-5 sm:gap-2">
           {METRICS.map((metric) => (
             <div key={metric.label} className="min-w-0">
               <dt className="text-[8px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{metric.label}</dt>
-              <dd className={`mt-0.5 flex items-center gap-[21px] text-[11px] font-semibold tracking-tight tabular-nums ${metric.tone}`}>
-                <span>{metric.value}</span>
+              <dd className={`mt-0.5 flex flex-col items-start gap-1 text-[11px] font-semibold tracking-tight tabular-nums sm:flex-row sm:items-center sm:gap-[21px] ${metric.tone}`}>
+                <span className="truncate">{metric.value}</span>
                 <Sparkline points={metric.points} className={metric.stroke} />
               </dd>
             </div>

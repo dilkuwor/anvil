@@ -54,7 +54,7 @@ export default function HomePage() {
             <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(var(--steel-800)_1px,transparent_1px),linear-gradient(90deg,var(--steel-800)_1px,transparent_1px)] [background-size:52px_52px] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />
           </div>
           <div className="ia-content relative pt-14 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
-            <div className="grid items-center gap-6 lg:grid-cols-[minmax(17rem,30rem)_minmax(0,1fr)] lg:gap-8">
+            <div className="grid min-w-0 items-center gap-6 lg:grid-cols-[minmax(17rem,30rem)_minmax(0,1fr)] lg:gap-8">
             <div className="max-w-2xl">
               <p className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[12px] font-medium text-accent">
                 <Zap className="h-3.5 w-3.5" aria-hidden />
