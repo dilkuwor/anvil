@@ -16,12 +16,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InterviewAnvil",
-  description: "Java coding practice for software engineering interviews.",
+  title: {
+    default: "Anvil — Build Skills. Break Limits. Ace the Interview.",
+    template: "%s · Anvil",
+  },
+  description:
+    "Anvil is a ByteTech LLC product built to help software engineers prepare for technical interviews through deliberate, realistic practice.",
   icons: {
-    icon: [{ url: "/logo.png", type: "image/png" }],
-    apple: "/logo.png",
-    shortcut: "/logo.png",
+    icon: [{ url: "/logo-app-v4.png", type: "image/png" }],
+    apple: "/logo-app-v4.png",
+    shortcut: "/logo-app-v4.png",
   },
 };
 

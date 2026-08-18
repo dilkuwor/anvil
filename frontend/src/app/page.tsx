@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles } from "lucide-react";
+import { Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles, Zap } from "lucide-react";
 
 import { HeroPreview } from "@/components/landing/hero-preview";
 import { HomeGate } from "@/components/landing/home-gate";
 import { PublicHeader } from "@/components/layout/public-header";
-import { BrandMark } from "@/components/ui/section";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
 
 const FEATURES = [
@@ -41,14 +41,6 @@ const STEPS = [
   { n: "04", title: "Improve", body: "Review interview feedback, target weak areas, and use cheat sheets.", icon: ListChecks },
 ];
 
-const FOOTER_NAV = [
-  { href: "/problems", label: "Problems" },
-  { href: "/system-design", label: "System Design" },
-  { href: "/roadmap", label: "Roadmap" },
-  { href: "/learn", label: "Learn" },
-  { href: "/cheatsheets", label: "Cheat Sheets" },
-];
-
 export default function HomePage() {
   return (
     <HomeGate>
@@ -62,27 +54,33 @@ export default function HomePage() {
           </div>
           <div className="ia-content relative pt-14 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
             <div className="max-w-2xl">
-              <h1 className="text-[2rem] font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-[1.06]">
-                Practice coding.
-                <br className="hidden sm:block" /> Master the interview.
+              <p className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[12px] font-medium text-accent">
+                <Zap className="h-3.5 w-3.5" aria-hidden />
+                Forge Your Interview Skills
+              </p>
+              <h1 className="mt-3 text-[2rem] font-semibold leading-[1.1] tracking-tight text-balance sm:text-[3rem] lg:text-[3.25rem]">
+                Build skills.
+                <br />
+                Break limits.
+                <br />
+                Ace the interview.
               </h1>
-              <p className="mt-4 max-w-xl text-[15px] leading-7 text-muted-foreground">
-                Everything you need to prepare for software engineering interviews — coding problems, system design,
-                AI/ML, mock interviews, and focused interview review.
+              <p className="mt-4 max-w-xl text-[15px] leading-7 text-[#475569] dark:text-zinc-300">
+                Everything you need to prepare for software engineering interviews — coding, system design, AI/ML,
+                AI-powered mock interviews, and focused practice.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
                   <Link href="/problems">Start Practicing</Link>
                 </Button>
-                <Button asChild size="lg" variant="secondary">
-                  <Link href="/learn">Explore Learn</Link>
-                </Button>
-                <Link
-                  href="/login"
-                  className="max-sm:hidden px-1 text-[13px] text-muted-foreground hover:text-foreground"
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-[#CBD5E1] bg-white/80 text-foreground hover:bg-white dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-400 dark:hover:bg-zinc-800"
                 >
-                  Log in
-                </Link>
+                  <Link href="/learn">Explore Learning</Link>
+                </Button>
               </div>
             </div>
 
@@ -170,7 +168,7 @@ export default function HomePage() {
                     <Link href="/problems">Start Practicing</Link>
                   </Button>
                   <Button asChild variant="secondary">
-                    <Link href="/learn">Explore Learn</Link>
+                    <Link href="/learn">Explore Learning</Link>
                   </Button>
                 </div>
               </div>
@@ -179,26 +177,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="mt-auto border-t border-steel-800">
-        <div className="ia-content flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <Link href="/" className="text-sm">
-              <BrandMark compact />
-            </Link>
-            <p className="text-[12px] text-muted-foreground">© 2026 InterviewAnvil</p>
-          </div>
-          <nav className="flex flex-wrap items-center text-[13px] text-muted-foreground" aria-label="Footer">
-            {FOOTER_NAV.map((item, index) => (
-              <span key={item.href} className="inline-flex items-center">
-                {index > 0 ? <span aria-hidden className="px-2">·</span> : null}
-                <Link href={item.href} className="hover:text-foreground">
-                  {item.label}
-                </Link>
-              </span>
-            ))}
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
     </HomeGate>
   );

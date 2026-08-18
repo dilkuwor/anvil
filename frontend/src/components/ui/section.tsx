@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 import { cn } from "@/lib/utils";
 
 export function SectionCard({
@@ -29,28 +27,29 @@ export function SectionTitle({ children, className }: { children: React.ReactNod
 export function BrandMark({
   compact = false,
   wordmarkClassName,
+  wordmark = "Anvil",
 }: {
   compact?: boolean;
   wordmarkClassName?: string;
+  wordmark?: string;
 }) {
   return (
     <span className="inline-flex items-center gap-2 font-semibold tracking-tight">
       <span
         className={cn(
-          "relative inline-flex overflow-hidden rounded-[22%] bg-[#1a1224]",
+          "relative inline-flex overflow-hidden rounded-[22%]",
           compact ? "h-6 w-6" : "h-7 w-7",
         )}
       >
-        <Image
-          src="/logo.png"
+        <img
+          src="/logo-app-v4.png"
           alt=""
           width={28}
           height={28}
-          priority
-          className="h-full w-full scale-[1.08] object-cover"
+          className="h-full w-full object-cover"
         />
       </span>
-      <span className={wordmarkClassName}>InterviewAnvil</span>
+      <span className={wordmarkClassName}>{wordmark}</span>
     </span>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState, type PointerEvent } from "react";
 
 import type { ActiveFailure, FailureType, SimulationResult, SloConfig, WorkloadConfig } from "../models/types";
 import { deriveWorkload } from "../models/workload";
@@ -11,6 +11,18 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const TABS = ["Workload", "Metrics", "Capacity", "Latency", "Storage", "Cost", "Failures"] as const;
+const COLLAPSED_HEIGHT = 36;
+const MIN_OPEN_HEIGHT = 160;
+const DEFAULT_HEIGHT = 240;
+
+function panelMaxHeight() {
+  if (typeof window === "undefined") return 560;
+  return Math.max(MIN_OPEN_HEIGHT, Math.round(window.innerHeight * 0.72));
+}
+
+function clampHeight(value: number) {
+  return Math.min(panelMaxHeight(), Math.max(MIN_OPEN_HEIGHT, Math.round(value)));
+}
 
 const FAILURES: { type: FailureType; label: string }[] = [
   { type: "traffic_spike", label: "Traffic spike 5×" },
@@ -54,15 +66,79 @@ export function BottomPanel({
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Workload");
   const [open, setOpen] = useState(true);
+  const [height, setHeight] = useState(DEFAULT_HEIGHT);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ y: number; height: number } | null>(null);
   const derived = deriveWorkload(workload);
+
+  function onResizePointerDown(event: PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { y: event.clientY, height: open ? height : COLLAPSED_HEIGHT };
+    setDragging(true);
+  }
+
+  function onResizePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!drag.current) return;
+    const next = drag.current.height + (drag.current.y - event.clientY);
+    if (next < MIN_OPEN_HEIGHT / 2) {
+      setOpen(false);
+      return;
+    }
+    setOpen(true);
+    setHeight(clampHeight(next));
+  }
+
+  function onResizePointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (drag.current) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    drag.current = null;
+    setDragging(false);
+  }
 
   return (
     <section
       className={cn(
-        "flex shrink-0 flex-col overflow-hidden border-t border-steel-800 bg-steel-900 transition-[height] duration-200 ease-out",
-        open ? "h-[240px]" : "h-9",
+        "relative flex shrink-0 flex-col overflow-hidden border-t border-steel-800 bg-steel-900",
+        !dragging && "transition-[height] duration-200 ease-out",
       )}
+      style={{ height: open ? height : COLLAPSED_HEIGHT }}
     >
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize results panel"
+        aria-valuemin={MIN_OPEN_HEIGHT}
+        aria-valuemax={panelMaxHeight()}
+        aria-valuenow={open ? height : COLLAPSED_HEIGHT}
+        tabIndex={0}
+        className="absolute inset-x-0 -top-1 z-10 flex h-3 cursor-ns-resize items-start justify-center"
+        onPointerDown={onResizePointerDown}
+        onPointerMove={onResizePointerMove}
+        onPointerUp={onResizePointerUp}
+        onPointerCancel={onResizePointerUp}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setOpen(true);
+            setHeight((value) => clampHeight(value + 24));
+          }
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setHeight((value) => {
+              const next = value - 24;
+              if (next < MIN_OPEN_HEIGHT) {
+                setOpen(false);
+                return value;
+              }
+              return next;
+            });
+          }
+        }}
+      >
+        <span className="mt-0.5 h-1 w-8 rounded-full bg-steel-600" />
+      </div>
       <div className={cn("flex items-center justify-between gap-3 px-2", open && "border-b border-steel-800")}>
         <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto" role="tablist">
           {TABS.map((item) => (
