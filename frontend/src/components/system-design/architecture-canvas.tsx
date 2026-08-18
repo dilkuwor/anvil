@@ -136,33 +136,34 @@ export function ArchitectureCanvas({
 
   useEffect(() => {
     if (!drag) return;
+    const session = drag;
     function onMove(event: PointerEvent) {
       const point = localPoint(event);
       const current = graphRef.current;
-      if (drag.mode === "move") {
+      if (session.mode === "move") {
         emit({
           ...current,
           nodes: current.nodes.map((node) =>
-            node.id === drag.id
-              ? { ...node, x: Math.max(12, point.x - drag.dx), y: Math.max(12, point.y - drag.dy) }
+            node.id === session.id
+              ? { ...node, x: Math.max(12, point.x - session.dx), y: Math.max(12, point.y - session.dy) }
               : node,
           ),
         });
         return;
       }
-      setDrag({ ...drag, x: point.x, y: point.y });
+      setDrag({ mode: "link", from: session.from, x: point.x, y: point.y });
     }
     function onUp(event: PointerEvent) {
       const current = graphRef.current;
-      if (drag.mode === "link") {
+      if (session.mode === "link") {
         const target = document.elementFromPoint(event.clientX, event.clientY);
         const nodeId = target instanceof HTMLElement ? target.closest("[data-node-id]")?.getAttribute("data-node-id") : null;
-        if (nodeId && nodeId !== drag.from) {
-          const exists = current.edges.some((edge) => edge.from === drag.from && edge.to === nodeId);
+        if (nodeId && nodeId !== session.from) {
+          const exists = current.edges.some((edge) => edge.from === session.from && edge.to === nodeId);
           if (!exists) {
             emit({
               ...current,
-              edges: [...current.edges, { id: `e_${drag.from}_${nodeId}`, from: drag.from, to: nodeId }],
+              edges: [...current.edges, { id: `e_${session.from}_${nodeId}`, from: session.from, to: nodeId }],
             });
           }
         }
