@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { DesktopNav, MobileNav } from "@/components/layout/site-nav";
+import { DesktopNav, MobileNavSheet, MobileNavTrigger, useMobileMenu } from "@/components/layout/site-nav";
 import { UserAvatar } from "@/components/settings/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/ui/section";
@@ -25,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const menu = useMobileMenu(pathname);
   const editor = pathname.startsWith("/problems/") && !pathname.startsWith("/problems/lists");
   const designWorkspace = pathname.startsWith("/system-design/interview");
   const simulator = pathname.startsWith("/system-design/simulator");
@@ -67,55 +68,56 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-dvh min-h-0 flex-col">
-      <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
-        <div
-          className={cn(
-            "relative flex h-12 items-center justify-between gap-3",
-            wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content",
-          )}
-        >
-          <div className="flex min-w-0 items-center gap-5">
-            <Link href={signedIn ? "/dashboard" : "/"} className="shrink-0 text-sm">
-              <BrandMark compact wordmarkClassName="max-md:sr-only" />
-            </Link>
-            <DesktopNav pathname={pathname} />
+      <header className="sticky top-0 z-50 border-b border-steel-800 bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+        <div className={cn(wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content")}>
+          <div className="flex h-12 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-5">
+              <Link href={signedIn ? "/dashboard" : "/"} className="shrink-0 text-sm">
+                <BrandMark compact wordmarkClassName="max-md:sr-only" />
+              </Link>
+              <DesktopNav pathname={pathname} />
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+              <ThemeToggle />
+              {signedIn && me.data ? (
+                <div className="hidden items-center gap-1.5 md:flex">
+                  <Link
+                    href="/settings"
+                    className={cn(
+                      "inline-flex max-w-[10rem] items-center gap-2 truncate hover:text-foreground",
+                      pathname.startsWith("/settings") && "font-medium text-foreground",
+                    )}
+                  >
+                    <UserAvatar user={me.data} size="sm" />
+                    <span className="truncate">{me.data.display_name || me.data.username}</span>
+                  </Link>
+                  <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
+                    Log out
+                  </Button>
+                </div>
+              ) : (
+                <div className="hidden items-center gap-1.5 md:flex">
+                  <Button asChild size="sm" variant="ghost">
+                    <Link href={`/login?next=${encodeURIComponent(pathname)}`}>Log in</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href={`/register?next=${encodeURIComponent(pathname)}`}>Register</Link>
+                  </Button>
+                </div>
+              )}
+              <MobileNavTrigger open={menu.open} menuId={menu.menuId} onToggle={() => menu.setOpen((value) => !value)} />
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 text-[13px] text-muted-foreground">
-            <ThemeToggle />
-            {signedIn && me.data ? (
-              <div className="hidden items-center gap-1.5 md:flex">
-                <Link
-                  href="/settings"
-                  className={cn(
-                    "inline-flex max-w-[10rem] items-center gap-2 truncate hover:text-foreground",
-                    pathname.startsWith("/settings") && "font-medium text-foreground",
-                  )}
-                >
-                  <UserAvatar user={me.data} size="sm" />
-                  <span className="truncate">{me.data.display_name || me.data.username}</span>
-                </Link>
-                <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
-                  Log out
-                </Button>
-              </div>
-            ) : (
-              <div className="hidden items-center gap-1.5 md:flex">
-                <Button asChild size="sm" variant="ghost">
-                  <Link href={`/login?next=${encodeURIComponent(pathname)}`}>Log in</Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link href={`/register?next=${encodeURIComponent(pathname)}`}>Register</Link>
-                </Button>
-              </div>
-            )}
-            <MobileNav
-              signedIn={signedIn}
-              user={me.data}
-              nextPath={pathname}
-              onLogout={signedIn ? () => logout.mutate() : undefined}
-              loggingOut={logout.isPending}
-            />
-          </div>
+          <MobileNavSheet
+            open={menu.open}
+            menuId={menu.menuId}
+            signedIn={signedIn}
+            user={me.data}
+            nextPath={pathname}
+            onClose={() => menu.setOpen(false)}
+            onLogout={signedIn ? () => logout.mutate() : undefined}
+            loggingOut={logout.isPending}
+          />
         </div>
       </header>
       <main
