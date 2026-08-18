@@ -42,7 +42,7 @@ export function SystemDesignHub() {
       />
       <article className="flex flex-col gap-4 rounded-2xl border border-steel-800 bg-steel-900 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">Sample design</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">Featured Design</div>
           <h2 className="mt-1 text-sm font-semibold tracking-tight">URL Shortener</h2>
           <p className="mt-1 max-w-xl text-[13px] leading-6 text-muted-foreground">
             A wired architecture you can simulate immediately: DNS, rate limit, load balancer, API, Redis, Postgres, and

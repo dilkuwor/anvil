@@ -12,7 +12,6 @@ import {
   useReactFlow,
   type Connection,
   type Edge,
-  type Node,
 } from "@xyflow/react";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -39,7 +38,7 @@ export function SimulatorCanvas({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, getNodes } = useReactFlow();
   const selectedRef = useRef(selectedId);
   const designRef = useRef({ designNodes, designEdges, onGraph });
   const applyingRef = useRef(false);
@@ -66,31 +65,17 @@ export function SimulatorCanvas({
     return () => window.cancelAnimationFrame(frame);
   }, [graphKey, designNodes, designEdges, result, setNodes, setEdges, fitView]);
 
-  const persist = useCallback(
-    (nextNodes: Node[], nextEdges: Edge[]) => {
-      const { designNodes: source, onGraph: emit } = designRef.current;
-      emit(
-        nextNodes.map((node) => {
-          const data = node.data as ArchitectureNode["data"];
-          return {
-            id: node.id,
-            type: data.kind,
-            label: data.label,
-            x: node.position.x,
-            y: node.position.y,
-            config: source.find((item) => item.id === node.id)?.config ?? getKind(data.kind).defaultConfig,
-          };
-        }),
-        nextEdges.map((edge) => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          label: typeof edge.label === "string" ? edge.label : undefined,
-        })),
-      );
-    },
-    [],
-  );
+  const persistPositions = useCallback(() => {
+    const { designNodes: source, designEdges: links, onGraph: emit } = designRef.current;
+    const live = new Map(getNodes().map((node) => [node.id, node]));
+    emit(
+      source.map((node) => {
+        const next = live.get(node.id);
+        return next ? { ...node, x: next.position.x, y: next.position.y } : node;
+      }),
+      links,
+    );
+  }, [getNodes]);
 
   return (
     <div
@@ -126,7 +111,7 @@ export function SimulatorCanvas({
         onInit={(instance) => instance.fitView({ padding: 0.2 })}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeDragStop={(_event, _node, next) => persist(next, edges)}
+        onNodeDragStop={() => persistPositions()}
         onSelectionChange={({ nodes: selected }) => {
           const id = selected[0]?.id ?? null;
           if (id !== selectedRef.current) onSelect(id);
@@ -134,7 +119,13 @@ export function SimulatorCanvas({
         onConnect={(connection: Connection) => {
           const next = addEdge({ ...connection, id: uid("e") }, edges);
           setEdges(next);
-          persist(nodes, next);
+          const { designNodes: current, onGraph: emit } = designRef.current;
+          emit(current, next.map((edge) => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            label: typeof edge.label === "string" ? edge.label : undefined,
+          })));
         }}
         onNodesDelete={(deleted) => {
           if (applyingRef.current) return;
@@ -165,7 +156,7 @@ export function SimulatorCanvas({
 
 function graphSignature(nodes: DesignNode[], edges: DesignEdge[], result: SimulationResult | null): string {
   return [
-    nodes.map((node) => `${node.id}:${node.label}:${node.x}:${node.y}:${node.type}`).join(","),
+    nodes.map((node) => `${node.id}:${node.label}:${node.type}`).join(","),
     edges.map((edge) => `${edge.id}:${edge.source}:${edge.target}`).join(","),
     result?.timestamp ?? "",
   ].join("|");
