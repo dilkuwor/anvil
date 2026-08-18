@@ -341,34 +341,42 @@ _CATALOG: dict[str, dict[str, Any]] = {
         "workload": {"dau": 20_000_000, "requests_per_user_day": 8, "read_ratio": 0.92, "peak_multiplier": 5},
     },
     "twitter-feed": {
+        "sample_slug": "twitter-feed",
         "workload": {"dau": 100_000_000, "requests_per_user_day": 25, "read_ratio": 0.96, "peak_multiplier": 5},
     },
     "chat-system": {
         "learn_slug": "sd-chat-system",
+        "sample_slug": "chat-system",
         "workload": {"dau": 40_000_000, "requests_per_user_day": 50, "read_ratio": 0.7, "peak_multiplier": 3},
     },
     "video-streaming": {
         "learn_slug": "sd-video-streaming",
+        "sample_slug": "video-streaming",
         "workload": {"dau": 50_000_000, "requests_per_user_day": 6, "read_ratio": 0.97, "peak_multiplier": 4},
     },
     "ride-sharing": {
         "learn_slug": "sd-ride-sharing",
+        "sample_slug": "ride-sharing",
         "workload": {"dau": 10_000_000, "requests_per_user_day": 4, "read_ratio": 0.6, "peak_multiplier": 3},
     },
     "rate-limiter": {
         "learn_slug": "sd-rate-limiter-design",
+        "sample_slug": "rate-limiter",
         "workload": {"dau": 5_000_000, "requests_per_user_day": 40, "read_ratio": 0.85, "peak_multiplier": 6},
     },
     "news-feed": {
         "learn_slug": "sd-news-feed",
+        "sample_slug": "news-feed",
         "workload": {"dau": 80_000_000, "requests_per_user_day": 30, "read_ratio": 0.95, "peak_multiplier": 4},
     },
     "web-crawler": {
         "learn_slug": "sd-web-crawler",
+        "sample_slug": "web-crawler",
         "workload": {"dau": 1_000_000, "requests_per_user_day": 80, "read_ratio": 0.25, "peak_multiplier": 2},
     },
     "autocomplete": {
         "learn_slug": "sd-autocomplete",
+        "sample_slug": "autocomplete",
         "workload": {"dau": 50_000_000, "requests_per_user_day": 40, "read_ratio": 0.99, "peak_multiplier": 3},
     },
 }
@@ -378,8 +386,17 @@ def _enrich(item: dict[str, Any]) -> dict[str, Any]:
     return {**item, **_CATALOG.get(item["slug"], {})}
 
 
+def _with_sample(item: dict[str, Any]) -> dict[str, Any]:
+    from app.interviews.samples import load_sample
+
+    payload = _enrich(dict(item))
+    sample_slug = payload.get("sample_slug")
+    payload["sample"] = load_sample(sample_slug) if sample_slug else None
+    return payload
+
+
 def list_scenarios() -> list[dict[str, Any]]:
-    return [public_scenario(_enrich(item)) for item in _SCENARIOS]
+    return [public_scenario(_with_sample(item)) for item in _SCENARIOS]
 
 
 def get_scenario(slug: str) -> dict[str, Any]:
@@ -387,6 +404,10 @@ def get_scenario(slug: str) -> dict[str, Any]:
         if item["slug"] == slug:
             return _enrich(dict(item))
     raise NotFoundError("Scenario not found.")
+
+
+def public_catalog_item(slug: str) -> dict[str, Any]:
+    return public_scenario(_with_sample(get_scenario(slug)))
 
 
 def public_scenario(scenario: dict[str, Any]) -> dict[str, Any]:

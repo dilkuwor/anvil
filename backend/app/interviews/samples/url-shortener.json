@@ -1,0 +1,106 @@
+{
+  "slug": "url-shortener",
+  "name": "URL Shortener",
+  "summary": "Users → DNS → rate limit → LB → API, with Redis on the redirect path, Postgres for writes, and Kafka for clicks.",
+  "difficulty": "intermediate",
+  "workload": {
+    "dau": 20000000,
+    "concurrent_users": 80000,
+    "requests_per_user_day": 8,
+    "read_ratio": 0.92,
+    "avg_request_bytes": 400,
+    "avg_response_bytes": 800,
+    "peak_multiplier": 5,
+    "traffic_growth": 0.25
+  },
+  "slo": {
+    "availability": 0.9999,
+    "p95_ms": 200,
+    "p99_ms": 400,
+    "error_rate": 0.001,
+    "rpo_seconds": 60,
+    "rto_seconds": 300
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "Users", "x": 40, "y": 220 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 220, "config": { "latencyMs": 3, "qps": 200000 } },
+    {
+      "id": "limiter",
+      "type": "rate_limiter",
+      "label": "Rate Limiter",
+      "x": 460,
+      "y": 220,
+      "config": { "limitRps": 40000, "burst": 8000, "algorithm": "token_bucket" }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 680,
+      "y": 220,
+      "config": { "instances": 3, "maxRps": 40000, "algorithm": "least_connections" }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Redirect API",
+      "x": 900,
+      "y": 220,
+      "config": {
+        "instances": 16,
+        "vcpu": 4,
+        "avgLatencyMs": 12,
+        "p95LatencyMs": 28,
+        "autoscaling": true,
+        "minInstances": 8,
+        "maxInstances": 48
+      }
+    },
+    {
+      "id": "cache",
+      "type": "redis",
+      "label": "Redis",
+      "x": 1160,
+      "y": 80,
+      "config": { "memoryGb": 64, "hitRatio": 0.92, "maxOps": 200000, "replicas": 1 }
+    },
+    {
+      "id": "db",
+      "type": "postgresql",
+      "label": "Links DB",
+      "x": 1160,
+      "y": 240,
+      "config": {
+        "vcpu": 8,
+        "storageGb": 1500,
+        "readCapacity": 20000,
+        "writeCapacity": 6000,
+        "readReplicas": 2,
+        "dailyGrowthGb": 12
+      }
+    },
+    {
+      "id": "analytics",
+      "type": "kafka",
+      "label": "Click Events",
+      "x": 1160,
+      "y": 420,
+      "config": {
+        "brokers": 3,
+        "partitions": 18,
+        "consumers": 8,
+        "producerThroughput": 40000,
+        "consumerThroughput": 30000
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-rl", "source": "dns", "target": "limiter" },
+    { "id": "e-rl-lb", "source": "limiter", "target": "lb" },
+    { "id": "e-lb-api", "source": "lb", "target": "api" },
+    { "id": "e-api-redis", "source": "api", "target": "cache" },
+    { "id": "e-api-db", "source": "api", "target": "db" },
+    { "id": "e-api-kafka", "source": "api", "target": "analytics" }
+  ]
+}

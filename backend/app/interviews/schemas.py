@@ -100,6 +100,53 @@ class ScenarioWorkloadOut(BaseModel):
     peak_multiplier: float
 
 
+class SimulatorSampleNodeOut(BaseModel):
+    id: str
+    type: str
+    label: str
+    x: float
+    y: float
+    config: dict = {}
+
+
+class SimulatorSampleEdgeOut(BaseModel):
+    id: str
+    source: str
+    target: str
+    label: str | None = None
+
+
+class SimulatorSampleWorkloadOut(BaseModel):
+    dau: int
+    concurrent_users: int
+    requests_per_user_day: float
+    read_ratio: float
+    avg_request_bytes: int
+    avg_response_bytes: int
+    peak_multiplier: float
+    traffic_growth: float
+
+
+class SimulatorSampleSloOut(BaseModel):
+    availability: float
+    p95_ms: float
+    p99_ms: float
+    error_rate: float
+    rpo_seconds: int
+    rto_seconds: int
+
+
+class SimulatorSampleOut(BaseModel):
+    slug: str
+    name: str
+    summary: str
+    difficulty: str
+    workload: SimulatorSampleWorkloadOut
+    slo: SimulatorSampleSloOut
+    nodes: list[SimulatorSampleNodeOut]
+    edges: list[SimulatorSampleEdgeOut]
+
+
 class SystemDesignScenarioOut(BaseModel):
     slug: str
     title: str
@@ -113,6 +160,7 @@ class SystemDesignScenarioOut(BaseModel):
     learn_slug: str | None = None
     sample_slug: str | None = None
     workload: ScenarioWorkloadOut | None = None
+    sample: SimulatorSampleOut | None = None
 
 
 class InterviewMessageRequest(BaseModel):

@@ -7,7 +7,7 @@ from app.common.database import get_db
 from app.common.deps import get_current_user
 from app.interviews import service
 from app.interviews import system_design
-from app.interviews.scenarios import list_scenarios, public_scenario
+from app.interviews.scenarios import list_scenarios, public_catalog_item
 from app.interviews.schemas import (
     ActiveInterviewResponse,
     ArchitectureUpdateRequest,
@@ -52,7 +52,7 @@ def list_system_design_scenarios() -> list[SystemDesignScenarioOut]:
 
 @router.get("/scenarios/{slug}", response_model=SystemDesignScenarioOut)
 def get_system_design_scenario(slug: str) -> SystemDesignScenarioOut:
-    return SystemDesignScenarioOut.model_validate(public_scenario(system_design.require_scenario(slug)))
+    return SystemDesignScenarioOut.model_validate(public_catalog_item(slug))
 
 
 @router.post("/system-design", response_model=InterviewSessionOut)

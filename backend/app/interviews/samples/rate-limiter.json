@@ -1,0 +1,79 @@
+{
+  "slug": "rate-limiter",
+  "name": "Rate Limiter",
+  "summary": "Users → DNS → limiter → LB → API. Redis holds distributed counters; Postgres stores per-plan rules.",
+  "difficulty": "intermediate",
+  "workload": {
+    "dau": 5000000,
+    "concurrent_users": 40000,
+    "requests_per_user_day": 40,
+    "read_ratio": 0.85,
+    "avg_request_bytes": 400,
+    "avg_response_bytes": 400,
+    "peak_multiplier": 6,
+    "traffic_growth": 0.2
+  },
+  "slo": {
+    "availability": 0.9999,
+    "p95_ms": 50,
+    "p99_ms": 120,
+    "error_rate": 0.001,
+    "rpo_seconds": 30,
+    "rto_seconds": 60
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "API Clients", "x": 40, "y": 220 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 220, "config": { "latencyMs": 2, "qps": 100000 } },
+    {
+      "id": "limiter",
+      "type": "rate_limiter",
+      "label": "Rate Limiter",
+      "x": 470, "y": 220,
+      "config": { "limitRps": 25000, "burst": 5000, "algorithm": "sliding_window", "storage": "redis", "latencyMs": 1 }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 700, "y": 220,
+      "config": { "instances": 3, "maxRps": 30000, "algorithm": "round_robin" }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Public API",
+      "x": 920, "y": 220,
+      "config": {
+        "instances": 40,
+        "vcpu": 4,
+        "avgLatencyMs": 6,
+        "p95LatencyMs": 16,
+        "autoscaling": true,
+        "minInstances": 16,
+        "maxInstances": 80
+      }
+    },
+    {
+      "id": "counters",
+      "type": "redis",
+      "label": "Counters",
+      "x": 1180, "y": 100,
+      "config": { "memoryGb": 32, "hitRatio": 0.99, "maxOps": 120000, "ttlSec": 60, "replicas": 1 }
+    },
+    {
+      "id": "rules",
+      "type": "postgresql",
+      "label": "Quota Rules",
+      "x": 1180, "y": 280,
+      "config": { "vcpu": 4, "storageGb": 200, "readCapacity": 10000, "writeCapacity": 2000, "readReplicas": 1 }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-rl", "source": "dns", "target": "limiter" },
+    { "id": "e-rl-lb", "source": "limiter", "target": "lb" },
+    { "id": "e-lb-api", "source": "lb", "target": "api" },
+    { "id": "e-api-counters", "source": "api", "target": "counters" },
+    { "id": "e-api-rules", "source": "api", "target": "rules" }
+  ]
+}

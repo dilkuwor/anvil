@@ -168,6 +168,40 @@ export type ScenarioWorkload = {
   peak_multiplier: number;
 };
 
+export type SimulatorSample = {
+  slug: string;
+  name: string;
+  summary: string;
+  difficulty: string;
+  workload: {
+    dau: number;
+    concurrent_users: number;
+    requests_per_user_day: number;
+    read_ratio: number;
+    avg_request_bytes: number;
+    avg_response_bytes: number;
+    peak_multiplier: number;
+    traffic_growth: number;
+  };
+  slo: {
+    availability: number;
+    p95_ms: number;
+    p99_ms: number;
+    error_rate: number;
+    rpo_seconds: number;
+    rto_seconds: number;
+  };
+  nodes: {
+    id: string;
+    type: string;
+    label: string;
+    x: number;
+    y: number;
+    config?: Record<string, string | number | boolean>;
+  }[];
+  edges: { id: string; source: string; target: string; label?: string | null }[];
+};
+
 export type SystemDesignScenario = {
   slug: string;
   title: string;
@@ -181,6 +215,7 @@ export type SystemDesignScenario = {
   learn_slug?: string | null;
   sample_slug?: string | null;
   workload?: ScenarioWorkload | null;
+  sample?: SimulatorSample | null;
 };
 
 export function emptyArchitecture(): ArchitectureGraph {

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { applyScenarioWorkload, scenarioBySlug, useSystemDesignCatalog } from "@/lib/system-design-catalog";
 import { simulateAsync } from "../engine/client";
-import { getSample } from "../models/samples";
+import { designFromSample, sampleFromCatalog } from "../models/samples";
 import type { ActiveFailure, ConfigValue, DesignEdge, DesignNode, Difficulty, SimulationResult, SystemDesign } from "../models/types";
 import { listResults, loadCurrent, newDesign, saveCurrent, saveDesign, saveResult } from "../state/persist";
 import { uid } from "../utils/ids";
@@ -31,23 +31,8 @@ function SimulatorWorkspace() {
   const search = useSearchParams();
   const catalog = useSystemDesignCatalog();
   const appliedProblem = useRef<string | null>(null);
-  const [design, setDesign] = useState<SystemDesign>(() => {
-    const sample = getSample(search.get("sample") ?? "");
-    if (sample) return sample.build();
-    return loadCurrent() ?? newDesign();
-  });
-
-  useEffect(() => {
-    if (search.get("sample")) return;
-    const slug = search.get("problem");
-    const item = scenarioBySlug(catalog.data, slug ?? undefined);
-    if (!item || appliedProblem.current === item.slug) return;
-    appliedProblem.current = item.slug;
-    setDesign((current) => {
-      const base = current.problemSlug === item.slug ? current : newDesign(item.title);
-      return applyScenarioWorkload(base, item);
-    });
-  }, [catalog.data, search]);
+  const appliedSample = useRef<string | null>(null);
+  const [design, setDesign] = useState<SystemDesign>(() => loadCurrent() ?? newDesign());
   const [selectedId, setSelectedId] = useState<string | null>(design.nodes[0]?.id ?? null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [previous, setPrevious] = useState<SimulationResult | null>(null);
@@ -58,6 +43,28 @@ function SimulatorWorkspace() {
   const [cursor, setCursor] = useState(1);
   const undo = useRef<SystemDesign[]>([]);
   const redo = useRef<SystemDesign[]>([]);
+
+  useEffect(() => {
+    const sampleSlug = search.get("sample");
+    const sample = sampleFromCatalog(catalog.data, sampleSlug);
+    if (sampleSlug && sample && appliedSample.current !== sampleSlug) {
+      appliedSample.current = sampleSlug;
+      const next = designFromSample(sample);
+      setDesign(next);
+      setSelectedId(next.nodes[0]?.id ?? null);
+      setResult(null);
+      return;
+    }
+    if (sampleSlug) return;
+    const slug = search.get("problem");
+    const item = scenarioBySlug(catalog.data, slug ?? undefined);
+    if (!item || appliedProblem.current === item.slug) return;
+    appliedProblem.current = item.slug;
+    setDesign((current) => {
+      const base = current.problemSlug === item.slug ? current : newDesign(item.title);
+      return applyScenarioWorkload(base, item);
+    });
+  }, [catalog.data, search]);
 
   useEffect(() => {
     const handle = window.setTimeout(() => saveCurrent(design), 400);
@@ -164,13 +171,15 @@ function SimulatorWorkspace() {
               variant="ghost"
               size="sm"
               title="Load the URL Shortener sample architecture"
+              disabled={!sampleFromCatalog(catalog.data, "url-shortener")}
               onClick={() => {
-                const sample = getSample("url-shortener")?.build();
+                const sample = sampleFromCatalog(catalog.data, "url-shortener");
                 if (!sample) return;
-                commit(sample);
-                setSelectedId(sample.nodes[0]?.id ?? null);
+                const next = designFromSample(sample);
+                commit(next);
+                setSelectedId(next.nodes[0]?.id ?? null);
                 setResult(null);
-                toast.success("Loaded the URL Shortener sample.");
+                toast.success(`Loaded the ${sample.name} sample.`);
               }}
             >
               Sample

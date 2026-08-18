@@ -1,0 +1,79 @@
+{
+  "slug": "ride-sharing",
+  "name": "Uber",
+  "summary": "Users → DNS → LB → Dispatch API. Redis GEO tracks nearby drivers, Postgres holds the trip state machine, Kafka streams location pings.",
+  "difficulty": "advanced",
+  "workload": {
+    "dau": 10000000,
+    "concurrent_users": 25000,
+    "requests_per_user_day": 4,
+    "read_ratio": 0.6,
+    "avg_request_bytes": 600,
+    "avg_response_bytes": 1500,
+    "peak_multiplier": 3,
+    "traffic_growth": 0.2
+  },
+  "slo": {
+    "availability": 0.999,
+    "p95_ms": 300,
+    "p99_ms": 700,
+    "error_rate": 0.002,
+    "rpo_seconds": 15,
+    "rto_seconds": 120
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "Riders & Drivers", "x": 40, "y": 240 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 240, "config": { "latencyMs": 4, "qps": 80000 } },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 500, "y": 240,
+      "config": { "instances": 3, "maxRps": 20000, "algorithm": "least_connections" }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Dispatch API",
+      "x": 760, "y": 240,
+      "config": {
+        "instances": 16,
+        "vcpu": 4,
+        "avgLatencyMs": 15,
+        "p95LatencyMs": 40,
+        "autoscaling": true,
+        "minInstances": 8,
+        "maxInstances": 48
+      }
+    },
+    {
+      "id": "locations",
+      "type": "redis",
+      "label": "Driver GEO",
+      "x": 1060, "y": 80,
+      "config": { "memoryGb": 48, "hitRatio": 0.9, "maxOps": 80000, "ttlSec": 15, "replicas": 1 }
+    },
+    {
+      "id": "trips",
+      "type": "postgresql",
+      "label": "Trips",
+      "x": 1060, "y": 240,
+      "config": { "vcpu": 8, "storageGb": 1500, "readCapacity": 15000, "writeCapacity": 8000, "readReplicas": 2 }
+    },
+    {
+      "id": "pings",
+      "type": "kafka",
+      "label": "Location Stream",
+      "x": 1060, "y": 400,
+      "config": { "brokers": 5, "partitions": 36, "consumers": 12, "producerThroughput": 40000, "consumerThroughput": 35000 }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-lb", "source": "dns", "target": "lb" },
+    { "id": "e-lb-api", "source": "lb", "target": "api" },
+    { "id": "e-api-geo", "source": "api", "target": "locations" },
+    { "id": "e-api-trips", "source": "api", "target": "trips" },
+    { "id": "e-api-pings", "source": "api", "target": "pings" }
+  ]
+}

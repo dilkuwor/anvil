@@ -1,0 +1,87 @@
+{
+  "slug": "video-streaming",
+  "name": "YouTube",
+  "summary": "Users → DNS → CDN for playback. Origin misses hit the catalog API, object storage for bytes, Kafka for async transcode.",
+  "difficulty": "advanced",
+  "workload": {
+    "dau": 50000000,
+    "concurrent_users": 80000,
+    "requests_per_user_day": 6,
+    "read_ratio": 0.97,
+    "avg_request_bytes": 800,
+    "avg_response_bytes": 80000,
+    "peak_multiplier": 4,
+    "traffic_growth": 0.25
+  },
+  "slo": {
+    "availability": 0.999,
+    "p95_ms": 400,
+    "p99_ms": 900,
+    "error_rate": 0.002,
+    "rpo_seconds": 60,
+    "rto_seconds": 300
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "Viewers", "x": 40, "y": 240 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 230, "y": 240, "config": { "latencyMs": 3, "qps": 200000 } },
+    {
+      "id": "cdn",
+      "type": "cdn",
+      "label": "Video CDN",
+      "x": 440, "y": 240,
+      "config": { "hitRatio": 0.92, "maxRps": 200000, "edgeLatencyMs": 18, "ttlSec": 600 }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Origin LB",
+      "x": 660, "y": 240,
+      "config": { "instances": 4, "maxRps": 40000, "algorithm": "least_connections" }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Catalog API",
+      "x": 880, "y": 240,
+      "config": {
+        "instances": 40,
+        "vcpu": 4,
+        "avgLatencyMs": 8,
+        "p95LatencyMs": 22,
+        "autoscaling": true,
+        "minInstances": 16,
+        "maxInstances": 80
+      }
+    },
+    {
+      "id": "catalog",
+      "type": "postgresql",
+      "label": "Metadata",
+      "x": 1140, "y": 80,
+      "config": { "vcpu": 8, "storageGb": 2000, "readCapacity": 25000, "writeCapacity": 4000, "readReplicas": 3 }
+    },
+    {
+      "id": "videos",
+      "type": "object_storage",
+      "label": "Video Store",
+      "x": 1140, "y": 240,
+      "config": { "capacityTb": 400, "avgObjectKb": 8192, "readRps": 40000, "writeRps": 4000 }
+    },
+    {
+      "id": "transcode",
+      "type": "kafka",
+      "label": "Transcode",
+      "x": 1140, "y": 400,
+      "config": { "brokers": 6, "partitions": 36, "consumers": 20, "producerThroughput": 20000, "consumerThroughput": 15000 }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-cdn", "source": "dns", "target": "cdn" },
+    { "id": "e-cdn-lb", "source": "cdn", "target": "lb" },
+    { "id": "e-lb-api", "source": "lb", "target": "api" },
+    { "id": "e-api-catalog", "source": "api", "target": "catalog" },
+    { "id": "e-api-videos", "source": "api", "target": "videos" },
+    { "id": "e-api-transcode", "source": "api", "target": "transcode" }
+  ]
+}

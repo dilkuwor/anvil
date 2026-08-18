@@ -1,0 +1,87 @@
+{
+  "slug": "twitter-feed",
+  "name": "Twitter",
+  "summary": "Users → DNS → LB → Timeline API. Redis holds the home timeline, NoSQL stores tweets, Postgres the follow graph, Kafka fans out new posts.",
+  "difficulty": "advanced",
+  "workload": {
+    "dau": 100000000,
+    "concurrent_users": 400000,
+    "requests_per_user_day": 25,
+    "read_ratio": 0.96,
+    "avg_request_bytes": 800,
+    "avg_response_bytes": 4000,
+    "peak_multiplier": 5,
+    "traffic_growth": 0.2
+  },
+  "slo": {
+    "availability": 0.9999,
+    "p95_ms": 200,
+    "p99_ms": 500,
+    "error_rate": 0.001,
+    "rpo_seconds": 30,
+    "rto_seconds": 180
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "Users", "x": 40, "y": 260 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 260, "config": { "latencyMs": 3, "qps": 400000 } },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 500, "y": 260,
+      "config": { "instances": 8, "maxRps": 200000, "algorithm": "least_connections" }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Timeline API",
+      "x": 760, "y": 260,
+      "config": {
+        "instances": 160,
+        "vcpu": 8,
+        "avgLatencyMs": 6,
+        "p95LatencyMs": 18,
+        "autoscaling": true,
+        "minInstances": 80,
+        "maxInstances": 240
+      }
+    },
+    {
+      "id": "timeline",
+      "type": "redis",
+      "label": "Home Timeline",
+      "x": 1060, "y": 60,
+      "config": { "memoryGb": 256, "hitRatio": 0.94, "maxOps": 250000, "replicas": 2 }
+    },
+    {
+      "id": "tweets",
+      "type": "nosql",
+      "label": "Tweet Store",
+      "x": 1060, "y": 220,
+      "config": { "vcpu": 16, "storageGb": 8000, "readCapacity": 80000, "writeCapacity": 25000, "readReplicas": 4 }
+    },
+    {
+      "id": "graph",
+      "type": "postgresql",
+      "label": "Follow Graph",
+      "x": 1060, "y": 380,
+      "config": { "vcpu": 12, "storageGb": 4000, "readCapacity": 40000, "writeCapacity": 8000, "readReplicas": 3 }
+    },
+    {
+      "id": "fanout",
+      "type": "kafka",
+      "label": "Fan-out",
+      "x": 1060, "y": 540,
+      "config": { "brokers": 9, "partitions": 72, "consumers": 24, "producerThroughput": 80000, "consumerThroughput": 70000 }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-lb", "source": "dns", "target": "lb" },
+    { "id": "e-lb-api", "source": "lb", "target": "api" },
+    { "id": "e-api-timeline", "source": "api", "target": "timeline" },
+    { "id": "e-api-tweets", "source": "api", "target": "tweets" },
+    { "id": "e-api-graph", "source": "api", "target": "graph" },
+    { "id": "e-api-fanout", "source": "api", "target": "fanout" }
+  ]
+}

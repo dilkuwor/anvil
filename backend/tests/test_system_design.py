@@ -16,7 +16,26 @@ def test_scenarios_are_public(client):
     assert url["learn_slug"] == "sd-url-shortener"
     assert url["sample_slug"] == "url-shortener"
     assert url["workload"]["dau"] == 20_000_000
+    assert url["sample"]["slug"] == "url-shortener"
+    assert [node["type"] for node in url["sample"]["nodes"]] == [
+        "client",
+        "dns",
+        "rate_limiter",
+        "load_balancer",
+        "api_server",
+        "redis",
+        "postgresql",
+        "kafka",
+    ]
+    assert len(url["sample"]["edges"]) == 7
     assert "interviewer_notes" not in url
+    missing = [item["slug"] for item in items if not item.get("sample")]
+    assert missing == []
+    for item in items:
+        sample = item["sample"]
+        assert sample["slug"] == item["slug"]
+        assert any(node["type"] == "client" for node in sample["nodes"])
+        assert sample["edges"]
 
 
 def test_unknown_scenario_is_404(client):

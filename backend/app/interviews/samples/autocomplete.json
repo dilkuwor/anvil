@@ -1,0 +1,87 @@
+{
+  "slug": "autocomplete",
+  "name": "Search Autocomplete",
+  "summary": "Users → DNS → CDN → LB → Suggest API. Redis serves prefix → top-k; Postgres logs queries; Kafka rebuilds the prefix lists offline.",
+  "difficulty": "intermediate",
+  "workload": {
+    "dau": 50000000,
+    "concurrent_users": 150000,
+    "requests_per_user_day": 40,
+    "read_ratio": 0.99,
+    "avg_request_bytes": 200,
+    "avg_response_bytes": 800,
+    "peak_multiplier": 3,
+    "traffic_growth": 0.15
+  },
+  "slo": {
+    "availability": 0.999,
+    "p95_ms": 80,
+    "p99_ms": 150,
+    "error_rate": 0.001,
+    "rpo_seconds": 3600,
+    "rto_seconds": 180
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "Searchers", "x": 40, "y": 240 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 230, "y": 240, "config": { "latencyMs": 2, "qps": 250000 } },
+    {
+      "id": "cdn",
+      "type": "cdn",
+      "label": "Edge Cache",
+      "x": 430, "y": 240,
+      "config": { "hitRatio": 0.75, "maxRps": 200000, "edgeLatencyMs": 8, "ttlSec": 60 }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 640, "y": 240,
+      "config": { "instances": 5, "maxRps": 100000, "algorithm": "least_connections" }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Suggest API",
+      "x": 860, "y": 240,
+      "config": {
+        "instances": 80,
+        "vcpu": 8,
+        "avgLatencyMs": 4,
+        "p95LatencyMs": 12,
+        "autoscaling": true,
+        "minInstances": 32,
+        "maxInstances": 120
+      }
+    },
+    {
+      "id": "prefixes",
+      "type": "redis",
+      "label": "Prefix → Top-k",
+      "x": 1140, "y": 80,
+      "config": { "memoryGb": 96, "hitRatio": 0.97, "maxOps": 200000, "ttlSec": 3600, "replicas": 2 }
+    },
+    {
+      "id": "logs",
+      "type": "postgresql",
+      "label": "Query Logs",
+      "x": 1140, "y": 240,
+      "config": { "vcpu": 8, "storageGb": 3000, "readCapacity": 15000, "writeCapacity": 8000, "readReplicas": 2 }
+    },
+    {
+      "id": "rebuild",
+      "type": "kafka",
+      "label": "Rebuild Job",
+      "x": 1140, "y": 400,
+      "config": { "brokers": 4, "partitions": 24, "consumers": 8, "producerThroughput": 40000, "consumerThroughput": 30000 }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-cdn", "source": "dns", "target": "cdn" },
+    { "id": "e-cdn-lb", "source": "cdn", "target": "lb" },
+    { "id": "e-lb-api", "source": "lb", "target": "api" },
+    { "id": "e-api-prefixes", "source": "api", "target": "prefixes" },
+    { "id": "e-api-logs", "source": "api", "target": "logs" },
+    { "id": "e-api-rebuild", "source": "api", "target": "rebuild" }
+  ]
+}

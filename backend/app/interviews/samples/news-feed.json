@@ -1,0 +1,95 @@
+{
+  "slug": "news-feed",
+  "name": "News Feed",
+  "summary": "Users → DNS → CDN → LB → Feed API. Redis precomputes the home feed, NoSQL stores posts, Postgres the friend graph, Kafka publishes fan-out.",
+  "difficulty": "advanced",
+  "workload": {
+    "dau": 80000000,
+    "concurrent_users": 300000,
+    "requests_per_user_day": 30,
+    "read_ratio": 0.95,
+    "avg_request_bytes": 800,
+    "avg_response_bytes": 8000,
+    "peak_multiplier": 4,
+    "traffic_growth": 0.2
+  },
+  "slo": {
+    "availability": 0.999,
+    "p95_ms": 200,
+    "p99_ms": 500,
+    "error_rate": 0.002,
+    "rpo_seconds": 30,
+    "rto_seconds": 180
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "Users", "x": 40, "y": 260 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 230, "y": 260, "config": { "latencyMs": 3, "qps": 300000 } },
+    {
+      "id": "cdn",
+      "type": "cdn",
+      "label": "Media CDN",
+      "x": 430, "y": 260,
+      "config": { "hitRatio": 0.7, "maxRps": 200000, "edgeLatencyMs": 20, "ttlSec": 180 }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 640, "y": 260,
+      "config": { "instances": 6, "maxRps": 150000, "algorithm": "least_connections" }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Feed API",
+      "x": 860, "y": 260,
+      "config": {
+        "instances": 120,
+        "vcpu": 8,
+        "avgLatencyMs": 6,
+        "p95LatencyMs": 20,
+        "autoscaling": true,
+        "minInstances": 60,
+        "maxInstances": 200
+      }
+    },
+    {
+      "id": "feed",
+      "type": "redis",
+      "label": "Feed Cache",
+      "x": 1140, "y": 60,
+      "config": { "memoryGb": 192, "hitRatio": 0.93, "maxOps": 200000, "replicas": 2 }
+    },
+    {
+      "id": "posts",
+      "type": "nosql",
+      "label": "Post Store",
+      "x": 1140, "y": 220,
+      "config": { "vcpu": 16, "storageGb": 10000, "readCapacity": 70000, "writeCapacity": 20000, "readReplicas": 4 }
+    },
+    {
+      "id": "graph",
+      "type": "postgresql",
+      "label": "Friend Graph",
+      "x": 1140, "y": 380,
+      "config": { "vcpu": 12, "storageGb": 5000, "readCapacity": 35000, "writeCapacity": 6000, "readReplicas": 3 }
+    },
+    {
+      "id": "publish",
+      "type": "kafka",
+      "label": "Publish",
+      "x": 1140, "y": 540,
+      "config": { "brokers": 8, "partitions": 64, "consumers": 20, "producerThroughput": 60000, "consumerThroughput": 50000 }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-cdn", "source": "dns", "target": "cdn" },
+    { "id": "e-cdn-lb", "source": "cdn", "target": "lb" },
+    { "id": "e-lb-api", "source": "lb", "target": "api" },
+    { "id": "e-api-feed", "source": "api", "target": "feed" },
+    { "id": "e-api-posts", "source": "api", "target": "posts" },
+    { "id": "e-api-graph", "source": "api", "target": "graph" },
+    { "id": "e-api-publish", "source": "api", "target": "publish" }
+  ]
+}

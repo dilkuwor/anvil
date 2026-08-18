@@ -1,0 +1,79 @@
+{
+  "slug": "chat-system",
+  "name": "Chat System",
+  "summary": "Users → DNS → LB → Chat gateway. Redis keeps presence, NoSQL stores the message log, Kafka fans out to online sockets.",
+  "difficulty": "advanced",
+  "workload": {
+    "dau": 40000000,
+    "concurrent_users": 150000,
+    "requests_per_user_day": 50,
+    "read_ratio": 0.7,
+    "avg_request_bytes": 400,
+    "avg_response_bytes": 800,
+    "peak_multiplier": 3,
+    "traffic_growth": 0.2
+  },
+  "slo": {
+    "availability": 0.999,
+    "p95_ms": 150,
+    "p99_ms": 400,
+    "error_rate": 0.002,
+    "rpo_seconds": 10,
+    "rto_seconds": 120
+  },
+  "nodes": [
+    { "id": "users", "type": "client", "label": "Mobile Clients", "x": 40, "y": 240 },
+    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 240, "config": { "latencyMs": 3, "qps": 200000 } },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Gateway LB",
+      "x": 500, "y": 240,
+      "config": { "instances": 6, "maxRps": 120000, "algorithm": "least_connections" }
+    },
+    {
+      "id": "gateway",
+      "type": "api_server",
+      "label": "Chat Gateway",
+      "x": 760, "y": 240,
+      "config": {
+        "instances": 80,
+        "vcpu": 8,
+        "avgLatencyMs": 6,
+        "p95LatencyMs": 16,
+        "autoscaling": true,
+        "minInstances": 40,
+        "maxInstances": 160
+      }
+    },
+    {
+      "id": "presence",
+      "type": "redis",
+      "label": "Presence",
+      "x": 1060, "y": 80,
+      "config": { "memoryGb": 64, "hitRatio": 0.98, "maxOps": 200000, "ttlSec": 30, "replicas": 2 }
+    },
+    {
+      "id": "messages",
+      "type": "nosql",
+      "label": "Message Log",
+      "x": 1060, "y": 240,
+      "config": { "vcpu": 16, "storageGb": 12000, "readCapacity": 60000, "writeCapacity": 40000, "readReplicas": 3 }
+    },
+    {
+      "id": "delivery",
+      "type": "kafka",
+      "label": "Delivery",
+      "x": 1060, "y": 400,
+      "config": { "brokers": 6, "partitions": 48, "consumers": 16, "producerThroughput": 80000, "consumerThroughput": 70000 }
+    }
+  ],
+  "edges": [
+    { "id": "e-users-dns", "source": "users", "target": "dns" },
+    { "id": "e-dns-lb", "source": "dns", "target": "lb" },
+    { "id": "e-lb-gw", "source": "lb", "target": "gateway" },
+    { "id": "e-gw-presence", "source": "gateway", "target": "presence" },
+    { "id": "e-gw-messages", "source": "gateway", "target": "messages" },
+    { "id": "e-gw-delivery", "source": "gateway", "target": "delivery" }
+  ]
+}
