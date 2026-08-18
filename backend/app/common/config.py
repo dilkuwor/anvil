@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    openrouter_model: str = "openai/gpt-4o-mini"
+    openrouter_model: str = "google/gemma-4-26b-a4b-it:free"
     openrouter_referer: str = "https://interviewanvil.local"
     tts_base_url: str = "http://100.120.169.81:8091"
     tts_voice: str = "af_heart"
