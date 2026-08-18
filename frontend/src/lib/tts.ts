@@ -1,4 +1,3 @@
-import { api } from "@/lib/api";
 import type { CheatSheetDetail } from "@/lib/cheatsheets";
 import { asStringList, asTable } from "@/lib/cheatsheets";
 

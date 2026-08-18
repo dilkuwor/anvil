@@ -54,9 +54,10 @@ export function ArchitectureCanvas({
 
   const selectedNode = graph.nodes.find((node) => node.id === selected) ?? null;
 
-  useEffect(() => {
-    setLabelDraft(selectedNode?.label ?? "");
-  }, [selectedNode?.id, selectedNode?.label]);
+  function selectNode(id: string | null, label = "") {
+    setSelected(id);
+    setLabelDraft(label);
+  }
 
   useEffect(() => {
     if (readOnly) return;
@@ -91,7 +92,7 @@ export function ArchitectureCanvas({
       y: 48 + Math.floor(index / 4) * 110,
     };
     emit({ ...graph, nodes: [...graph.nodes, node] });
-    setSelected(node.id);
+    selectNode(node.id, node.label);
   }
 
   function removeNode(id: string) {
@@ -99,7 +100,7 @@ export function ArchitectureCanvas({
       nodes: graph.nodes.filter((node) => node.id !== id),
       edges: graph.edges.filter((edge) => edge.from !== id && edge.to !== id),
     });
-    if (selected === id) setSelected(null);
+    if (selected === id) selectNode(null);
   }
 
   function renameSelected(label: string) {
@@ -119,7 +120,7 @@ export function ArchitectureCanvas({
   function onNodePointerDown(event: React.PointerEvent, node: DesignNode) {
     if (readOnly) return;
     event.stopPropagation();
-    setSelected(node.id);
+    selectNode(node.id, node.label);
     const point = localPoint(event);
     setDrag({ mode: "move", id: node.id, dx: point.x - node.x, dy: point.y - node.y });
   }
@@ -128,7 +129,7 @@ export function ArchitectureCanvas({
     if (readOnly) return;
     event.preventDefault();
     event.stopPropagation();
-    setSelected(node.id);
+    selectNode(node.id, node.label);
     const point = localPoint(event);
     setDrag({ mode: "link", from: node.id, x: point.x, y: point.y });
   }
@@ -219,7 +220,7 @@ export function ArchitectureCanvas({
       <div
         ref={surface}
         className="relative min-h-[28rem] flex-1 overflow-auto"
-        onPointerDown={() => setSelected(null)}
+        onPointerDown={() => selectNode(null)}
       >
         <div className="absolute inset-0 min-h-full min-w-full bg-background/40" />
         <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
