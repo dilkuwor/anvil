@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { lessonSpeech, speakableText } from "@/lib/tts";
 
 describe("tts text prep", () => {

@@ -23,7 +23,6 @@ export function ListenButton({
 
   useEffect(() => {
     return () => stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function stop() {
