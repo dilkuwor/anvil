@@ -23,9 +23,9 @@ export const metadata: Metadata = {
   description:
     "Anvil is a ByteTech LLC product built to help software engineers prepare for technical interviews through deliberate, realistic practice.",
   icons: {
-    icon: [{ url: "/logo-app-v4.png", type: "image/png" }],
-    apple: "/logo-app-v4.png",
-    shortcut: "/logo-app-v4.png",
+    icon: [{ url: "/logo-app-v6.png", type: "image/png" }],
+    apple: "/logo-app-v6.png",
+    shortcut: "/logo-app-v6.png",
   },
 };
 

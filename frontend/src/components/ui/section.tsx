@@ -42,7 +42,7 @@ export function BrandMark({
         )}
       >
         <img
-          src="/logo-app-v4.png"
+          src="/logo-app-v6.png"
           alt=""
           width={28}
           height={28}
