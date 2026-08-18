@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import {
   Bookmark,
   Briefcase,
@@ -14,29 +13,47 @@ function escapeHtml(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
-const HEADING_ICONS: Record<string, LucideIcon> = {
-  "why it matters": Lightbulb,
-  "how it works": Workflow,
-  example: Code2,
-  "common use cases": Briefcase,
-  "use cases": Briefcase,
-  tradeoffs: Scale,
-  "common mistakes": TriangleAlert,
-  "interview tip": GraduationCap,
-};
+const HEADING_ICON_CLASS = "h-4 w-4 shrink-0 text-accent";
 
-function headingIcon(title: string): LucideIcon {
-  return HEADING_ICONS[title.trim().toLowerCase()] ?? Bookmark;
+function HeadingIcon({ title }: { title: string }) {
+  const props = { className: HEADING_ICON_CLASS, strokeWidth: 2.25, "aria-hidden": true as const };
+  switch (title.trim().toLowerCase()) {
+    case "why it matters":
+      return <Lightbulb {...props} />;
+    case "how it works":
+      return <Workflow {...props} />;
+    case "example":
+      return <Code2 {...props} />;
+    case "common use cases":
+    case "use cases":
+      return <Briefcase {...props} />;
+    case "tradeoffs":
+      return <Scale {...props} />;
+    case "common mistakes":
+      return <TriangleAlert {...props} />;
+    case "interview tip":
+      return <GraduationCap {...props} />;
+    default:
+      return <Bookmark {...props} />;
+  }
 }
 
 function LessonHeading({ title }: { title: string }) {
-  const Icon = headingIcon(title);
   return (
     <h2 className="flex items-center gap-2 pt-2 text-[15px] font-semibold tracking-tight">
-      <Icon className="h-4 w-4 shrink-0 text-accent" strokeWidth={2.25} aria-hidden />
+      <HeadingIcon title={title} />
       {title}
     </h2>
   );
+}
+
+function isHeadingBlock(block: string): boolean {
+  const first = block.split("\n")[0] ?? "";
+  return first.startsWith("# ") || first.startsWith("## ");
+}
+
+function isListBlock(block: string): boolean {
+  return block.split("\n").every((line) => line.startsWith("- "));
 }
 
 function inline(text: string): string {
@@ -55,7 +72,10 @@ export function LessonMarkdown({
 }) {
   const blocks = content.replaceAll("\r\n", "\n").trim().split(/\n{2,}/);
   const skipFirstTitle = skipLeadingTitle && Boolean(blocks[0]?.startsWith("# "));
-  let leadUsed = false;
+  const leadIndex = blocks.findIndex((block, index) => {
+    if (index === 0 && skipFirstTitle) return false;
+    return !isHeadingBlock(block) && !isListBlock(block);
+  });
   return (
     <div className="w-full space-y-5 text-sm leading-7 text-foreground">
       {blocks.map((block, index) => {
@@ -67,7 +87,7 @@ export function LessonMarkdown({
         if (lines[0].startsWith("## ")) {
           return <LessonHeading key={index} title={lines[0].slice(3)} />;
         }
-        if (lines.every((line) => line.startsWith("- "))) {
+        if (isListBlock(block)) {
           return (
             <ul key={index} className="list-disc space-y-1 pl-5 text-foreground/90">
               {lines.map((line) => (
@@ -77,8 +97,7 @@ export function LessonMarkdown({
           );
         }
         const html = inline(lines.join(" "));
-        if (!leadUsed) {
-          leadUsed = true;
+        if (index === leadIndex) {
           return (
             <p
               key={index}
