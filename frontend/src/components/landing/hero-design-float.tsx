@@ -55,7 +55,7 @@ function TrafficEdge() {
 export function HeroDesignFloat() {
   return (
     <Link href="/system-design" className="group relative mx-auto block w-full max-w-[38rem] lg:ml-auto lg:mr-0" aria-label="Open System Design">
-      <article className="relative rounded-2xl border border-black/[0.08] bg-[rgba(255,255,255,0.85)] px-3.5 py-4 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.35)] backdrop-blur-md transition duration-300 group-hover:border-black/12 group-hover:bg-[rgba(255,255,255,0.90)] dark:border-white/[0.08] dark:bg-[rgba(30,30,34,0.85)] dark:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)] dark:group-hover:border-white/12 dark:group-hover:bg-[rgba(30,30,34,0.90)]">
+      <article className="relative rounded-2xl border border-black/[0.06] bg-[rgba(255,255,255,0.48)] px-3.5 py-4 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.35)] transition duration-300 group-hover:border-black/12 group-hover:bg-[rgba(255,255,255,0.82)] dark:border-white/[0.07] dark:bg-[rgba(30,30,34,0.42)] dark:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)] dark:group-hover:border-white/12 dark:group-hover:bg-[rgba(30,30,34,0.78)]">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-accent">System Design</p>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-steel-700 px-2 py-0.5 text-[10px] text-muted-foreground">
