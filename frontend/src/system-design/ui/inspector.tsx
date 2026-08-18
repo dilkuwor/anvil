@@ -52,8 +52,10 @@ export function Inspector({
   if (!node || !kind) {
     return (
       <aside className="flex h-full w-[280px] shrink-0 flex-col border-l border-steel-800 bg-steel-900 transition-[width] duration-200 ease-out">
-        <InspectorHeader open onToggle={() => setOpen(false)} />
-        <p className="px-4 py-3 text-[13px] leading-6 text-muted-foreground">Select a component to edit its capacity and behavior.</p>
+        <div className="px-4 py-3">
+          <InspectorHeader open onToggle={() => setOpen(false)} />
+        </div>
+        <p className="px-4 pb-3 text-[13px] leading-6 text-muted-foreground">Select a component to edit its capacity and behavior.</p>
       </aside>
     );
   }
