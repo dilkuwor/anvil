@@ -43,7 +43,7 @@ const STEPS = [
 
 const FOOTER_NAV = [
   { href: "/problems", label: "Problems" },
-  { href: "/system-design", label: "Design" },
+  { href: "/system-design", label: "System Design" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
   { href: "/cheatsheets", label: "Cheat Sheets" },

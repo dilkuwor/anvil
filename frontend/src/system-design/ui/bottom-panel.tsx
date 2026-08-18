@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 import type { ActiveFailure, FailureType, SimulationResult, SloConfig, WorkloadConfig } from "../models/types";
@@ -52,12 +53,18 @@ export function BottomPanel({
   onCursor: (value: number) => void;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Workload");
+  const [open, setOpen] = useState(true);
   const derived = deriveWorkload(workload);
 
   return (
-    <section className="flex h-[240px] shrink-0 flex-col border-t border-steel-800 bg-steel-900">
-      <div className="flex items-center justify-between gap-3 border-b border-steel-800 px-2">
-        <div className="flex gap-0.5 overflow-x-auto" role="tablist">
+    <section
+      className={cn(
+        "flex shrink-0 flex-col overflow-hidden border-t border-steel-800 bg-steel-900 transition-[height] duration-200 ease-out",
+        open ? "h-[240px]" : "h-9",
+      )}
+    >
+      <div className={cn("flex items-center justify-between gap-3 px-2", open && "border-b border-steel-800")}>
+        <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto" role="tablist">
           {TABS.map((item) => (
             <button
               key={item}
@@ -68,14 +75,17 @@ export function BottomPanel({
                 "shrink-0 px-3 py-2 text-[12px]",
                 tab === item ? "border-b-2 border-accent text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
-              onClick={() => setTab(item)}
+              onClick={() => {
+                setTab(item);
+                if (!open) setOpen(true);
+              }}
             >
               {item}
             </button>
           ))}
         </div>
-        {result ? (
-          <div className="flex items-center gap-2 pr-2 text-[11px] text-muted-foreground">
+        {result && open ? (
+          <div className="flex items-center gap-2 pr-1 text-[11px] text-muted-foreground">
             <Button variant="ghost" size="sm" onClick={onPlay}>
               {playing ? "Pause" : "Play"}
             </Button>
@@ -91,6 +101,15 @@ export function BottomPanel({
             ))}
           </div>
         ) : null}
+        <button
+          type="button"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+          aria-expanded={open}
+          aria-label={open ? "Collapse results" : "Expand results"}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+        </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3 text-[13px]">
         {tab === "Workload" ? <WorkloadTab workload={workload} derived={derived} slo={slo} onWorkload={onWorkload} onSlo={onSlo} /> : null}
@@ -109,7 +128,7 @@ export function BottomPanel({
           />
         ) : null}
       </div>
-      {result ? (
+      {result && open ? (
         <div className="border-t border-steel-800 px-4 py-1.5">
           <input
             type="range"

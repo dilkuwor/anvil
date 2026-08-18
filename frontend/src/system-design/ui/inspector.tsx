@@ -1,8 +1,12 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+
 import { getKind, visibleFields } from "../components/registry";
 import type { ConfigValue, DesignNode, Difficulty, NodeMetrics } from "../models/types";
 import { formatMs, formatPct, formatRps } from "../utils/format";
+import { KindIcon } from "./icons";
 import { Input } from "@/components/ui/input";
 
 export function Inspector({
@@ -18,16 +22,41 @@ export function Inspector({
   onChange: (key: string, value: ConfigValue) => void;
   onRename: (label: string) => void;
 }) {
-  if (!node) {
+  const [open, setOpen] = useState(true);
+  const kind = node ? getKind(node.type) : null;
+
+  if (!open) {
     return (
-      <aside className="flex h-full w-[280px] shrink-0 flex-col border-l border-steel-800 bg-steel-900 px-4 py-4">
-        <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Inspector</div>
-        <p className="mt-3 text-[13px] leading-6 text-muted-foreground">Select a component to edit its capacity and behavior.</p>
+      <aside className="flex h-full w-11 shrink-0 flex-col items-center gap-3 overflow-hidden border-l border-steel-800 bg-steel-900 py-2 transition-[width] duration-200 ease-out">
+        <button
+          type="button"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+          aria-expanded={false}
+          aria-label="Expand inspector"
+          onClick={() => setOpen(true)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        {kind ? (
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-steel-800 text-accent" title={node?.label}>
+            <KindIcon name={kind.icon} className="h-4 w-4" />
+          </span>
+        ) : null}
+        <span className="mt-2 rotate-180 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground [writing-mode:vertical-rl]">
+          Inspector
+        </span>
       </aside>
     );
   }
 
-  const kind = getKind(node.type);
+  if (!node || !kind) {
+    return (
+      <aside className="flex h-full w-[280px] shrink-0 flex-col border-l border-steel-800 bg-steel-900 transition-[width] duration-200 ease-out">
+        <InspectorHeader open onToggle={() => setOpen(false)} />
+        <p className="px-4 py-3 text-[13px] leading-6 text-muted-foreground">Select a component to edit its capacity and behavior.</p>
+      </aside>
+    );
+  }
   const fields = visibleFields(kind, difficulty);
   const groups = [
     { title: "Basic", items: fields.filter((field) => field.tier === "beginner") },
@@ -36,9 +65,9 @@ export function Inspector({
   ].filter((group) => group.items.length);
 
   return (
-    <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden border-l border-steel-800 bg-steel-900">
+    <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden border-l border-steel-800 bg-steel-900 transition-[width] duration-200 ease-out">
       <div className="border-b border-steel-800 px-4 py-3">
-        <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Inspector</div>
+        <InspectorHeader open onToggle={() => setOpen(false)} />
         <Input className="mt-2 h-8" value={node.label} onChange={(event) => onRename(event.target.value)} />
         <p className="mt-2 text-[12px] leading-5 text-muted-foreground">{kind.description}</p>
       </div>
@@ -114,6 +143,23 @@ export function Inspector({
         ) : null}
       </div>
     </aside>
+  );
+}
+
+function InspectorHeader({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Inspector</div>
+      <button
+        type="button"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+        aria-expanded={open}
+        aria-label="Collapse inspector"
+        onClick={onToggle}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 
