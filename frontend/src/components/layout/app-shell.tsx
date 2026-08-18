@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const nav = PUBLIC_NAV;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-dvh min-h-0 flex-col">
       <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 backdrop-blur-md">
         <div
           className={cn(
@@ -141,7 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={cn(
           "flex w-full flex-1 flex-col",
           pathname.startsWith("/roadmap") || simulator
-            ? "h-[calc(100dvh-3rem)] min-h-0 w-full overflow-hidden py-0"
+            ? "min-h-0 w-full flex-1 overflow-hidden py-0"
             : designWorkspace
               ? "mx-auto h-[calc(100dvh-3rem)] min-h-0 w-full max-w-[1600px] overflow-hidden px-4 py-3"
               : editor

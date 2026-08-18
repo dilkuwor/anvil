@@ -22,9 +22,15 @@ export function ProblemsPage() {
               <DifficultyBadge difficulty={item.difficulty} />
             </div>
             <p className="mt-2 flex-1 text-[13px] leading-6 text-muted-foreground">{item.prompt}</p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
+              {item.slug === "url-shortener" ? (
+                <Button size="sm" onClick={() => router.push("/system-design/simulator?sample=url-shortener")}>
+                  Load sample design
+                </Button>
+              ) : null}
               <Button
                 size="sm"
+                variant={item.slug === "url-shortener" ? "secondary" : "default"}
                 onClick={() => {
                   const design = newDesign(item.title);
                   saveCurrent({
@@ -35,7 +41,7 @@ export function ProblemsPage() {
                   router.push(`/system-design/simulator?problem=${item.slug}`);
                 }}
               >
-                Open in Simulator
+                Start blank
               </Button>
             </div>
           </article>

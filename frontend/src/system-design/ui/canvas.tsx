@@ -39,11 +39,14 @@ export function SimulatorCanvas({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const selectedRef = useRef(selectedId);
-  selectedRef.current = selectedId;
   const designRef = useRef({ designNodes, designEdges, onGraph });
-  designRef.current = { designNodes, designEdges, onGraph };
+  const applyingRef = useRef(false);
+  useEffect(() => {
+    selectedRef.current = selectedId;
+    designRef.current = { designNodes, designEdges, onGraph };
+  }, [selectedId, designNodes, designEdges, onGraph]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(toRfNodes(designNodes, result));
   const [edges, setEdges, onEdgesChange] = useEdgesState(toRfEdges(designEdges, result));
@@ -53,9 +56,15 @@ export function SimulatorCanvas({
   useEffect(() => {
     if (lastKey.current === graphKey) return;
     lastKey.current = graphKey;
+    applyingRef.current = true;
     setNodes((current) => mergeNodes(current, toRfNodes(designNodes, result)));
     setEdges(toRfEdges(designEdges, result));
-  }, [graphKey, designNodes, designEdges, result, setNodes, setEdges]);
+    const frame = window.requestAnimationFrame(() => {
+      applyingRef.current = false;
+      void fitView({ padding: 0.2, duration: 200 });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [graphKey, designNodes, designEdges, result, setNodes, setEdges, fitView]);
 
   const persist = useCallback(
     (nextNodes: Node[], nextEdges: Edge[]) => {
@@ -85,7 +94,7 @@ export function SimulatorCanvas({
 
   return (
     <div
-      className="h-full min-h-0 min-w-0 flex-1 bg-background"
+      className="relative min-h-[24rem] min-w-0 flex-1 bg-background"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -105,10 +114,13 @@ export function SimulatorCanvas({
         emit([...current, created], links);
       }}
     >
+      <div className="absolute inset-0">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        minZoom={0.2}
+        maxZoom={1.6}
         deleteKeyCode={["Backspace", "Delete"]}
         multiSelectionKeyCode={["Meta", "Control"]}
         onInit={(instance) => instance.fitView({ padding: 0.2 })}
@@ -125,16 +137,20 @@ export function SimulatorCanvas({
           persist(nodes, next);
         }}
         onNodesDelete={(deleted) => {
+          if (applyingRef.current) return;
           const ids = new Set(deleted.map((node) => node.id));
           const { designNodes: current, designEdges: links, onGraph: emit } = designRef.current;
+          if (!current.some((node) => ids.has(node.id))) return;
           emit(
             current.filter((node) => !ids.has(node.id)),
             links.filter((edge) => !ids.has(edge.source) && !ids.has(edge.target)),
           );
         }}
         onEdgesDelete={(deleted) => {
+          if (applyingRef.current) return;
           const ids = new Set(deleted.map((edge) => edge.id));
           const { designNodes: current, designEdges: links, onGraph: emit } = designRef.current;
+          if (!links.some((edge) => ids.has(edge.id))) return;
           emit(current, links.filter((edge) => !ids.has(edge.id)));
         }}
       >
@@ -142,6 +158,7 @@ export function SimulatorCanvas({
         <Controls showInteractive={false} />
         <MiniMap pannable zoomable className="!bg-steel-900 !border-steel-800" />
       </ReactFlow>
+      </div>
     </div>
   );
 }

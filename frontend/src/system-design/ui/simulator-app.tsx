@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { simulateAsync } from "../engine/client";
 import { SIMULATOR_PROBLEMS } from "../models/problems";
+import { getSample } from "../models/samples";
 import type { ActiveFailure, ConfigValue, DesignEdge, DesignNode, Difficulty, SimulationResult, SystemDesign } from "../models/types";
 import { listResults, loadCurrent, newDesign, saveCurrent, saveDesign, saveResult } from "../state/persist";
 import { BottomPanel } from "./bottom-panel";
@@ -28,6 +29,8 @@ export function SimulatorApp() {
 function SimulatorWorkspace() {
   const search = useSearchParams();
   const [design, setDesign] = useState<SystemDesign>(() => {
+    const sample = getSample(search.get("sample") ?? "");
+    if (sample) return sample.build();
     const stored = loadCurrent();
     const problem = search.get("problem");
     const catalog = problem ? SIMULATOR_PROBLEMS.find((item) => item.slug === problem) : undefined;
@@ -156,6 +159,20 @@ function SimulatorWorkspace() {
             Save
           </Button>
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              const sample = getSample("url-shortener")?.build();
+              if (!sample) return;
+              commit(sample);
+              setSelectedId(sample.nodes[0]?.id ?? null);
+              setResult(null);
+              toast.success("Loaded the URL Shortener sample.");
+            }}
+          >
+            Load URL Shortener
+          </Button>
+          <Button
             variant="ghost"
             size="sm"
             onClick={() => {
@@ -183,9 +200,10 @@ function SimulatorWorkspace() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1">
         <Palette />
         <SimulatorCanvas
+          key={design.id}
           designNodes={design.nodes}
           designEdges={design.edges}
           result={result}

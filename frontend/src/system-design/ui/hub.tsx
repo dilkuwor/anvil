@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, Clock3, MessageSquare, Network } from "lucide-react";
+import { Activity, Clock3, MessageSquare, Network, Play } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 
 const CARDS = [
   {
@@ -39,6 +40,22 @@ export function SystemDesignHub() {
         title="System Design"
         description="Simulate architectures like an engineer: traffic, capacity, latency, storage, and cost — then iterate."
       />
+      <article className="flex flex-col gap-4 rounded-2xl border border-steel-800 bg-steel-900 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">Sample design</div>
+          <h2 className="mt-1 text-sm font-semibold tracking-tight">URL Shortener</h2>
+          <p className="mt-1 max-w-xl text-[13px] leading-6 text-muted-foreground">
+            A wired architecture you can simulate immediately: DNS, rate limit, load balancer, API, Redis, Postgres, and
+            Kafka for click events. Change a box, hit Simulate again.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/system-design/simulator?sample=url-shortener">
+            <Play className="h-3.5 w-3.5" />
+            Load & simulate
+          </Link>
+        </Button>
+      </article>
       <div className="grid gap-3 sm:grid-cols-2">
         {CARDS.map((card) => (
           <Link
