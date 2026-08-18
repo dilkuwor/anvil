@@ -9,10 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.common.config import get_settings
-from app.common.enums import InterviewEventType, InterviewMessageRole, InterviewPhase
+from app.common.enums import InterviewEventType, InterviewKind, InterviewMessageRole, InterviewPhase
 from app.common.errors import AppError, ForbiddenError, NotFoundError
 from app.interviews import ollama
-from app.interviews.agent import InterviewContext, InterviewKind, MockInterviewAgent, ProblemSnapshot, SandboxSnapshot
+from app.interviews.agent import InterviewContext, MockInterviewAgent, ProblemSnapshot, SandboxSnapshot
 from app.interviews.providers import get_llm_provider_for_user
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession
 from app.interviews.signals import empty_signals, normalize_signals
@@ -31,6 +31,13 @@ PHASE_LABELS = {
     InterviewPhase.CODING.value: "Coding",
     InterviewPhase.TESTING.value: "Testing",
     InterviewPhase.FOLLOW_UP.value: "Follow-up",
+    InterviewPhase.REQUIREMENTS.value: "Requirements",
+    InterviewPhase.CAPACITY.value: "Capacity Estimation",
+    InterviewPhase.HIGH_LEVEL.value: "High-Level Design",
+    InterviewPhase.DEEP_DIVE.value: "Deep Dive",
+    InterviewPhase.SCALABILITY.value: "Scalability",
+    InterviewPhase.RELIABILITY.value: "Reliability",
+    InterviewPhase.TRADEOFFS.value: "Trade-offs",
     InterviewPhase.FEEDBACK.value: "Feedback",
 }
 
@@ -111,6 +118,10 @@ def get_session(db: Session, session_id: UUID, user_id: UUID) -> InterviewSessio
 def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content: str) -> InterviewSession:
     session = get_session(db, session_id, user_id)
     _ensure_open(session)
+    if _is_system_design(session):
+        from app.interviews import system_design
+
+        return system_design.add_message(db, session, content)
     problem = _get_problem(db, session.problem_id)
     text = content.strip()
     _add_message(session, InterviewMessageRole.CANDIDATE, text)
@@ -148,6 +159,10 @@ def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content:
 def request_hint(db: Session, session_id: UUID, user_id: UUID) -> InterviewSession:
     session = get_session(db, session_id, user_id)
     _ensure_open(session)
+    if _is_system_design(session):
+        from app.interviews import system_design
+
+        return system_design.request_hint(db, session)
     problem = _get_problem(db, session.problem_id)
     session.hints_used += 1
     _add_event(session, InterviewEventType.HINT, {"n": session.hints_used})
@@ -186,6 +201,8 @@ def record_execution_event(
 ) -> InterviewSession:
     session = get_session(db, session_id, user_id)
     _ensure_open(session)
+    if _is_system_design(session):
+        raise AppError("Execution events are not used in system design interviews.", status_code=400, code="bad_request")
     problem = _get_problem(db, session.problem_id)
     accepted = status == "ACCEPTED"
 
@@ -245,7 +262,7 @@ def end_session(db: Session, session_id: UUID, user_id: UUID) -> InterviewSessio
     session = get_session(db, session_id, user_id)
     if session.ended_at is not None:
         return session
-    problem = _get_problem(db, session.problem_id)
+    problem = _get_problem(db, session.problem_id) if session.problem_id else None
     _add_event(session, InterviewEventType.END, {})
     _complete(db, session, problem)
     return session
@@ -275,6 +292,11 @@ def to_out(session: InterviewSession, problem: Problem | None = None) -> Intervi
         title = session.problem.title
         slug = session.problem.slug
         difficulty = session.problem.difficulty
+    scenario = session.scenario if isinstance(getattr(session, "scenario", None), dict) else None
+    if _is_system_design(session) and scenario:
+        title = str(scenario.get("title") or title)
+        slug = str(session.scenario_slug or scenario.get("slug") or slug)
+        difficulty = str(scenario.get("difficulty") or difficulty)
     messages = [
         message
         for message in _sorted_messages(session)
@@ -286,6 +308,10 @@ def to_out(session: InterviewSession, problem: Problem | None = None) -> Intervi
         problem_title=title,
         problem_slug=slug,
         difficulty=difficulty,
+        kind=getattr(session, "kind", None) or InterviewKind.CODING.value,
+        scenario_slug=getattr(session, "scenario_slug", None),
+        scenario=scenario,
+        architecture=getattr(session, "architecture", None),
         phase=session.phase,
         phase_label=PHASE_LABELS.get(session.phase, session.phase.title()),
         duration_seconds=session.duration_seconds,
@@ -309,7 +335,7 @@ def to_out(session: InterviewSession, problem: Problem | None = None) -> Intervi
 
 
 def serialize(db: Session, session: InterviewSession) -> InterviewSessionOut:
-    problem = db.get(Problem, session.problem_id)
+    problem = db.get(Problem, session.problem_id) if session.problem_id else None
     return to_out(session, problem)
 
 
@@ -336,10 +362,17 @@ def build_problem_context(problem: Problem) -> str:
     )
 
 
-def _complete(db: Session, session: InterviewSession, problem: Problem) -> None:
+def _complete(db: Session, session: InterviewSession, problem: Problem | None) -> None:
     session.phase = InterviewPhase.FEEDBACK.value
     session.ended_at = session.ended_at or _now()
-    session.feedback = _build_feedback(problem, session)
+    if _is_system_design(session):
+        from app.interviews import system_design
+
+        session.feedback = system_design.build_feedback(session)
+    else:
+        if problem is None:
+            raise AppError("Interview problem is missing.", status_code=500, code="internal_error")
+        session.feedback = _build_feedback(problem, session)
     db.commit()
     db.refresh(session)
 
@@ -349,7 +382,7 @@ def _expire_if_needed(db: Session, session: InterviewSession) -> None:
         return
     if remaining_seconds(session) > 0:
         return
-    problem = _get_problem(db, session.problem_id)
+    problem = _get_problem(db, session.problem_id) if session.problem_id else None
     _add_event(session, InterviewEventType.TIMEOUT, {})
     _add_message(session, InterviewMessageRole.INTERVIEWER, "Interview time has ended.")
     _complete(db, session, problem)
@@ -370,7 +403,8 @@ def _agent(session: InterviewSession) -> MockInterviewAgent:
 
     db = object_session(session)
     user = db.get(User, session.user_id) if db is not None and session.user_id else None
-    return MockInterviewAgent(get_llm_provider_for_user(user), kind=InterviewKind.CODING)
+    kind = InterviewKind.SYSTEM_DESIGN if _is_system_design(session) else InterviewKind.CODING
+    return MockInterviewAgent(get_llm_provider_for_user(user), kind=kind)
 
 
 def _interview_context(
@@ -384,7 +418,7 @@ def _interview_context(
     last_event: str | None = None,
 ) -> InterviewContext:
     return InterviewContext(
-        kind=InterviewKind.CODING,
+        kind=InterviewKind.SYSTEM_DESIGN if _is_system_design(session) else InterviewKind.CODING,
         phase=session.phase,
         problem=ProblemSnapshot(
             title=problem.title,
@@ -804,6 +838,7 @@ def _open_new_session(
     session = InterviewSession(
         user_id=user_id,
         problem_id=problem.id,
+        kind=InterviewKind.CODING.value,
         phase=InterviewPhase.INTRO.value,
         duration_seconds=settings.interview_duration_seconds,
         is_preview=is_preview,
@@ -850,6 +885,10 @@ def _load_session(db: Session, session_id: UUID, user_id: UUID) -> InterviewSess
     if session.user_id != user_id:
         raise ForbiddenError("You do not have access to this interview.")
     return session
+
+
+def _is_system_design(session: InterviewSession) -> bool:
+    return getattr(session, "kind", InterviewKind.CODING.value) == InterviewKind.SYSTEM_DESIGN.value
 
 
 def _ensure_open(session: InterviewSession) -> None:

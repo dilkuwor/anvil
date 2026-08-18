@@ -5,7 +5,16 @@ export type InterviewPhase =
   | "CODING"
   | "TESTING"
   | "FOLLOW_UP"
+  | "REQUIREMENTS"
+  | "CAPACITY"
+  | "HIGH_LEVEL"
+  | "DEEP_DIVE"
+  | "SCALABILITY"
+  | "RELIABILITY"
+  | "TRADEOFFS"
   | "FEEDBACK";
+
+export type InterviewKind = "CODING" | "SYSTEM_DESIGN";
 
 export type InterviewMessage = {
   id: string;
@@ -49,10 +58,14 @@ export type InterviewFeedback = {
 
 export type InterviewSession = {
   id: string;
-  problem_id: string;
+  problem_id: string | null;
   problem_title: string;
   problem_slug: string;
   difficulty: string;
+  kind?: InterviewKind;
+  scenario_slug?: string | null;
+  scenario?: SystemDesignScenario | null;
+  architecture?: ArchitectureGraph | null;
   phase: InterviewPhase;
   phase_label: string;
   duration_seconds: number;
@@ -103,3 +116,63 @@ export const SCORE_ROWS: { key: keyof InterviewScores; label: string }[] = [
   { key: "complexity", label: "Complexity" },
   { key: "communication", label: "Communication" },
 ];
+
+export const DESIGN_SCORE_ROWS: { key: keyof InterviewScores; label: string }[] = [
+  { key: "understanding", label: "Requirements" },
+  { key: "approach", label: "High-Level Design" },
+  { key: "coding", label: "Deep Dive" },
+  { key: "correctness", label: "Architecture" },
+  { key: "complexity", label: "Capacity" },
+  { key: "communication", label: "Communication" },
+  { key: "reasoning", label: "Trade-offs" },
+  { key: "follow_up", label: "Scale & Reliability" },
+];
+
+export type DesignNodeType =
+  | "client"
+  | "cdn"
+  | "load_balancer"
+  | "api"
+  | "service"
+  | "cache"
+  | "database"
+  | "queue"
+  | "worker"
+  | "search"
+  | "storage"
+  | "websocket";
+
+export type DesignNode = {
+  id: string;
+  type: DesignNodeType;
+  label: string;
+  x: number;
+  y: number;
+};
+
+export type DesignEdge = {
+  id: string;
+  from: string;
+  to: string;
+};
+
+export type ArchitectureGraph = {
+  nodes: DesignNode[];
+  edges: DesignEdge[];
+};
+
+export type SystemDesignScenario = {
+  slug: string;
+  title: string;
+  difficulty: string;
+  summary: string;
+  prompt: string;
+  functional_requirements: string[];
+  non_functional_requirements: string[];
+  constraints: string[];
+  assumptions: string[];
+};
+
+export function emptyArchitecture(): ArchitectureGraph {
+  return { nodes: [], edges: [] };
+}

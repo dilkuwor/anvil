@@ -15,6 +15,17 @@ SIGNAL_KEYS = (
     "reasoning",
 )
 
+SD_SIGNAL_KEYS = (
+    "requirements",
+    "capacity",
+    "high_level",
+    "deep_dive",
+    "scalability",
+    "reliability",
+    "tradeoffs",
+    "communication",
+)
+
 MISSING = "missing"
 PARTIAL = "partial"
 DEMONSTRATED = "demonstrated"
@@ -57,23 +68,72 @@ CODING_FOCUS_BY_PHASE: dict[str, tuple[str, ...]] = {
     "FEEDBACK": (),
 }
 
+SD_FOCUS_BY_PHASE: dict[str, tuple[str, ...]] = {
+    "REQUIREMENTS": ("requirements", "communication"),
+    "CAPACITY": ("capacity", "requirements"),
+    "HIGH_LEVEL": ("high_level", "communication"),
+    "DEEP_DIVE": ("deep_dive", "tradeoffs"),
+    "SCALABILITY": ("scalability", "capacity"),
+    "RELIABILITY": ("reliability", "tradeoffs"),
+    "TRADEOFFS": ("tradeoffs", "scalability", "reliability"),
+    "FEEDBACK": (),
+}
 
-def empty_signals() -> dict[str, str]:
-    return {key: MISSING for key in SIGNAL_KEYS}
+_SD_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    "requirements": (
+        re.compile(
+            r"\b(user|must|need to|functional|read path|write path|feature|requirement|constraint)\b",
+            re.I,
+        ),
+    ),
+    "capacity": (
+        re.compile(r"\b(qps|rps|dau|storage|tb|gb|bandwidth|estimate|million|capacity|throughput)\b", re.I),
+    ),
+    "high_level": (
+        re.compile(
+            r"\b(load balancer|api gateway|microservice|cdn|cache|queue|database|service|client)\b",
+            re.I,
+        ),
+    ),
+    "deep_dive": (
+        re.compile(r"\b(schema|partition|shard|index|consistency|invalidat|hash|replication|protocol)\b", re.I),
+    ),
+    "scalability": (
+        re.compile(r"\b(scale|shard|replica|horizontal|hot key|bottleneck|partition|fan-?out)\b", re.I),
+    ),
+    "reliability": (
+        re.compile(r"\b(failover|replica|backup|retry|timeout|circuit|availability|redundan)\b", re.I),
+    ),
+    "tradeoffs": (
+        re.compile(
+            r"\b(tradeoff|consistency|availability|eventual|cap theorem|versus|rather than|instead of)\b",
+            re.I,
+        ),
+    ),
+}
 
 
-def normalize_signals(raw: dict | None) -> dict[str, str]:
-    base = empty_signals()
+def _keys_for(kind: str) -> tuple[str, ...]:
+    return SD_SIGNAL_KEYS if kind == "SYSTEM_DESIGN" else SIGNAL_KEYS
+
+
+def empty_signals(kind: str = "CODING") -> dict[str, str]:
+    return {key: MISSING for key in _keys_for(kind)}
+
+
+def normalize_signals(raw: dict | None, kind: str = "CODING") -> dict[str, str]:
+    keys = _keys_for(kind)
+    base = {key: MISSING for key in keys}
     if not raw:
         return base
-    for key in SIGNAL_KEYS:
+    for key in keys:
         value = str(raw.get(key) or MISSING).lower()
         base[key] = value if value in STATUSES else MISSING
     return base
 
 
-def merge_signals(current: dict[str, str], updates: dict[str, str]) -> dict[str, str]:
-    merged = normalize_signals(current)
+def merge_signals(current: dict[str, str], updates: dict[str, str], kind: str = "CODING") -> dict[str, str]:
+    merged = normalize_signals(current, kind)
     for key, value in updates.items():
         if key not in merged or value not in STATUSES:
             continue
@@ -82,22 +142,46 @@ def merge_signals(current: dict[str, str], updates: dict[str, str]) -> dict[str,
     return merged
 
 
-def missing_signals(signals: dict[str, str], keys: Iterable[str] | None = None) -> list[str]:
-    watch = tuple(keys) if keys is not None else SIGNAL_KEYS
-    return [key for key in watch if normalize_signals(signals).get(key) != DEMONSTRATED]
+def missing_signals(signals: dict[str, str], keys: Iterable[str] | None = None, kind: str = "CODING") -> list[str]:
+    watch = tuple(keys) if keys is not None else _keys_for(kind)
+    normalized = normalize_signals(signals, kind)
+    return [key for key in watch if normalized.get(key) != DEMONSTRATED]
 
 
-def infer_signals(text: str, current: dict[str, str] | None = None) -> dict[str, str]:
+def infer_signals(text: str, current: dict[str, str] | None = None, kind: str = "CODING") -> dict[str, str]:
     """Raise signal status from the candidate's latest utterance. Never lowers a status."""
+    del current
     blob = (text or "").strip()
     updates: dict[str, str] = {}
     if not blob:
         return updates
-    for key, patterns in _PATTERNS.items():
-        if any(pattern.search(blob) for pattern in patterns):
+    patterns = _SD_PATTERNS if kind == "SYSTEM_DESIGN" else _PATTERNS
+    for key, group in patterns.items():
+        if any(pattern.search(blob) for pattern in group):
             updates[key] = DEMONSTRATED if len(blob) >= 80 else PARTIAL
     if len(blob) >= 50:
         updates["communication"] = DEMONSTRATED if len(blob) >= 120 else PARTIAL
+    return updates
+
+
+def infer_from_architecture(architecture: dict | None) -> dict[str, str]:
+    from app.interviews.architecture import has_core_shape, node_types, normalize_architecture
+
+    graph = normalize_architecture(architecture)
+    types = node_types(graph)
+    updates: dict[str, str] = {}
+    if len(graph["nodes"]) >= 2:
+        updates["high_level"] = PARTIAL
+    if has_core_shape(graph) and graph["edges"]:
+        updates["high_level"] = DEMONSTRATED
+    if "cache" in types or "cdn" in types:
+        updates["scalability"] = PARTIAL
+    if {"cache", "load_balancer"} & types and ({"queue", "worker"} & types):
+        updates["scalability"] = DEMONSTRATED
+    if {"queue", "worker", "database"} & types:
+        updates["reliability"] = PARTIAL
+    if len(types) >= 6 and graph["edges"]:
+        updates["deep_dive"] = PARTIAL
     return updates
 
 
@@ -119,14 +203,17 @@ def infer_from_sandbox(
     return updates
 
 
-def choose_focus(phase: str, signals: dict[str, str]) -> str | None:
-    for key in CODING_FOCUS_BY_PHASE.get(phase, ()):
-        if normalize_signals(signals).get(key) != DEMONSTRATED:
+def choose_focus(phase: str, signals: dict[str, str], kind: str = "CODING") -> str | None:
+    table = SD_FOCUS_BY_PHASE if kind == "SYSTEM_DESIGN" else CODING_FOCUS_BY_PHASE
+    normalized = normalize_signals(signals, kind)
+    for key in table.get(phase, ()):
+        if normalized.get(key) != DEMONSTRATED:
             return key
     return None
 
 
-def coverage_score(signals: dict[str, str]) -> float:
-    normalized = normalize_signals(signals)
-    points = sum(_RANK[normalized[key]] for key in SIGNAL_KEYS)
-    return round(10 * points / (_RANK[DEMONSTRATED] * len(SIGNAL_KEYS)), 1)
+def coverage_score(signals: dict[str, str], kind: str = "CODING") -> float:
+    keys = _keys_for(kind)
+    normalized = normalize_signals(signals, kind)
+    points = sum(_RANK[normalized[key]] for key in keys)
+    return round(10 * points / (_RANK[DEMONSTRATED] * len(keys)), 1)

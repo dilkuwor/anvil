@@ -16,12 +16,13 @@ import { cn } from "@/lib/utils";
 
 const PUBLIC_NAV = [
   { href: "/problems", label: "Problems" },
+  { href: "/system-design", label: "Design" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
 ];
 
-const PRIVATE_PREFIXES = ["/dashboard", "/settings"];
+const PRIVATE_PREFIXES = ["/dashboard", "/settings", "/system-design/interview"];
 
 function isPrivatePath(pathname: string): boolean {
   return PRIVATE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -32,6 +33,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const editor = pathname.startsWith("/problems/") && !pathname.startsWith("/problems/lists");
+  const designWorkspace = pathname.startsWith("/system-design/interview");
+  const wide = editor || designWorkspace;
   const me = useQuery({
     queryKey: queryKeys.me,
     queryFn: fetchCurrentUser,
@@ -76,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div
           className={cn(
             "flex h-12 items-center justify-between",
-            editor ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content",
+            wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content",
           )}
         >
           <div className="flex min-w-0 items-center gap-5">
@@ -138,9 +141,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           "flex w-full flex-1 flex-col",
           pathname.startsWith("/roadmap")
             ? "h-[calc(100dvh-3rem)] min-h-0 w-full overflow-hidden py-0"
-            : editor
-              ? "mx-auto max-w-[1600px] px-4 py-3"
-              : "ia-content py-6",
+            : designWorkspace
+              ? "mx-auto h-[calc(100dvh-3rem)] min-h-0 w-full max-w-[1600px] overflow-hidden px-4 py-3"
+              : editor
+                ? "mx-auto max-w-[1600px] px-4 py-3"
+                : "ia-content py-6",
         )}
       >
         {children}

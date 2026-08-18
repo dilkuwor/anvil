@@ -16,10 +16,15 @@ class InterviewSession(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
     )
-    problem_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("problems.id", ondelete="CASCADE"), index=True, nullable=False
+    problem_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("problems.id", ondelete="CASCADE"), index=True, nullable=True
     )
+    kind: Mapped[str] = mapped_column(String(30), nullable=False, default="CODING", server_default="CODING")
+    scenario_slug: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    scenario: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    architecture: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     phase: Mapped[str] = mapped_column(String(30), nullable=False, default=InterviewPhase.INTRO.value)
+    phase_turns: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=2700)
     hints_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     run_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

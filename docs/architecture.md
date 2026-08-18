@@ -60,7 +60,11 @@ Before compilation, `app/execution/imports.py` scans the submitted source and in
 
 A mock interview is a timed session bound to one problem. The editor stays the same; the left pane becomes the interviewer. Java correctness still comes from the sandbox — the model is not the judge.
 
-`app/interviews/agent.py` (`MockInterviewAgent`) chooses the next question. The service still owns phase transitions, timers, and completion. The agent records structured signals (`requirements`, `approach`, `complexity`, `edge_cases`, `communication`, `testing`, `reasoning`) as `missing` / `partial` / `demonstrated` and probes whatever is still missing. It implements **CODING** interviews first; `SYSTEM_DESIGN` is reserved and must not be constructed yet.
+`app/interviews/agent.py` (`MockInterviewAgent`) chooses the next question. The service still owns phase transitions, timers, and completion. The agent records structured signals as `missing` / `partial` / `demonstrated` and probes whatever is still missing.
+
+**CODING** interviews stay bound to a problem and the Java sandbox. Signals are `requirements`, `approach`, `complexity`, `edge_cases`, `communication`, `testing`, `reasoning`.
+
+**SYSTEM_DESIGN** interviews are a separate kind. They have no `problem_id`. The session stores a scenario snapshot and an architecture canvas (`nodes` + `edges`). The interviewer sees a live summary of the canvas and challenges gaps (missing cache, single store, no async path) instead of walking a fixed script. Signals are `requirements`, `capacity`, `high_level`, `deep_dive`, `scalability`, `reliability`, `tradeoffs`, `communication`.
 
 The agent depends only on `LLMProvider`. Concrete backends live under `app/interviews/providers/` (`OllamaProvider`, `OpenAIProvider`, `GeminiProvider`, `OpenRouterProvider`). `INTERVIEW_LLM_PROVIDER` is the platform default (usually `ollama`). A signed-in user can pick a paid provider and save an API key and optional model slug per provider in `user_llm_keys`. Switching providers reuses a stored key and model when they exist. An empty model falls back to the server env default (`OPENROUTER_MODEL`, `OPENAI_MODEL`, `GEMINI_MODEL`). Keys are encrypted at rest and never returned to the client. Adding a vendor means a new provider class — not a change to the agent or the phase machine.
 
@@ -70,6 +74,8 @@ The agent depends only on `LLMProvider`. Concrete backends live under `app/inter
 |---|---|---|---|
 | Landing preview | none | `POST /api/v1/interviews/preview` and `/preview/{id}/messages` | 4 candidate turns, then login required. Session has `user_id = null` and `is_preview = true`. Fixed problem `pair-target`. |
 | Problem workspace | required | `POST /api/v1/interviews` | Full session. One active (unended) session per user per problem is reused. Duration is `INTERVIEW_DURATION_SECONDS` (default 45 minutes). |
+| System design picker | none to browse | `GET /api/v1/interviews/scenarios` | Catalog of design prompts. Auth required to start. |
+| System design workspace | required | `POST /api/v1/interviews/system-design`, `PUT /{id}/architecture` | Timed 3-panel session. One active session per user per scenario. Canvas JSON is persisted; the interviewer reads a summary of it. |
 
 Preview sessions do not expire on the timer and do not write feedback. Authenticated sessions expire when remaining time hits zero; the API then records a `TIMEOUT` event and completes the interview.
 
@@ -88,6 +94,14 @@ INTRO → UNDERSTANDING → APPROACH → CODING → TESTING → FOLLOW_UP → FE
 - After two follow-up answers, or when the user ends the session, the phase becomes **Feedback** and `ended_at` is set.
 
 The workspace reports Run/Submit into the session with `POST /api/v1/interviews/{id}/events` (`type` is `RUN` or `SUBMIT`). Hint requests increment `hints_used` and ask for a nudge only — no algorithm or code.
+
+System design uses a different machine, owned by `app/interviews/system_design.py`:
+
+```text
+REQUIREMENTS → CAPACITY → HIGH_LEVEL → DEEP_DIVE → SCALABILITY → RELIABILITY → TRADEOFFS → FEEDBACK
+```
+
+The service advances after a minimum number of candidate turns in each phase. High-level design waits for a core canvas (compute + store) before moving on. Architecture updates do not change phase; the next chat turn sees the latest graph.
 
 ### What the interviewer is allowed to do
 

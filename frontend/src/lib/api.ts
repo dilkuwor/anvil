@@ -45,6 +45,8 @@ export const api = {
     request<T>(path, { method: "POST", body: body == null ? undefined : JSON.stringify(body) }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body == null ? undefined : JSON.stringify(body) }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PUT", body: body == null ? undefined : JSON.stringify(body) }),
   putFile: <T>(path: string, file: File) => {
     const body = new FormData();
     body.append("file", file);

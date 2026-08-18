@@ -166,12 +166,48 @@ def test_llm_failure_uses_fallback():
     assert turn.reply == "What approach would you consider?"
 
 
-def test_system_design_is_reserved():
-    try:
-        MockInterviewAgent(FakeLLM(), kind=InterviewKind.SYSTEM_DESIGN)
-    except NotImplementedError:
-        return
-    raise AssertionError("SYSTEM_DESIGN should not be constructed yet")
+def test_system_design_agent_challenges_architecture():
+    from app.interviews.agent import ArchitectureSnapshot, ScenarioSnapshot
+
+    llm = FakeLLM("Your service talks to one database. How do you handle a 10x read spike?")
+    agent = MockInterviewAgent(llm, kind=InterviewKind.SYSTEM_DESIGN)
+    scenario = ScenarioSnapshot(
+        slug="url-shortener",
+        title="Design a URL Shortener",
+        difficulty="MEDIUM",
+        prompt="Shorten URLs and redirect.",
+        functional_requirements=["Create a short URL."],
+        non_functional_requirements=["Low-latency redirects."],
+        constraints=["100M new URLs / month."],
+        assumptions=["Links are public."],
+        public_context="Title: Design a URL Shortener",
+        interviewer_notes="Probe cache on the redirect path.",
+    )
+    architecture = ArchitectureSnapshot(
+        nodes=[
+            {"id": "n1", "type": "api", "label": "API", "x": 40, "y": 40},
+            {"id": "n2", "type": "service", "label": "Redirect", "x": 200, "y": 40},
+            {"id": "n3", "type": "database", "label": "Links DB", "x": 360, "y": 40},
+        ],
+        edges=[{"id": "e1", "from": "n1", "to": "n2"}, {"id": "e2", "from": "n2", "to": "n3"}],
+        summary="Components: API, Redirect, Links DB. Typical pieces still missing: cache.",
+    )
+    turn = agent.respond(
+        _context(
+            kind=InterviewKind.SYSTEM_DESIGN,
+            phase="HIGH_LEVEL",
+            scenario=scenario,
+            architecture=architecture,
+            last_candidate_text="API talks to a service which writes to one Postgres database.",
+            fallback="What happens to redirects if the database is the only store?",
+        )
+    )
+    assert turn.reply
+    assert "?" in turn.reply
+    system_prompt = llm.complete_calls[0][0]
+    assert "SYSTEM DESIGN" in system_prompt
+    assert "cache" in system_prompt.lower()
+    assert "class Solution" not in system_prompt
 
 
 def test_evaluate_uses_signals_and_not_correctness_from_model():

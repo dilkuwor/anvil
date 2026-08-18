@@ -6,12 +6,17 @@ from sqlalchemy.orm import Session
 from app.common.database import get_db
 from app.common.deps import get_current_user
 from app.interviews import service
+from app.interviews import system_design
+from app.interviews.scenarios import list_scenarios, public_scenario
 from app.interviews.schemas import (
     ActiveInterviewResponse,
+    ArchitectureUpdateRequest,
     InterviewEventRequest,
     InterviewMessageRequest,
     InterviewSessionOut,
     StartInterviewRequest,
+    StartSystemDesignRequest,
+    SystemDesignScenarioOut,
 )
 from app.users.models import User
 
@@ -37,6 +42,51 @@ def send_preview_interview_message(
     db: Session = Depends(get_db),
 ) -> InterviewSessionOut:
     session = service.add_preview_message(db, session_id, payload.content)
+    return service.serialize(db, session)
+
+
+@router.get("/scenarios", response_model=list[SystemDesignScenarioOut])
+def list_system_design_scenarios() -> list[SystemDesignScenarioOut]:
+    return [SystemDesignScenarioOut.model_validate(item) for item in list_scenarios()]
+
+
+@router.get("/scenarios/{slug}", response_model=SystemDesignScenarioOut)
+def get_system_design_scenario(slug: str) -> SystemDesignScenarioOut:
+    return SystemDesignScenarioOut.model_validate(public_scenario(system_design.require_scenario(slug)))
+
+
+@router.post("/system-design", response_model=InterviewSessionOut)
+def start_system_design_interview(
+    payload: StartSystemDesignRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InterviewSessionOut:
+    session = system_design.start_session(db, current_user.id, payload.scenario_slug)
+    return service.serialize(db, session)
+
+
+@router.get("/system-design/active", response_model=ActiveInterviewResponse)
+def get_active_system_design_interview(
+    scenario_slug: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ActiveInterviewResponse:
+    session = system_design.get_active_session(db, current_user.id, scenario_slug)
+    if session is None or session.ended_at is not None:
+        return ActiveInterviewResponse(session=None)
+    return ActiveInterviewResponse(session=service.serialize(db, session))
+
+
+@router.put("/{session_id}/architecture", response_model=InterviewSessionOut)
+def update_interview_architecture(
+    session_id: UUID,
+    payload: ArchitectureUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InterviewSessionOut:
+    session = service.get_session(db, session_id, current_user.id)
+    system_design.raise_if_coding_only(session)
+    session = system_design.save_architecture(db, session, payload.architecture)
     return service.serialize(db, session)
 
 

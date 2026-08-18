@@ -48,10 +48,14 @@ class InterviewFeedbackOut(BaseModel):
 
 class InterviewSessionOut(BaseModel):
     id: UUID
-    problem_id: UUID
+    problem_id: UUID | None
     problem_title: str
     problem_slug: str
     difficulty: str
+    kind: str = "CODING"
+    scenario_slug: str | None = None
+    scenario: dict | None = None
+    architecture: dict | None = None
     phase: str
     phase_label: str
     duration_seconds: int
@@ -79,6 +83,26 @@ class ActiveInterviewResponse(BaseModel):
 
 class StartInterviewRequest(BaseModel):
     problem_id: UUID
+
+
+class StartSystemDesignRequest(BaseModel):
+    scenario_slug: str = Field(min_length=1, max_length=80)
+
+
+class ArchitectureUpdateRequest(BaseModel):
+    architecture: dict
+
+
+class SystemDesignScenarioOut(BaseModel):
+    slug: str
+    title: str
+    difficulty: str
+    summary: str
+    prompt: str
+    functional_requirements: list[str]
+    non_functional_requirements: list[str]
+    constraints: list[str]
+    assumptions: list[str]
 
 
 class InterviewMessageRequest(BaseModel):

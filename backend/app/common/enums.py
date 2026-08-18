@@ -41,6 +41,11 @@ class Language(StrEnum):
     JAVA = "JAVA"
 
 
+class InterviewKind(StrEnum):
+    CODING = "CODING"
+    SYSTEM_DESIGN = "SYSTEM_DESIGN"
+
+
 class InterviewPhase(StrEnum):
     INTRO = "INTRO"
     UNDERSTANDING = "UNDERSTANDING"
@@ -48,6 +53,13 @@ class InterviewPhase(StrEnum):
     CODING = "CODING"
     TESTING = "TESTING"
     FOLLOW_UP = "FOLLOW_UP"
+    REQUIREMENTS = "REQUIREMENTS"
+    CAPACITY = "CAPACITY"
+    HIGH_LEVEL = "HIGH_LEVEL"
+    DEEP_DIVE = "DEEP_DIVE"
+    SCALABILITY = "SCALABILITY"
+    RELIABILITY = "RELIABILITY"
+    TRADEOFFS = "TRADEOFFS"
     FEEDBACK = "FEEDBACK"
 
 
@@ -63,6 +75,7 @@ class InterviewEventType(StrEnum):
     HINT = "HINT"
     END = "END"
     TIMEOUT = "TIMEOUT"
+    ARCHITECTURE = "ARCHITECTURE"
 
 
 class LearningProgressStatus(StrEnum):

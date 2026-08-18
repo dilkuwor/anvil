@@ -16,6 +16,9 @@ export function InterviewerPanel({
   compact = false,
   locked = false,
   lockFooter,
+  showProblemButton = true,
+  showEndButton = true,
+  showHint = true,
 }: {
   session: InterviewSession;
   busy: boolean;
@@ -26,6 +29,9 @@ export function InterviewerPanel({
   compact?: boolean;
   locked?: boolean;
   lockFooter?: ReactNode;
+  showProblemButton?: boolean;
+  showEndButton?: boolean;
+  showHint?: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
@@ -61,14 +67,18 @@ export function InterviewerPanel({
             Active
           </div>
         </div>
-        {compact ? null : (
+        {compact || (!showProblemButton && !showEndButton) ? null : (
           <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="sm" onClick={onShowProblem}>
-              Show Problem
-            </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={onEnd}>
-              End Interview
-            </Button>
+            {showProblemButton ? (
+              <Button variant="ghost" size="sm" onClick={onShowProblem}>
+                Show Problem
+              </Button>
+            ) : null}
+            {showEndButton ? (
+              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={onEnd}>
+                End Interview
+              </Button>
+            ) : null}
           </div>
         )}
       </div>
@@ -123,7 +133,7 @@ export function InterviewerPanel({
               }}
             />
             <div className="mt-2 flex items-center justify-between gap-2">
-              {compact ? (
+              {compact || !showHint ? (
                 <span />
               ) : (
                 <Button variant="ghost" size="sm" disabled={busy} onClick={onHint}>

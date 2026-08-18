@@ -18,7 +18,7 @@ const FEATURES = [
     title: "System Design",
     body: "Learn scalable architecture, capacity estimation, APIs, databases, caching, and distributed systems.",
     icon: Network,
-    href: "/learn/system-design",
+    href: "/system-design",
   },
   {
     title: "AI & Machine Learning",
@@ -43,6 +43,7 @@ const STEPS = [
 
 const FOOTER_NAV = [
   { href: "/problems", label: "Problems" },
+  { href: "/system-design", label: "Design" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
