@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
 
 import { kindsByCategory } from "../components/registry";
 import type { ComponentCategory } from "../models/types";
 import { KindIcon } from "./icons";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_ICON: Record<ComponentCategory, string> = {
@@ -21,7 +22,13 @@ const CATEGORY_ICON: Record<ComponentCategory, string> = {
 
 export function Palette() {
   const [open, setOpen] = useState(true);
-  const groups = kindsByCategory();
+  const [query, setQuery] = useState("");
+  const groups = kindsByCategory()
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => matchesQuery(query, item.label, item.type, group.label, item.description)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside
@@ -49,6 +56,19 @@ export function Palette() {
       </div>
       {open ? (
         <div className="min-h-0 flex-1 space-y-4 overflow-auto px-2 py-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search components"
+              aria-label="Search components"
+              className="h-8 pl-8"
+            />
+          </div>
+          {groups.length === 0 ? (
+            <p className="px-1 text-[12px] text-muted-foreground">No matching components.</p>
+          ) : null}
           {groups.map((group) => (
             <section key={group.category}>
               <h3 className="px-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h3>
@@ -92,4 +112,10 @@ export function Palette() {
       )}
     </aside>
   );
+}
+
+function matchesQuery(query: string, ...values: string[]): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return values.some((value) => value.toLowerCase().includes(needle));
 }
