@@ -149,6 +149,19 @@ select.select-field:focus-visible {
   outline-offset: 2px;
 }
 
+.react-flow {
+  --xy-background-color: var(--background);
+  --xy-minimap-background-color: var(--steel-900);
+  --xy-controls-button-background-color: var(--steel-900);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-border-color: var(--steel-800);
+  --xy-attribution-background-color: transparent;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
 @keyframes ia-slide-in {
   from {
     transform: translateX(100%);

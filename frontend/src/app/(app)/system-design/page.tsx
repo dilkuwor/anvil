@@ -1,5 +1,5 @@
-import { ScenarioPicker } from "@/components/system-design/scenario-picker";
+import { SystemDesignHub } from "@/system-design/ui/hub";
 
 export default function SystemDesignPage() {
-  return <ScenarioPicker />;
+  return <SystemDesignHub />;
 }

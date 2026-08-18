@@ -34,7 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const editor = pathname.startsWith("/problems/") && !pathname.startsWith("/problems/lists");
   const designWorkspace = pathname.startsWith("/system-design/interview");
-  const wide = editor || designWorkspace;
+  const simulator = pathname.startsWith("/system-design/simulator");
+  const wide = editor || designWorkspace || simulator;
   const me = useQuery({
     queryKey: queryKeys.me,
     queryFn: fetchCurrentUser,
@@ -139,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={cn(
           "flex w-full flex-1 flex-col",
-          pathname.startsWith("/roadmap")
+          pathname.startsWith("/roadmap") || simulator
             ? "h-[calc(100dvh-3rem)] min-h-0 w-full overflow-hidden py-0"
             : designWorkspace
               ? "mx-auto h-[calc(100dvh-3rem)] min-h-0 w-full max-w-[1600px] overflow-hidden px-4 py-3"
