@@ -58,7 +58,7 @@ export function LessonView({ slug }: { slug: string }) {
 
   const page = (
       <div className="space-y-5">
-        <div className="space-y-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <Breadcrumbs
             items={[
               { href: "/learn", label: "Learn" },
@@ -67,43 +67,43 @@ export function LessonView({ slug }: { slug: string }) {
               { label: data.title },
             ]}
           />
-          <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h1 className="min-w-0 text-lg font-semibold tracking-tight">{data.title}</h1>
-            <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <BookOpen className="h-3.5 w-3.5 text-accent" aria-hidden />
-                {data.category_title}
-              </span>
-              <span aria-hidden>·</span>
-              <span>{data.topic_title}</span>
-              <span aria-hidden>·</span>
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-accent" aria-hidden />
-                {data.estimated_minutes} min read
-              </span>
-            </p>
-          </div>
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <BookOpen className="h-3.5 w-3.5 text-accent" aria-hidden />
+              {data.category_title}
+            </span>
+            <span aria-hidden>·</span>
+            <span>{data.topic_title}</span>
+            <span aria-hidden>·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-accent" aria-hidden />
+              {data.estimated_minutes} min read
+            </span>
+          </p>
         </div>
 
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <SectionCard className="min-w-0">
-            <div className="mb-5 flex flex-wrap items-center justify-end gap-1.5 border-b border-steel-800 pb-4">
-              <ListenButton
-                text={lessonSpeech({
-                  title: data.title,
-                  short_description: data.short_description,
-                  content: data.content,
-                  takeaways: data.takeaways,
-                })}
-              />
-              {signedIn ? (
-                <AskAiButton />
-              ) : (
-                <Button size="sm" onClick={() => setAuthPrompt("ask-ai")}>
-                  <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                  Ask AI
-                </Button>
-              )}
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-steel-800 pb-4">
+              <h1 className="min-w-0 text-lg font-semibold tracking-tight">{data.title}</h1>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <ListenButton
+                  text={lessonSpeech({
+                    title: data.title,
+                    short_description: data.short_description,
+                    content: data.content,
+                    takeaways: data.takeaways,
+                  })}
+                />
+                {signedIn ? (
+                  <AskAiButton />
+                ) : (
+                  <Button size="sm" onClick={() => setAuthPrompt("ask-ai")}>
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                    Ask AI
+                  </Button>
+                )}
+              </div>
             </div>
             {signedIn ? <AskAiPanel /> : null}
             <LessonMarkdown content={data.content} />
