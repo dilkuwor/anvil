@@ -295,17 +295,97 @@ _SCENARIOS: list[dict[str, Any]] = [
             "and how politeness is enforced across workers."
         ),
     },
+    {
+        "slug": "autocomplete",
+        "title": "Design Search Autocomplete",
+        "difficulty": "MEDIUM",
+        "summary": "Prefix suggestions at type-ahead latency.",
+        "prompt": (
+            "Design type-ahead search. As the user types, show the top completions "
+            "in well under 100ms, ranked by popularity."
+        ),
+        "functional_requirements": [
+            "Return top-k completions for a prefix.",
+            "Rank suggestions by historical popularity.",
+            "Update the ranking as query volume changes (minutes to hours is fine).",
+            "Handle common prefixes without melting origin.",
+        ],
+        "non_functional_requirements": [
+            "p99 well under 100ms for hot prefixes.",
+            "The suggest path must stay up if the main search index is slow.",
+            "A viral query should appear after the next rebuild, not on the next keystroke.",
+        ],
+        "constraints": [
+            "Tens of millions of daily searchers.",
+            "Most traffic is a handful of hot prefixes.",
+            "Clients debounce; still expect bursts of short prefixes.",
+            "Personalization, if any, re-ranks a global top-k — it is not a per-user index.",
+        ],
+        "assumptions": [
+            "Typo-tolerance and full search ranking are later deep-dives.",
+            "An offline job can rebuild prefix → top-k lists.",
+            "Unicode normalization is in scope to mention, not to implement fully.",
+        ],
+        "interviewer_notes": (
+            "Want an in-memory prefix index or trie, debounce, and offline top-k rebuild. "
+            "Push on sharding by prefix and why you do not hit the primary search index."
+        ),
+    },
 ]
+
+# Modes hang off the same slug: Learn lesson, optional sample graph, simulator seed.
+_CATALOG: dict[str, dict[str, Any]] = {
+    "url-shortener": {
+        "learn_slug": "sd-url-shortener",
+        "sample_slug": "url-shortener",
+        "workload": {"dau": 20_000_000, "requests_per_user_day": 8, "read_ratio": 0.92, "peak_multiplier": 5},
+    },
+    "twitter-feed": {
+        "workload": {"dau": 100_000_000, "requests_per_user_day": 25, "read_ratio": 0.96, "peak_multiplier": 5},
+    },
+    "chat-system": {
+        "learn_slug": "sd-chat-system",
+        "workload": {"dau": 40_000_000, "requests_per_user_day": 50, "read_ratio": 0.7, "peak_multiplier": 3},
+    },
+    "video-streaming": {
+        "learn_slug": "sd-video-streaming",
+        "workload": {"dau": 50_000_000, "requests_per_user_day": 6, "read_ratio": 0.97, "peak_multiplier": 4},
+    },
+    "ride-sharing": {
+        "learn_slug": "sd-ride-sharing",
+        "workload": {"dau": 10_000_000, "requests_per_user_day": 4, "read_ratio": 0.6, "peak_multiplier": 3},
+    },
+    "rate-limiter": {
+        "learn_slug": "sd-rate-limiter-design",
+        "workload": {"dau": 5_000_000, "requests_per_user_day": 40, "read_ratio": 0.85, "peak_multiplier": 6},
+    },
+    "news-feed": {
+        "learn_slug": "sd-news-feed",
+        "workload": {"dau": 80_000_000, "requests_per_user_day": 30, "read_ratio": 0.95, "peak_multiplier": 4},
+    },
+    "web-crawler": {
+        "learn_slug": "sd-web-crawler",
+        "workload": {"dau": 1_000_000, "requests_per_user_day": 80, "read_ratio": 0.25, "peak_multiplier": 2},
+    },
+    "autocomplete": {
+        "learn_slug": "sd-autocomplete",
+        "workload": {"dau": 50_000_000, "requests_per_user_day": 40, "read_ratio": 0.99, "peak_multiplier": 3},
+    },
+}
+
+
+def _enrich(item: dict[str, Any]) -> dict[str, Any]:
+    return {**item, **_CATALOG.get(item["slug"], {})}
 
 
 def list_scenarios() -> list[dict[str, Any]]:
-    return [public_scenario(item) for item in _SCENARIOS]
+    return [public_scenario(_enrich(item)) for item in _SCENARIOS]
 
 
 def get_scenario(slug: str) -> dict[str, Any]:
     for item in _SCENARIOS:
         if item["slug"] == slug:
-            return dict(item)
+            return _enrich(dict(item))
     raise NotFoundError("Scenario not found.")
 
 

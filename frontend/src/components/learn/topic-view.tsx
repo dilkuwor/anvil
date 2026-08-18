@@ -3,16 +3,23 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
+import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { Meter } from "@/components/dashboard/meter";
 import { LearnStatus } from "@/components/learn/learn-status";
 import { Breadcrumbs, PageHeader } from "@/components/layout/page-header";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
+import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
 import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
-import { actionLabel, type LearningTopicDetail } from "@/lib/learn";
+import { actionLabel, type LearningLessonSummary, type LearningTopicDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
+import {
+  DESIGN_LEARN_TOPIC,
+  useStartDesignInterview,
+  useSystemDesignCatalog,
+} from "@/lib/system-design-catalog";
 
 export function TopicView({ slug }: { slug: string }) {
   const topic = useQuery({
@@ -26,8 +33,17 @@ export function TopicView({ slug }: { slug: string }) {
   }
 
   const data = topic.data;
-  const practiceHref = data.practice_tag ? `/problems?tag=${data.practice_tag}` : "/problems";
-  const mockHref = data.related_problems[0] ? `/problems/${data.related_problems[0].slug}` : practiceHref;
+  const isDesignCatalog = data.slug === DESIGN_LEARN_TOPIC;
+  const practiceHref = isDesignCatalog
+    ? "/system-design/problems"
+    : data.practice_tag
+      ? `/problems?tag=${data.practice_tag}`
+      : "/problems";
+  const mockHref = isDesignCatalog
+    ? "/system-design/interview"
+    : data.related_problems[0]
+      ? `/problems/${data.related_problems[0].slug}`
+      : practiceHref;
 
   return (
     <div className="space-y-5">
@@ -60,35 +76,39 @@ export function TopicView({ slug }: { slug: string }) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <SectionCard className="p-0">
-          <ol>
-            {data.lessons.map((lesson, index) => (
-              <li key={lesson.id} className="border-t border-steel-800 first:border-t-0">
-                <Link href={lesson.href} className="flex items-start gap-3 px-4 py-3.5 hover:bg-steel-950/50">
-                  <span className="mt-0.5 w-5 shrink-0 text-[12px] tabular-nums text-muted-foreground">{index + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h2 className="text-sm font-medium">{lesson.title}</h2>
-                      <span className="text-[12px] text-accent">{actionLabel(lesson.status)}</span>
+        {isDesignCatalog ? (
+          <DesignProblemsCatalog lessons={data.lessons} />
+        ) : (
+          <SectionCard className="p-0">
+            <ol>
+              {data.lessons.map((lesson, index) => (
+                <li key={lesson.id} className="border-t border-steel-800 first:border-t-0">
+                  <Link href={lesson.href} className="flex items-start gap-3 px-4 py-3.5 hover:bg-steel-950/50">
+                    <span className="mt-0.5 w-5 shrink-0 text-[12px] tabular-nums text-muted-foreground">{index + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-sm font-medium">{lesson.title}</h2>
+                        <span className="text-[12px] text-accent">{actionLabel(lesson.status)}</span>
+                      </div>
+                      <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{lesson.short_description}</p>
+                      <div className="mt-1.5 flex items-center gap-3 text-[12px] text-muted-foreground">
+                        <LearnStatus status={lesson.status} />
+                        <span>{lesson.estimated_minutes} min</span>
+                      </div>
                     </div>
-                    <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{lesson.short_description}</p>
-                    <div className="mt-1.5 flex items-center gap-3 text-[12px] text-muted-foreground">
-                      <LearnStatus status={lesson.status} />
-                      <span>{lesson.estimated_minutes} min</span>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ol>
-        </SectionCard>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </SectionCard>
+        )}
 
         <aside className="space-y-4">
           <SectionCard>
             <SectionTitle>Next step</SectionTitle>
             <div className="mt-3 flex flex-col gap-2">
               <Button asChild size="sm">
-                <Link href={practiceHref}>Practice Problems</Link>
+                <Link href={practiceHref}>{isDesignCatalog ? "Open Simulator" : "Practice Problems"}</Link>
               </Button>
               <Button asChild size="sm" variant="secondary">
                 <Link href={mockHref}>Mock Interview</Link>
@@ -118,6 +138,69 @@ export function TopicView({ slug }: { slug: string }) {
           ) : null}
         </aside>
       </div>
+    </div>
+  );
+}
+
+function DesignProblemsCatalog({ lessons }: { lessons: LearningLessonSummary[] }) {
+  const catalog = useSystemDesignCatalog();
+  const interview = useStartDesignInterview();
+
+  if (catalog.isLoading) return <CardSkeleton rows={6} />;
+  if (catalog.isError || !catalog.data?.length) {
+    return (
+      <SectionCard className="p-0">
+        <ol>
+          {lessons.map((lesson, index) => (
+            <li key={lesson.id} className="border-t border-steel-800 first:border-t-0">
+              <Link href={lesson.href} className="flex items-start gap-3 px-4 py-3.5 hover:bg-steel-950/50">
+                <span className="mt-0.5 w-5 shrink-0 text-[12px] tabular-nums text-muted-foreground">{index + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-medium">{lesson.title}</h2>
+                  <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{lesson.short_description}</p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </SectionCard>
+    );
+  }
+
+  const lessonBySlug = new Map(lessons.map((lesson) => [lesson.slug, lesson]));
+  const used = new Set((catalog.data ?? []).map((item) => item.learn_slug).filter(Boolean));
+  const extra = lessons.filter((lesson) => !used.has(lesson.slug));
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {catalog.data.map((item) => {
+          const lesson = item.learn_slug ? lessonBySlug.get(item.learn_slug) : undefined;
+          return (
+            <SystemDesignProblemCard
+              key={item.slug}
+              item={item}
+              primary="learn"
+              lesson={
+                lesson
+                  ? { href: lesson.href, status: lesson.status, estimated_minutes: lesson.estimated_minutes }
+                  : undefined
+              }
+              onInterview={interview.startInterview}
+              interviewing={interview.startingSlug === item.slug}
+            />
+          );
+        })}
+      </div>
+      {extra.map((lesson) => (
+        <SectionCard key={lesson.id} className="p-4">
+          <Link href={lesson.href} className="text-sm font-medium hover:text-accent">
+            {lesson.title}
+          </Link>
+          <p className="mt-1 text-[13px] text-muted-foreground">{lesson.short_description}</p>
+        </SectionCard>
+      ))}
+      {interview.authOpen ? <AuthPrompt kind="mock" onClose={interview.closeAuth} /> : null}
     </div>
   );
 }

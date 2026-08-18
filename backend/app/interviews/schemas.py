@@ -93,6 +93,13 @@ class ArchitectureUpdateRequest(BaseModel):
     architecture: dict
 
 
+class ScenarioWorkloadOut(BaseModel):
+    dau: int
+    requests_per_user_day: float
+    read_ratio: float
+    peak_multiplier: float
+
+
 class SystemDesignScenarioOut(BaseModel):
     slug: str
     title: str
@@ -103,6 +110,9 @@ class SystemDesignScenarioOut(BaseModel):
     non_functional_requirements: list[str]
     constraints: list[str]
     assumptions: list[str]
+    learn_slug: str | None = None
+    sample_slug: str | None = None
+    workload: ScenarioWorkloadOut | None = None
 
 
 class InterviewMessageRequest(BaseModel):

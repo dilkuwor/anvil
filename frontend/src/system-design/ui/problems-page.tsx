@@ -1,55 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { DifficultyBadge } from "@/components/problems/difficulty-badge";
+import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
-import { SIMULATOR_PROBLEMS } from "../models/problems";
-import { newDesign, saveCurrent } from "../state/persist";
+import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
+import { CardSkeleton, ErrorState } from "@/components/ui/state";
+import { useStartDesignInterview, useSystemDesignCatalog } from "@/lib/system-design-catalog";
 
 export function ProblemsPage() {
-  const router = useRouter();
+  const catalog = useSystemDesignCatalog();
+  const interview = useStartDesignInterview();
+
+  if (catalog.isLoading) return <CardSkeleton rows={6} />;
+  if (catalog.isError) {
+    return <ErrorState message="Unable to load system design problems." onRetry={() => catalog.refetch()} />;
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader title="System Design Problems" description="Open a prompt in the simulator with realistic traffic already filled in." />
+      <PageHeader
+        title="System Design Problems"
+        description="One catalog. Learn the walkthrough, simulate the architecture, or sit the mock interview."
+      />
       <div className="grid gap-3 sm:grid-cols-2">
-        {SIMULATOR_PROBLEMS.map((item) => (
-          <article key={item.slug} className="flex flex-col rounded-2xl border border-steel-800 bg-steel-900 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-sm font-semibold">{item.title}</h2>
-              <DifficultyBadge difficulty={item.difficulty} />
-            </div>
-            <p className="mt-2 flex-1 text-[13px] leading-6 text-muted-foreground">{item.prompt}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {item.slug === "url-shortener" ? (
-                <Button size="sm" onClick={() => router.push("/system-design/simulator?sample=url-shortener")}>
-                  Load sample design
-                </Button>
-              ) : null}
-              <Button
-                size="sm"
-                variant={item.slug === "url-shortener" ? "secondary" : "default"}
-                onClick={() => {
-                  const design = newDesign(item.title);
-                  saveCurrent({
-                    ...design,
-                    problemSlug: item.slug,
-                    workload: { ...design.workload, ...item.seed },
-                  });
-                  router.push(`/system-design/simulator?problem=${item.slug}`);
-                }}
-              >
-                Start blank
-              </Button>
-            </div>
-          </article>
+        {(catalog.data ?? []).map((item) => (
+          <SystemDesignProblemCard
+            key={item.slug}
+            item={item}
+            primary="simulate"
+            onInterview={interview.startInterview}
+            interviewing={interview.startingSlug === item.slug}
+          />
         ))}
       </div>
       <Link href="/system-design" className="text-[13px] text-muted-foreground hover:text-accent">
         ← System Design
       </Link>
+      {interview.authOpen ? <AuthPrompt kind="mock" onClose={interview.closeAuth} /> : null}
     </div>
   );
 }

@@ -161,6 +161,13 @@ export type ArchitectureGraph = {
   edges: DesignEdge[];
 };
 
+export type ScenarioWorkload = {
+  dau: number;
+  requests_per_user_day: number;
+  read_ratio: number;
+  peak_multiplier: number;
+};
+
 export type SystemDesignScenario = {
   slug: string;
   title: string;
@@ -171,6 +178,9 @@ export type SystemDesignScenario = {
   non_functional_requirements: string[];
   constraints: string[];
   assumptions: string[];
+  learn_slug?: string | null;
+  sample_slug?: string | null;
+  workload?: ScenarioWorkload | null;
 };
 
 export function emptyArchitecture(): ArchitectureGraph {

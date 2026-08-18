@@ -6,10 +6,17 @@ from app.interviews.scenarios import get_scenario, list_scenarios
 def test_scenarios_are_public(client):
     response = client.get("/api/v1/interviews/scenarios")
     assert response.status_code == 200
-    slugs = {item["slug"] for item in response.json()}
+    items = response.json()
+    slugs = [item["slug"] for item in items]
+    assert len(slugs) == len(set(slugs))
     assert "url-shortener" in slugs
     assert "twitter-feed" in slugs
-    assert "interviewer_notes" not in response.json()[0]
+    assert "autocomplete" in slugs
+    url = next(item for item in items if item["slug"] == "url-shortener")
+    assert url["learn_slug"] == "sd-url-shortener"
+    assert url["sample_slug"] == "url-shortener"
+    assert url["workload"]["dau"] == 20_000_000
+    assert "interviewer_notes" not in url
 
 
 def test_unknown_scenario_is_404(client):

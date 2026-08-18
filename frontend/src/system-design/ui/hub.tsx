@@ -16,7 +16,7 @@ const CARDS = [
   {
     href: "/system-design/problems",
     title: "Problems",
-    body: "Start from a concrete interview prompt with seeded traffic numbers.",
+    body: "The same catalog as Learn and Mock Interview — open a prompt in the simulator.",
     icon: Activity,
   },
   {

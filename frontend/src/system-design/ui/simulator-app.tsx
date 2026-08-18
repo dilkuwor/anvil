@@ -8,8 +8,8 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { applyScenarioWorkload, scenarioBySlug, useSystemDesignCatalog } from "@/lib/system-design-catalog";
 import { simulateAsync } from "../engine/client";
-import { SIMULATOR_PROBLEMS } from "../models/problems";
 import { getSample } from "../models/samples";
 import type { ActiveFailure, ConfigValue, DesignEdge, DesignNode, Difficulty, SimulationResult, SystemDesign } from "../models/types";
 import { listResults, loadCurrent, newDesign, saveCurrent, saveDesign, saveResult } from "../state/persist";
@@ -29,18 +29,25 @@ export function SimulatorApp() {
 
 function SimulatorWorkspace() {
   const search = useSearchParams();
+  const catalog = useSystemDesignCatalog();
+  const appliedProblem = useRef<string | null>(null);
   const [design, setDesign] = useState<SystemDesign>(() => {
     const sample = getSample(search.get("sample") ?? "");
     if (sample) return sample.build();
-    const stored = loadCurrent();
-    const problem = search.get("problem");
-    const catalog = problem ? SIMULATOR_PROBLEMS.find((item) => item.slug === problem) : undefined;
-    if (catalog) {
-      const base = stored && stored.problemSlug === catalog.slug ? stored : newDesign(catalog.title);
-      return { ...base, name: catalog.title, problemSlug: catalog.slug, workload: { ...base.workload, ...catalog.seed } };
-    }
-    return stored ?? newDesign();
+    return loadCurrent() ?? newDesign();
   });
+
+  useEffect(() => {
+    if (search.get("sample")) return;
+    const slug = search.get("problem");
+    const item = scenarioBySlug(catalog.data, slug ?? undefined);
+    if (!item || appliedProblem.current === item.slug) return;
+    appliedProblem.current = item.slug;
+    setDesign((current) => {
+      const base = current.problemSlug === item.slug ? current : newDesign(item.title);
+      return applyScenarioWorkload(base, item);
+    });
+  }, [catalog.data, search]);
   const [selectedId, setSelectedId] = useState<string | null>(design.nodes[0]?.id ?? null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [previous, setPrevious] = useState<SimulationResult | null>(null);
