@@ -44,6 +44,20 @@ export function runSimulation(request: SimulationRequest): SimulationResult {
     if (node.type === "client" && traffic.rps === 0) {
       nodeTraffic.set(node.id, incoming);
     }
+    if (node.disabled) {
+      const inbound = nodeTraffic.get(node.id) ?? emptyTraffic();
+      nodeMetrics[node.id] = {
+        incomingRps: inbound.rps,
+        processedRps: 0,
+        droppedRps: inbound.rps,
+        rejectedRps: 0,
+        latency: { p50: 0, p95: 0, p99: 0 },
+        utilization: {},
+        health: "overloaded",
+        notes: ["This component is disabled and does not process traffic."],
+      };
+      continue;
+    }
     const kind = getKind(node.type);
     const result = kind.simulate(node.config, nodeTraffic.get(node.id) ?? emptyTraffic(), {
       difficulty: design.difficulty,

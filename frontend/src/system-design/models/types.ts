@@ -145,6 +145,7 @@ export type DesignNode = {
   x: number;
   y: number;
   config: Record<string, ConfigValue>;
+  disabled?: boolean;
 };
 
 export type DesignEdge = {

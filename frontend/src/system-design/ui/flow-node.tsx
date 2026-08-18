@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 export type ArchitectureNodeData = {
   kind: ComponentType;
   label: string;
+  disabled?: boolean;
   metrics?: NodeMetrics;
 };
 
@@ -30,7 +31,7 @@ export function ArchitectureFlowNode({ data, selected }: NodeProps<ArchitectureN
     <div
       className={cn(
         "min-w-[148px] rounded-xl border bg-steel-900 px-3 py-2 shadow-sm",
-        selected ? "border-accent" : HEALTH[health],
+        data.disabled ? "border-dashed border-steel-600 opacity-50" : selected ? "border-accent" : HEALTH[health],
       )}
     >
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-accent !bg-background" />
@@ -40,7 +41,9 @@ export function ArchitectureFlowNode({ data, selected }: NodeProps<ArchitectureN
         </span>
         <div className="min-w-0">
           <div className="truncate text-[13px] font-medium">{data.label}</div>
-          <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{kind.label}</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            {data.disabled ? "Disabled" : kind.label}
+          </div>
         </div>
       </div>
       {data.metrics ? (

@@ -13,12 +13,13 @@ import {
   type Connection,
   type Edge,
 } from "@xyflow/react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getKind } from "../components/registry";
 import type { ComponentType, DesignEdge, DesignNode, SimulationResult } from "../models/types";
 import { uid } from "../utils/ids";
 import { ArchitectureFlowNode, type ArchitectureNode } from "./flow-node";
+import { NodeContextMenu } from "./node-context-menu";
 import { formatRps } from "../utils/format";
 
 const nodeTypes = { architecture: ArchitectureFlowNode };
@@ -30,6 +31,9 @@ export function SimulatorCanvas({
   onGraph,
   selectedId,
   onSelect,
+  onDuplicate,
+  onToggleDisabled,
+  onDelete,
 }: {
   designNodes: DesignNode[];
   designEdges: DesignEdge[];
@@ -37,6 +41,9 @@ export function SimulatorCanvas({
   onGraph: (nodes: DesignNode[], edges: DesignEdge[]) => void;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  onDuplicate: (id: string) => void;
+  onToggleDisabled: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const { screenToFlowPosition, fitView, getNodes } = useReactFlow();
   const selectedRef = useRef(selectedId);
@@ -64,6 +71,8 @@ export function SimulatorCanvas({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [graphKey, designNodes, designEdges, result, setNodes, setEdges, fitView]);
+
+  const [menu, setMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
   const persistPositions = useCallback(() => {
     const { designNodes: source, designEdges: links, onGraph: emit } = designRef.current;
@@ -112,6 +121,12 @@ export function SimulatorCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={() => persistPositions()}
+        onNodeContextMenu={(event, node) => {
+          event.preventDefault();
+          onSelect(node.id);
+          setMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+        }}
+        onPaneClick={() => setMenu(null)}
         onSelectionChange={({ nodes: selected }) => {
           const id = selected[0]?.id ?? null;
           if (id !== selectedRef.current) onSelect(id);
@@ -150,13 +165,33 @@ export function SimulatorCanvas({
         <MiniMap pannable zoomable className="!bg-steel-900 !border-steel-800" />
       </ReactFlow>
       </div>
+      {menu ? (
+        <NodeContextMenu
+          x={menu.x}
+          y={menu.y}
+          disabled={Boolean(designNodes.find((node) => node.id === menu.nodeId)?.disabled)}
+          onDuplicate={() => {
+            onDuplicate(menu.nodeId);
+            setMenu(null);
+          }}
+          onDisable={() => {
+            onToggleDisabled(menu.nodeId);
+            setMenu(null);
+          }}
+          onDelete={() => {
+            onDelete(menu.nodeId);
+            setMenu(null);
+          }}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
     </div>
   );
 }
 
 function graphSignature(nodes: DesignNode[], edges: DesignEdge[], result: SimulationResult | null): string {
   return [
-    nodes.map((node) => `${node.id}:${node.label}:${node.type}`).join(","),
+    nodes.map((node) => `${node.id}:${node.label}:${node.type}:${node.disabled ? "off" : "on"}`).join(","),
     edges.map((edge) => `${edge.id}:${edge.source}:${edge.target}`).join(","),
     result?.timestamp ?? "",
   ].join("|");
@@ -172,7 +207,7 @@ function toRfNodes(nodes: DesignNode[], result: SimulationResult | null): Archit
     id: node.id,
     type: "architecture",
     position: { x: node.x, y: node.y },
-    data: { kind: node.type, label: node.label, metrics: result?.nodes[node.id] },
+    data: { kind: node.type, label: node.label, disabled: Boolean(node.disabled), metrics: result?.nodes[node.id] },
   }));
 }
 

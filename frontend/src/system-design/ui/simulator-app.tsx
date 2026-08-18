@@ -13,6 +13,7 @@ import { SIMULATOR_PROBLEMS } from "../models/problems";
 import { getSample } from "../models/samples";
 import type { ActiveFailure, ConfigValue, DesignEdge, DesignNode, Difficulty, SimulationResult, SystemDesign } from "../models/types";
 import { listResults, loadCurrent, newDesign, saveCurrent, saveDesign, saveResult } from "../state/persist";
+import { uid } from "../utils/ids";
 import { BottomPanel } from "./bottom-panel";
 import { SimulatorCanvas } from "./canvas";
 import { Inspector } from "./inspector";
@@ -220,6 +221,33 @@ function SimulatorWorkspace() {
           selectedId={selectedId}
           onSelect={setSelectedId}
           onGraph={updateGraph}
+          onDuplicate={(id) => {
+            const source = design.nodes.find((node) => node.id === id);
+            if (!source) return;
+            const copy: DesignNode = {
+              ...source,
+              id: uid("n"),
+              x: source.x + 36,
+              y: source.y + 36,
+              label: `${source.label} copy`,
+            };
+            commit({ ...design, nodes: [...design.nodes, copy] });
+            setSelectedId(copy.id);
+          }}
+          onToggleDisabled={(id) => {
+            commit({
+              ...design,
+              nodes: design.nodes.map((node) => (node.id === id ? { ...node, disabled: !node.disabled } : node)),
+            });
+          }}
+          onDelete={(id) => {
+            commit({
+              ...design,
+              nodes: design.nodes.filter((node) => node.id !== id),
+              edges: design.edges.filter((edge) => edge.source !== id && edge.target !== id),
+            });
+            if (selectedId === id) setSelectedId(null);
+          }}
         />
         <Inspector
           node={selected}
