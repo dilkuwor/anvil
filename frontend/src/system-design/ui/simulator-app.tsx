@@ -136,56 +136,66 @@ function SimulatorWorkspace() {
             </Link>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            className="select-field w-auto"
-            value={design.difficulty}
-            onChange={(event) => setDesign({ ...design, difficulty: event.target.value as Difficulty })}
-          >
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-            <option value="expert">Expert</option>
-          </select>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              const saved = saveDesign(design);
-              setDesign(saved);
-              toast.success("Saved locally.");
-            }}
-          >
-            Save
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              const sample = getSample("url-shortener")?.build();
-              if (!sample) return;
-              commit(sample);
-              setSelectedId(sample.nodes[0]?.id ?? null);
-              setResult(null);
-              toast.success("Loaded the URL Shortener sample.");
-            }}
-          >
-            Load URL Shortener
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              commit(newDesign());
-              setSelectedId(null);
-              setResult(null);
-            }}
-          >
-            Reset
-          </Button>
-          <Button size="sm" disabled={busy} onClick={() => void simulate()}>
-            {busy ? "Simulating…" : "Simulate"}
-          </Button>
+        <div className="flex shrink-0 items-center gap-3">
+          <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            Level
+            <select
+              className="select-field h-8 w-[8.75rem]"
+              value={design.difficulty}
+              onChange={(event) => setDesign({ ...design, difficulty: event.target.value as Difficulty })}
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="expert">Expert</option>
+            </select>
+          </label>
+          <span className="hidden h-5 w-px bg-steel-800 sm:block" aria-hidden />
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Load the URL Shortener sample architecture"
+              onClick={() => {
+                const sample = getSample("url-shortener")?.build();
+                if (!sample) return;
+                commit(sample);
+                setSelectedId(sample.nodes[0]?.id ?? null);
+                setResult(null);
+                toast.success("Loaded the URL Shortener sample.");
+              }}
+            >
+              Sample
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                commit(newDesign());
+                setSelectedId(null);
+                setResult(null);
+              }}
+            >
+              Reset
+            </Button>
+          </div>
+          <span className="hidden h-5 w-px bg-steel-800 sm:block" aria-hidden />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const saved = saveDesign(design);
+                setDesign(saved);
+                toast.success("Saved locally.");
+              }}
+            >
+              Save
+            </Button>
+            <Button size="sm" disabled={busy} onClick={() => void simulate()}>
+              {busy ? "Simulating…" : "Simulate"}
+            </Button>
+          </div>
         </div>
       </header>
 
