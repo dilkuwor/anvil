@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles, Zap } from "lucide-react";
 
+import { HeroDesignFloat } from "@/components/landing/hero-design-float";
 import { HeroPreview } from "@/components/landing/hero-preview";
 import { HomeGate } from "@/components/landing/home-gate";
 import { PublicHeader } from "@/components/layout/public-header";
@@ -53,12 +54,13 @@ export default function HomePage() {
             <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(var(--steel-800)_1px,transparent_1px),linear-gradient(90deg,var(--steel-800)_1px,transparent_1px)] [background-size:52px_52px] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />
           </div>
           <div className="ia-content relative pt-14 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
+            <div className="grid items-center gap-6 lg:grid-cols-[minmax(17rem,30rem)_minmax(0,1fr)] lg:gap-8">
             <div className="max-w-2xl">
               <p className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[12px] font-medium text-accent">
                 <Zap className="h-3.5 w-3.5" aria-hidden />
                 Forge Your Interview Skills
               </p>
-              <h1 className="mt-3 text-[2rem] font-semibold leading-[1.1] tracking-tight text-balance sm:text-[3rem] lg:text-[3.25rem]">
+              <h1 className="mt-3 text-[2rem] font-semibold leading-[1.1] tracking-tight text-balance sm:text-[3rem] lg:text-[3.15rem]">
                 Build skills.
                 <br />
                 Break limits.
@@ -84,7 +86,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mt-6">
+            <HeroDesignFloat />
+            </div>
+
+            <div className="mt-8">
               <HeroPreview />
             </div>
           </div>

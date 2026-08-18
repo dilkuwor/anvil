@@ -176,3 +176,40 @@ select.select-field:focus-visible {
 .ia-slide-in {
   animation: ia-slide-in 280ms ease-out;
 }
+
+@keyframes hero-traffic {
+  0% {
+    left: 6%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: 86%;
+    opacity: 0;
+  }
+}
+
+.hero-traffic-dot {
+  animation: hero-traffic 1.6s linear infinite;
+}
+
+@keyframes hero-live-blink {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 55%, transparent);
+  }
+  50% {
+    opacity: 0.35;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+.hero-live-dot {
+  animation: hero-live-blink 1.4s ease-in-out infinite;
+}
