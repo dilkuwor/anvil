@@ -937,6 +937,191 @@ def _one(
     )
 
 
+def _system_design_template_topic() -> dict:
+    return _topic(
+        "system-design",
+        "system-design-template",
+        "System Design Template",
+        "ASK → SIZE → SHAPE → STRESS → SELL — the repeatable 45-minute playbook.",
+        "EASY",
+        14,
+        1,
+        [
+            {
+                "slug": "system-design-template",
+                "title": "System Design Template",
+                "short": "An interview framework you can run on any prompt.",
+                "minutes": 14,
+                "content": """# System Design Template
+
+A repeatable framework for system design interviews. If you remember only five words, remember these.
+
+ASK → SIZE → SHAPE → STRESS → SELL
+
+| Step | What you do |
+| --- | --- |
+| **ASK** | Requirements — what are we building, and what is out of scope? |
+| **SIZE** | Scale and estimates — QPS, storage, bandwidth, read/write ratio |
+| **SHAPE** | APIs, data, and architecture — the outside, the records, then the boxes |
+| **STRESS** | Deep dive and failures — the 1–3 hard parts, then what breaks |
+| **SELL** | Trade-offs and summary — why this design, in 30 seconds |
+
+## The Full Interview Flow
+
+1. **Clarify** — What are we building? What is in and out of scope?
+2. **Requirements** — Functional + non-functional priorities
+3. **Estimate** — QPS, storage, bandwidth, read/write ratio
+4. **API + Data** — How clients interact and what we store
+5. **Architecture** — High-level components and request flow
+6. **Deep Dive** — The 1–3 hardest or most important components
+7. **Failures** — Bottlenecks, reliability, scaling, and recovery
+8. **Trade-offs** — Why this design? What are the alternatives?
+9. **Summary** — Recap the architecture and major decisions
+
+## 1. Clarify Requirements
+
+Start with questions. Do not immediately draw boxes.
+
+- Who are the users?
+- What are the core features?
+- What operations must the system support?
+- What is explicitly out of scope?
+
+Example: "Before I start, I would like to clarify the requirements. Should we support only URL creation and redirection, or also analytics, custom aliases, and expiration?"
+
+> Memory cue: ASK = Ask before you architect.
+
+## 2. Functional + Non-Functional Requirements
+
+Decide what matters before deciding what technology to use.
+
+- **Functional** — What must the system do?
+- **Scale** — How many users and requests?
+- **Latency** — How fast must it respond?
+- **Availability** — How much downtime is acceptable?
+- **Consistency** — Strong or eventual?
+- **Durability** — Can data ever be lost?
+
+> Memory cue: Write the NFRs on the board. They justify every later box.
+
+## 3. Back-of-the-Envelope Estimation
+
+Estimate only enough to justify the architecture. Order-of-magnitude is enough.
+
+- Average QPS = Daily requests ÷ 86,400
+- Peak QPS = Average QPS × peak factor (often 2–3×)
+- Storage = Writes × average record size × retention
+- Bandwidth = QPS × average request/response size
+
+> Memory cue: SIZE = How big is the problem?
+
+## 4. APIs + Data Model
+
+Define the system boundary and the data before designing internals.
+
+- What API endpoints are needed?
+- What are the request and response formats?
+- What entities must be stored?
+- What is the primary key?
+- What indexes are needed?
+- SQL or NoSQL, and why?
+
+> Memory cue: SHAPE begins here — define the outside and the data.
+
+## 5. High-Level Architecture
+
+Start simple. Add a box only when a requirement or a number forces it.
+
+Client → Load Balancer → Services → Cache → Database
+
+Walk the request flow out loud. The interviewer should always know what happens next.
+
+## 6. Deep Dive
+
+Pick only the most important 1–3 areas. Do not deep dive into everything.
+
+- **URL shortener** — ID generation, caching, database scaling
+- **Chat system** — WebSockets, ordering, offline messages
+- **Video platform** — Upload, transcoding, storage, CDN
+- **Ride sharing** — Location updates, geospatial indexing, matching
+
+> Memory cue: STRESS the part of the system most likely to fail at scale.
+
+## 7. Bottlenecks, Failures & Scaling
+
+Ask these out loud, then name the tool that answers each one.
+
+- What happens if the database fails?
+- What happens if the cache is unavailable?
+- What happens during a traffic spike?
+- What happens if a service or availability zone goes down?
+- How do retries, replication, queues, and failover work?
+
+Common tools: replication, load balancing, retries, dead-letter queues, circuit breakers, multi-AZ, rate limiting.
+
+## 8. Trade-offs
+
+This is where senior candidates pull ahead. Every major decision should answer: why this, instead of something else?
+
+- **Cache** — lower latency, at the cost of invalidation and stale reads
+- **SQL** — stronger transactions, harder to shard for some write patterns
+- **NoSQL** — easier scale and flexible schemas, weaker joins and transactions
+- **Async processing** — better throughput and resilience, eventual consistency and more ops
+
+> Useful phrase: "I chose X because the primary requirement is Y. The trade-off is Z."
+
+## 9. Final Summary
+
+Finish with a 30-second recap.
+
+"We designed a highly available system optimized for low-latency reads. The architecture uses load balancing for horizontal scale, caching to reduce database load, and replicated storage for durability. The main trade-off is increased complexity from distributed components and cache consistency."
+
+## The Visual Memory Map
+
+ASK → SIZE → SHAPE → STRESS → SELL
+
+- **ASK** → Requirements
+- **SIZE** → Estimates
+- **SHAPE** → API → Data → Architecture
+- **STRESS** → Deep dive → Bottlenecks → Failures
+- **SELL** → Trade-offs → Summary
+
+## 30-Second Pre-Interview Checklist
+
+- **ASK** — Have I clarified the scope?
+- **SIZE** — Do I know the scale and traffic?
+- **SHAPE** — Have I defined APIs, data, and high-level architecture?
+- **STRESS** — Did I analyze the hardest parts and failure modes?
+- **SELL** — Did I explain the trade-offs and summarize the design?
+
+## Practice Tip: Use the 3-Pass Method
+
+- **Pass 1** — Design the system yourself without notes.
+- **Pass 2** — Compare against a strong reference solution.
+- **Pass 3** — Redesign it aloud in 30–45 minutes.
+
+The goal is not to memorize architecture diagrams. Memorize the thinking process.
+
+## Golden Rule
+
+Do not memorize solutions. Memorize the questions you ask yourself.
+""",
+                "takeaways": [
+                    "Memorize ASK → SIZE → SHAPE → STRESS → SELL, not architecture diagrams.",
+                    "Ask and estimate before you draw boxes.",
+                    "Deep-dive 1–3 hard parts, then sell the trade-offs in 30 seconds.",
+                ],
+                "questions": [
+                    "How do you start a system design interview?",
+                    "What does ASK, SIZE, SHAPE, STRESS, SELL stand for?",
+                    "What belongs in the final 30-second summary?",
+                ],
+                "problems": [],
+            }
+        ],
+    )
+
+
 def _system_design_topics() -> list[dict]:
     rows = [
         ("system-design-fundamentals", "System Design Fundamentals", "A repeatable 45-minute structure: requirements, API, data, scale, deepen.", "Start every design with users, constraints, and a single request path before you draw boxes.", "Interviewers grade structure more than whether you picked Kafka.", "Clarify functional + non-functional requirements. Estimate QPS and storage. Sketch API and a single-box design. Then split bottlenecks: load balancer, app, cache, DB, queue.", "Design URL shortener: write, read, 100:1 read ratio. Start with one app + SQL, then add cache and a key generator.", "Any 45-minute design", "Depth in one area beats a crowded diagram.", "Jumping to microservices first", "Say the numbers out loud. They justify every later box.", ["Requirements, then a simple design, then scale.", "Numbers justify architecture."], ["How do you start a system design interview?", "What do you estimate first?"]),
@@ -968,7 +1153,7 @@ def _system_design_topics() -> list[dict]:
                 slug,
                 title,
                 desc,
-                i + 1,
+                i + 2,
                 concept=desc,
                 why=why,
                 how=how,
@@ -992,7 +1177,7 @@ def _system_design_problem_topic() -> dict:
         "Full 45-minute system design interview prompts. Practice the structure on real products, not just the vocabulary.",
         "MEDIUM",
         80,
-        21,
+        22,
         [
             L(
                 "sd-url-shortener",
@@ -1382,6 +1567,7 @@ def _ai_topics() -> list[dict]:
     return ai_topics()
 
 
+TOPICS.append(_system_design_template_topic())
 TOPICS.extend(_system_design_topics())
 TOPICS.append(_system_design_problem_topic())
 TOPICS.extend(_java_topics())
