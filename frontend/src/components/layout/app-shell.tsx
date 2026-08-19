@@ -30,6 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const designWorkspace = pathname.startsWith("/system-design/interview");
   const simulator = pathname.startsWith("/system-design/simulator");
   const wide = editor || designWorkspace || simulator;
+  const lockViewport = wide || pathname.startsWith("/roadmap");
   const me = useQuery({
     queryKey: queryKeys.me,
     queryFn: fetchCurrentUser,
@@ -71,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-dvh min-h-0 flex-col">
+    <div className={cn("flex min-h-0 flex-col", lockViewport ? "h-dvh overflow-hidden" : "min-h-dvh")}>
       <header className="sticky top-0 z-50 border-b border-steel-800 bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
         <div className={cn(wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content")}>
           <div className="flex h-12 items-center justify-between gap-3">

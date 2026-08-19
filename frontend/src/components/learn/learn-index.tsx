@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import type { LearningCategoryCard, LearningProgressSummary, LearningSearchResponse } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
 export function LearnIndex() {
   const [query, setQuery] = useState("");
@@ -86,11 +87,14 @@ export function LearnIndex() {
           </div>
         ) : (
           <div className="grid gap-px bg-steel-800 sm:grid-cols-2">
-            {categories.data?.map((category) => (
+            {categories.data?.map((category, index) => (
               <Link
                 key={category.id}
                 href={`/learn/${category.slug}`}
-                className="flex flex-col bg-steel-900 p-5 hover:bg-steel-950/40"
+                className={cn(
+                  "flex flex-col bg-steel-900 p-5 hover:bg-steel-950/40",
+                  index === (categories.data?.length ?? 0) - 1 && (categories.data?.length ?? 0) % 2 === 1 && "sm:col-span-2",
+                )}
               >
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-steel-800 bg-steel-950/50 text-accent">
