@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useRef, useState, type PointerEvent } from "react";
 
 import type { ActiveFailure, FailureType, SimulationResult, SloConfig, WorkloadConfig } from "../models/types";
@@ -162,7 +162,8 @@ export function BottomPanel({
         </div>
         {result && open ? (
           <div className="flex items-center gap-2 pr-1 text-[11px] text-muted-foreground">
-            <Button variant="ghost" size="sm" onClick={onPlay}>
+            <Button variant="ghost" size="sm" onClick={onPlay} aria-label={playing ? "Pause timeline" : "Play timeline"}>
+              {playing ? <Pause className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
               {playing ? "Pause" : "Play"}
             </Button>
             {[1, 2, 5, 10].map((value) => (

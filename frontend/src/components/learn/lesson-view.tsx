@@ -138,7 +138,9 @@ export function LessonView({ slug }: { slug: string }) {
                 <ul className="mt-3 space-y-2 text-[13px] leading-6">
                   {data.takeaways.map((item) => (
                     <li key={item} className="flex items-start gap-2">
-                      <CircleCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" strokeWidth={2.25} aria-hidden />
+                      <span className="flex h-6 w-3.5 shrink-0 items-center justify-center">
+                        <CircleCheck className="block h-3.5 w-3.5 text-success" strokeWidth={2.25} aria-hidden />
+                      </span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -152,7 +154,9 @@ export function LessonView({ slug }: { slug: string }) {
                 <ul className="mt-3 space-y-2 text-[13px] leading-6">
                   {data.interview_questions.map((item) => (
                     <li key={item} className="flex items-start gap-2">
-                      <CircleHelp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+                      <span className="flex h-6 w-3.5 shrink-0 items-center justify-center">
+                        <CircleHelp className="block h-3.5 w-3.5 text-accent" aria-hidden />
+                      </span>
                       <span>{item}</span>
                     </li>
                   ))}

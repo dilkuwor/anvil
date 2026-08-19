@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     mutationFn: () => api.post("/api/v1/auth/logout"),
     onSuccess: async () => {
       queryClient.clear();
-      router.push("/login");
+      router.replace("/");
     },
     onError: () => toast.error("Unable to log out."),
   });
@@ -62,6 +62,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!signedIn && isPrivatePath(pathname)) {
+    if (logout.isPending || logout.isSuccess) {
+      router.replace("/");
+      return null;
+    }
     router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     return null;
   }

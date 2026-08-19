@@ -18,6 +18,7 @@ import { BottomPanel } from "./bottom-panel";
 import { SimulatorCanvas } from "./canvas";
 import { Inspector } from "./inspector";
 import { Palette } from "./palette";
+import { SimulatorHelp, SimulatorHelpButton } from "./simulator-help";
 
 export function SimulatorApp() {
   return (
@@ -38,6 +39,7 @@ function SimulatorWorkspace() {
   const [previous, setPrevious] = useState<SimulationResult | null>(null);
   const [failures, setFailures] = useState<ActiveFailure[]>([]);
   const [busy, setBusy] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [cursor, setCursor] = useState(1);
@@ -152,6 +154,7 @@ function SimulatorWorkspace() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          <SimulatorHelpButton expanded={helpOpen} onClick={() => setHelpOpen(true)} />
           <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
             Level
             <select
@@ -282,6 +285,8 @@ function SimulatorWorkspace() {
           }
         />
       </div>
+
+      <SimulatorHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       <BottomPanel
         workload={design.workload}
