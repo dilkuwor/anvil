@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleHelp, Play, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import { kindsByCategory } from "../components/registry";
@@ -158,29 +158,37 @@ const SHORTCUTS = [
   { label: "Right-click a node", body: "Duplicate, disable, or delete." },
 ];
 
+const subscribeClient = () => () => {};
+
 export function SimulatorHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeClient, () => true, () => false);
   const [visible, setVisible] = useState(false);
   const [entered, setEntered] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  if (open && !visible) {
+    setVisible(true);
+  }
+  if (!open && entered) {
+    setEntered(false);
+  }
 
   useEffect(() => {
-    if (open) {
-      setVisible(true);
-      const frame = window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => setEntered(true));
-      });
-      return () => window.cancelAnimationFrame(frame);
+    if (!open) {
+      if (!visible) return;
+      const timeout = window.setTimeout(() => setVisible(false), 300);
+      return () => window.clearTimeout(timeout);
     }
-    setEntered(false);
-    const timeout = window.setTimeout(() => setVisible(false), 300);
-    return () => window.clearTimeout(timeout);
-  }, [open]);
+    let inner = 0;
+    const outer = window.requestAnimationFrame(() => {
+      inner = window.requestAnimationFrame(() => setEntered(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(outer);
+      window.cancelAnimationFrame(inner);
+    };
+  }, [open, visible]);
 
   useEffect(() => {
     if (!open) return;

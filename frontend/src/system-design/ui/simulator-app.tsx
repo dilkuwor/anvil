@@ -74,12 +74,12 @@ function SimulatorWorkspace() {
     return () => window.clearTimeout(handle);
   }, [design]);
 
+  if (!result && playing) {
+    setPlaying(false);
+  }
+
   useEffect(() => {
-    if (!result) {
-      setPlaying(false);
-      return;
-    }
-    if (!playing) return;
+    if (!result || !playing) return;
     const tick = window.setInterval(() => {
       setCursor((value) => (value >= 1 ? 0 : Math.min(1, value + 0.02 * speed)));
     }, 80);
