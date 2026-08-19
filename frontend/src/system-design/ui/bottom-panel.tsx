@@ -5,6 +5,7 @@ import { useRef, useState, type PointerEvent } from "react";
 
 import type { ActiveFailure, FailureType, SimulationResult, SloConfig, WorkloadConfig } from "../models/types";
 import { deriveWorkload } from "../models/workload";
+import { formatTimelineClock } from "../engine/timeline";
 import { formatCompact, formatGb, formatMs, formatPct, formatRps, formatUsd } from "../utils/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,7 +207,17 @@ export function BottomPanel({
         ) : null}
       </div>
       {result && open ? (
-        <div className="border-t border-steel-800 px-4 py-1.5">
+        <div className="border-t border-steel-800 px-4 py-2">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+            <span className="font-medium tabular-nums text-foreground">{formatTimelineClock(cursor)}</span>
+            <span className="tabular-nums">
+              {formatRps(result.throughput.processedRps)} rps
+              <span aria-hidden> · </span>
+              {formatMs(result.latency.p95)} p95
+              <span aria-hidden> · </span>
+              {(result.errorRate * 100).toFixed(2)}% err
+            </span>
+          </div>
           <input
             type="range"
             min={0}
@@ -216,6 +227,7 @@ export function BottomPanel({
             onChange={(event) => onCursor(Number(event.target.value))}
             className="w-full"
             aria-label="Simulation timeline"
+            aria-valuetext={`${formatTimelineClock(cursor)}, ${formatRps(result.throughput.processedRps)} rps`}
           />
         </div>
       ) : null}

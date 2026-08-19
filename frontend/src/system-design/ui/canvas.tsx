@@ -59,6 +59,9 @@ export function SimulatorCanvas({
 
   const graphKey = graphSignature(designNodes, designEdges, result);
   const lastKey = useRef(graphKey);
+  const metricsKey = result
+    ? `${result.throughput.processedRps}:${result.latency.p95}:${result.errorRate}`
+    : "idle";
   useEffect(() => {
     if (lastKey.current === graphKey) return;
     lastKey.current = graphKey;
@@ -71,6 +74,16 @@ export function SimulatorCanvas({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [graphKey, designNodes, designEdges, result, setNodes, setEdges, fitView]);
+
+  useEffect(() => {
+    setNodes((current) =>
+      current.map((node) => ({
+        ...node,
+        data: { ...node.data, metrics: result?.nodes[node.id] },
+      })),
+    );
+    setEdges(toRfEdges(designEdges, result));
+  }, [metricsKey, result, designEdges, setNodes, setEdges]);
 
   const [menu, setMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 

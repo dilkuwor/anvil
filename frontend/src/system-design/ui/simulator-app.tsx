@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { applyScenarioWorkload, scenarioBySlug, useSystemDesignCatalog } from "@/lib/system-design-catalog";
 import { simulateAsync } from "../engine/client";
+import { viewAtCursor } from "../engine/timeline";
 import { designFromSample, sampleFromCatalog } from "../models/samples";
 import type { ActiveFailure, ConfigValue, DesignEdge, DesignNode, Difficulty, SimulationResult, SystemDesign } from "../models/types";
 import { listResults, loadCurrent, newDesign, saveCurrent, saveDesign, saveResult } from "../state/persist";
@@ -74,12 +75,18 @@ function SimulatorWorkspace() {
   }, [design]);
 
   useEffect(() => {
-    if (!playing || !result) return;
+    if (!result) {
+      setPlaying(false);
+      return;
+    }
+    if (!playing) return;
     const tick = window.setInterval(() => {
       setCursor((value) => (value >= 1 ? 0 : Math.min(1, value + 0.02 * speed)));
     }, 80);
     return () => window.clearInterval(tick);
   }, [playing, result, speed]);
+
+  const live = result ? viewAtCursor(result, cursor) : null;
 
   const selected = design.nodes.find((node) => node.id === selectedId) ?? null;
 
@@ -236,7 +243,7 @@ function SimulatorWorkspace() {
           key={design.id}
           designNodes={design.nodes}
           designEdges={design.edges}
-          result={result}
+          result={live}
           selectedId={selectedId}
           onSelect={setSelectedId}
           onGraph={updateGraph}
@@ -270,7 +277,7 @@ function SimulatorWorkspace() {
         />
         <Inspector
           node={selected}
-          metrics={selected ? result?.nodes[selected.id] : undefined}
+          metrics={selected ? live?.nodes[selected.id] : undefined}
           difficulty={design.difficulty}
           onRename={(label) =>
             commit({ ...design, nodes: design.nodes.map((node) => (node.id === selectedId ? { ...node, label } : node)) })
@@ -291,7 +298,7 @@ function SimulatorWorkspace() {
       <BottomPanel
         workload={design.workload}
         slo={design.slo}
-        result={result}
+        result={live}
         previous={previous ?? history[1] ?? null}
         failures={failures}
         playing={playing}
@@ -300,9 +307,18 @@ function SimulatorWorkspace() {
         onWorkload={(workload) => commit({ ...design, workload })}
         onSlo={(slo) => commit({ ...design, slo })}
         onFailures={setFailures}
-        onPlay={() => setPlaying((value) => !value)}
+        onPlay={() => {
+          setPlaying((value) => {
+            if (value) return false;
+            if (cursor >= 0.99) setCursor(0);
+            return true;
+          });
+        }}
         onSpeed={setSpeed}
-        onCursor={setCursor}
+        onCursor={(value) => {
+          setPlaying(false);
+          setCursor(value);
+        }}
       />
     </div>
   );

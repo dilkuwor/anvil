@@ -356,20 +356,20 @@ export function SimulatorHelp({ open, onClose }: { open: boolean; onClose: () =>
               </div>
               <ul className="mt-3 space-y-2 text-[13px] leading-6 text-muted-foreground">
                 <li>
-                  <span className="font-medium text-foreground">Play / Pause</span> walks a peak-hour ramp of the last run. The
-                  timeline slider moves from idle (0) to peak (1) and loops.
+                  <span className="font-medium text-foreground">Play / Pause</span> walks an 8-hour peak ramp. Node RPS, edge
+                  flow, health, Metrics, Capacity, and Latency follow the playhead.
                 </li>
                 <li>
                   <span className="font-medium text-foreground">1× 2× 5× 10×</span> is playback speed. Faster multipliers skip
                   through the ramp.
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Timeline slider</span> jumps to any point. Nodes still show the
-                  full-run numbers; Play is a scrubber, not a packet animation.
+                  <span className="font-medium text-foreground">Timeline slider</span> jumps to a time of day. The readout above
+                  it shows live RPS, p95, and error rate. Dragging pauses playback.
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Pause</span> freezes the cursor so you can inspect a moment in
-                  the ramp.
+                  <span className="font-medium text-foreground">Pause</span> freezes that moment so you can inspect the canvas
+                  and tabs.
                 </li>
               </ul>
             </div>
