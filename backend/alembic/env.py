@@ -6,6 +6,7 @@ from sqlalchemy import engine_from_config, pool
 from app.common.config import get_settings
 from app.common.database import Base
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession  # noqa: F401
+from app.notes.models import Note  # noqa: F401
 from app.learn.models import (  # noqa: F401
     LearningCategory,
     LearningLesson,

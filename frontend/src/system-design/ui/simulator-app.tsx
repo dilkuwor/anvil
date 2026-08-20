@@ -19,6 +19,7 @@ import { BottomPanel } from "./bottom-panel";
 import { SimulatorCanvas } from "./canvas";
 import { Inspector } from "./inspector";
 import { Palette } from "./palette";
+import { NotesPanel } from "@/components/notes/notes-drawer";
 import { SimulatorHelp, SimulatorHelpButton } from "./simulator-help";
 
 export function SimulatorApp() {
@@ -161,6 +162,13 @@ function SimulatorWorkspace() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          <NotesPanel
+            context={{
+              sourceType: "SYSTEM_DESIGN",
+              sourceId: design.problemSlug || search.get("problem") || search.get("sample") || "general",
+              sourceTitle: design.name || "System Design",
+            }}
+          />
           <SimulatorHelpButton expanded={helpOpen} onClick={() => setHelpOpen(true)} />
           <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
             Level

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { AskAiButton, AskAiController, AskAiPanel } from "@/components/learn/ask-ai-panel";
+import { NotesPanel } from "@/components/notes/notes-drawer";
 import { LessonMarkdown } from "@/components/learn/markdown";
 import { ListenButton } from "@/components/tts/listen-button";
 import { Breadcrumbs } from "@/components/layout/page-header";
@@ -94,6 +95,9 @@ export function LessonView({ slug }: { slug: string }) {
                     content: data.content,
                     takeaways: data.takeaways,
                   })}
+                />
+                <NotesPanel
+                  context={{ sourceType: "LESSON", sourceId: data.id, sourceTitle: data.title }}
                 />
                 {signedIn ? (
                   <AskAiButton />

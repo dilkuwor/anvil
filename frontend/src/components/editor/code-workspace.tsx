@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { NotesPanel } from "@/components/notes/notes-drawer";
 import { ResultPanel } from "@/components/editor/result-panel";
 import { SplitPane } from "@/components/editor/split-pane";
 import { EndInterviewDialog, InterviewBanner } from "@/components/interview/interview-banner";
@@ -268,6 +269,11 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
           <h1 className="text-lg font-semibold tracking-tight">{problem.title}</h1>
           <DifficultyBadge difficulty={problem.difficulty} />
           <StatusPip status={problem.status} />
+          <span className="ml-auto">
+            <NotesPanel
+              context={{ sourceType: "PROBLEM", sourceId: problem.id, sourceTitle: problem.title }}
+            />
+          </span>
           {interviewLive || interviewDone ? (
             <Button variant="ghost" size="sm" onClick={() => setShowProblem(false)}>
               Hide Problem

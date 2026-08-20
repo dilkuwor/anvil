@@ -9,6 +9,7 @@ const FOOTER_NAV = [
   { href: "/system-design", label: "System Design" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
+  { href: "/notes", label: "Notes" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
 ];
 

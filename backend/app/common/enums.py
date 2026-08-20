@@ -82,3 +82,14 @@ class LearningProgressStatus(StrEnum):
     NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
+
+
+class NoteSourceType(StrEnum):
+    LESSON = "LESSON"
+    PROBLEM = "PROBLEM"
+    SYSTEM_DESIGN = "SYSTEM_DESIGN"
+
+
+class NoteKind(StrEnum):
+    MANUAL = "MANUAL"
+    AI_RESPONSE = "AI_RESPONSE"

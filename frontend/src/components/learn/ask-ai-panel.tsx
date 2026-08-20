@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
 
+import { SaveAiNoteButton } from "@/components/notes/notes-drawer";
+
 import { TutorMarkdown } from "@/components/learn/markdown";
 import { Button } from "@/components/ui/button";
 import { SectionTitle } from "@/components/ui/section";
@@ -16,6 +18,7 @@ import {
 const UNAVAILABLE = "AI tutor is temporarily unavailable. Please try again.";
 
 type AskAiContextValue = {
+  lesson: LearningLessonDetail;
   open: boolean;
   pending: boolean;
   error: string | null;
@@ -118,6 +121,7 @@ export function AskAiController({ lesson, children }: { lesson: LearningLessonDe
 
   const value = useMemo(
     () => ({
+      lesson,
       open,
       pending,
       error,
@@ -129,7 +133,7 @@ export function AskAiController({ lesson, children }: { lesson: LearningLessonDe
       clearConversation,
       send,
     }),
-    [open, pending, error, draft, messages, suggestions, toggle, clearConversation, send],
+    [lesson, open, pending, error, draft, messages, suggestions, toggle, clearConversation, send],
   );
 
   return <AskAiContext.Provider value={value}>{children}</AskAiContext.Provider>;
@@ -146,7 +150,7 @@ export function AskAiButton() {
 }
 
 export function AskAiPanel() {
-  const { open, pending, error, draft, messages, suggestions, setDraft, clearConversation, send } = useAskAi();
+  const { lesson, open, pending, error, draft, messages, suggestions, setDraft, clearConversation, send } = useAskAi();
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -213,7 +217,16 @@ export function AskAiPanel() {
           }
           return (
             <div key={`${message.role}-${index}`} className="rounded-md border border-steel-800 px-3 py-2">
-              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tutor</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Tutor</p>
+                {!thinking && message.content.trim() ? (
+                  <SaveAiNoteButton
+                    context={{ sourceType: "LESSON", sourceId: lesson.id, sourceTitle: lesson.title }}
+                    body={message.content}
+                    disabled={pending && last}
+                  />
+                ) : null}
+              </div>
               <div className="mt-1">
                 {thinking ? <p className="text-[13px] text-muted-foreground">Thinking...</p> : <TutorMarkdown content={message.content} />}
               </div>

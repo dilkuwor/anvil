@@ -27,6 +27,7 @@ export const queryKeys = {
   publicProfile: (username: string) => ["public-profile", username] as const,
   problemLists: ["problem-lists"] as const,
   problemList: (id: string) => ["problem-lists", id] as const,
+  notes: (sourceType?: string, sourceId?: string) => ["notes", sourceType ?? "all", sourceId ?? "all"] as const,
 };
 
 export const fetchers = {

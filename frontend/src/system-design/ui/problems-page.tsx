@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
+import { NotesPanel } from "@/components/notes/notes-drawer";
 import { PageHeader } from "@/components/layout/page-header";
 import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
@@ -19,10 +20,16 @@ export function ProblemsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="System Design Problems"
-        description="One catalog. Learn the walkthrough, simulate the architecture, or sit the mock interview."
-      />
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader
+          title="System Design Problems"
+          description="One catalog. Learn the walkthrough, simulate the architecture, or sit the mock interview."
+        />
+        <NotesPanel
+          match="type"
+          context={{ sourceType: "SYSTEM_DESIGN", sourceId: "general", sourceTitle: "System Design" }}
+        />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {(catalog.data ?? []).map((item) => (
           <SystemDesignProblemCard

@@ -36,15 +36,15 @@ export default function PrivacyPage() {
       <p>
         <strong className="text-foreground">Learning and practice data.</strong> When you are signed in we store lesson
         progress (including started and completed lessons), coding problem progress and attempt counts, a daily activity
-        summary, custom problem lists, and submissions (your source code, language, pass/fail status, and runtime
-        metrics). Mock interviews store the session, your messages, interviewer messages, and generated feedback.
+        summary, custom problem lists, notes you save on lessons, coding problems, and system design (including saved Ask
+        AI replies), and submissions (your source code, language, pass/fail status, and runtime metrics). Mock interviews
+        store the session, your messages, interviewer messages, and generated feedback.
       </p>
       <p>
         <strong className="text-foreground">Optional AI settings.</strong> If you save an LLM provider API key in
         Settings, we store it encrypted and keep a short hint of the key. Questions you send to “Ask AI” on a lesson, and
-        mock-interview dialogue, are sent to the language-model provider you selected so a reply can be generated. We do
-        not currently keep a separate long-term “notes” product; content you type in interviews and the editor is stored
-        as described above.
+        mock-interview dialogue, are sent to the language-model provider you selected so a reply can be generated. If you
+        save an Ask AI reply as a note, that text is stored with your account.
       </p>
       <p>
         <strong className="text-foreground">Listen / speech.</strong> If you use Listen on a lesson, the lesson text is
