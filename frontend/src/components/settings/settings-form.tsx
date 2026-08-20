@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
-import { api, ApiError, fetchCurrentUser, type UpdateProfileRequest, type User } from "@/lib/api";
+import { api, ApiError, fetchCurrentUser, type LlmProbe, type UpdateProfileRequest, type User } from "@/lib/api";
 import { COUNTRIES } from "@/lib/countries";
 import { queryKeys } from "@/lib/queries";
 
@@ -239,6 +239,11 @@ function LlmSettings({ user }: { user: User }) {
     setModel((current.llm_keys ?? []).find((item) => item.provider === next)?.model ?? "");
   }
 
+  const probe = useMutation({
+    mutationFn: () => api.post<LlmProbe>("/api/v1/auth/me/llm/test"),
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Unable to test the AI provider."),
+  });
+
   const save = useMutation({
     mutationFn: () =>
       api.patch<User>("/api/v1/auth/me/llm", {
@@ -249,6 +254,7 @@ function LlmSettings({ user }: { user: User }) {
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.me, next);
       setApiKey("");
+      probe.reset();
       toast.success("AI provider settings saved.");
     },
     onError: (error) => {
@@ -262,6 +268,7 @@ function LlmSettings({ user }: { user: User }) {
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.me, next);
       setApiKey("");
+      probe.reset();
       toast.success("API key removed.");
     },
     onError: () => toast.error("Unable to remove API key."),
@@ -333,18 +340,65 @@ function LlmSettings({ user }: { user: User }) {
             />
           </Field>
         ) : null}
-        <div className="flex flex-wrap justify-end gap-2">
-          {savedKey ? (
-            <Button type="button" variant="ghost" size="sm" disabled={clearKey.isPending} onClick={() => clearKey.mutate()}>
-              {clearKey.isPending ? "Removing…" : "Remove key"}
-            </Button>
-          ) : null}
-          <Button type="submit" disabled={save.isPending}>
-            {save.isPending ? "Saving…" : "Save AI settings"}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={probe.isPending || save.isPending}
+            onClick={() => probe.mutate()}
+          >
+            {probe.isPending ? "Testing…" : "Test connection"}
           </Button>
+          <div className="flex flex-wrap gap-2">
+            {savedKey ? (
+              <Button type="button" variant="ghost" size="sm" disabled={clearKey.isPending} onClick={() => clearKey.mutate()}>
+                {clearKey.isPending ? "Removing…" : "Remove key"}
+              </Button>
+            ) : null}
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save AI settings"}
+            </Button>
+          </div>
         </div>
+        <p className="text-[12px] text-muted-foreground">Tests the saved provider used in interviews. Save first if you just changed these settings.</p>
+        {probe.data ? <LlmProbeResult result={probe.data} /> : null}
       </form>
     </SectionCard>
+  );
+}
+
+function LlmProbeResult({ result }: { result: LlmProbe }) {
+  const keyLabel = result.key_required
+    ? result.using_user_key
+      ? "Your API key"
+      : "Platform key"
+    : "Not required";
+  const modelSource = result.model_source === "custom" ? "Custom" : "Platform default";
+  const rows: { label: string; value: string }[] = [
+    { label: "Provider", value: result.using_platform_default ? `${result.provider_label} (platform default)` : result.provider_label },
+    { label: "Model", value: result.model ? `${result.model} · ${modelSource}` : modelSource },
+    { label: "API key", value: keyLabel },
+  ];
+  if (result.endpoint) rows.push({ label: "Endpoint", value: result.endpoint });
+  if (result.latency_ms != null) rows.push({ label: "Latency", value: `${result.latency_ms} ms` });
+  if (result.reply) rows.push({ label: "Reply", value: result.reply });
+  if (result.error) rows.push({ label: "Error", value: result.error });
+
+  return (
+    <div className="rounded-xl border border-steel-800 bg-background/40 px-4 py-3">
+      <p className={`text-[13px] font-medium ${result.ok ? "text-success" : "text-coral"}`}>
+        {result.ok ? "Connected" : "Could not connect"}
+      </p>
+      <dl className="mt-2 space-y-1.5">
+        {rows.map((row) => (
+          <div key={row.label} className="grid gap-0.5 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
+            <dt className="text-[12px] text-muted-foreground">{row.label}</dt>
+            <dd className="break-all text-[13px] text-foreground">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 

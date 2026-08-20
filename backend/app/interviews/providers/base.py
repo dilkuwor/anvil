@@ -14,6 +14,10 @@ class LLMProvider(ABC):
 
     name: str
 
+    def describe(self) -> dict[str, str | None]:
+        """Public connection details for Settings. Never include secrets."""
+        return {"provider": getattr(self, "name", None), "model": None, "endpoint": None}
+
     @abstractmethod
     def complete(self, system: str, transcript: list[dict[str, str]], user_turn: str) -> str:
         """Return a plain interviewer utterance."""

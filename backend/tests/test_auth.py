@@ -185,3 +185,105 @@ def test_upload_and_delete_avatar(auth_client):
     assert removed.status_code == 200
     assert removed.json()["has_avatar"] is False
     assert auth_client.get("/api/v1/auth/me/avatar").status_code == 404
+
+
+def test_llm_probe_requires_auth(client):
+    assert client.post("/api/v1/auth/me/llm/test").status_code == 401
+
+
+def test_llm_probe_platform_default(auth_client, monkeypatch):
+    monkeypatch.setattr(
+        "app.interviews.providers.ollama_provider.OllamaProvider.complete",
+        lambda self, system, transcript, user_turn: "pong",
+    )
+    response = auth_client.post("/api/v1/auth/me/llm/test")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["provider"] == "ollama"
+    assert body["provider_label"] == "Ollama"
+    assert body["using_platform_default"] is True
+    assert body["using_user_key"] is False
+    assert body["key_required"] is False
+    assert body["model_source"] == "platform_default"
+    assert body["model"]
+    assert body["reply"] == "pong"
+    assert body["error"] is None
+    assert isinstance(body["latency_ms"], int)
+
+
+def test_llm_probe_openai_reports_saved_model(auth_client, monkeypatch):
+    saved = auth_client.patch(
+        "/api/v1/auth/me/llm",
+        json={"provider": "openai", "api_key": "sk-test-secret-key-1234", "model": "gpt-4.1-mini"},
+    )
+    assert saved.status_code == 200
+    monkeypatch.setattr(
+        "app.interviews.providers.openai_provider.OpenAIProvider.complete",
+        lambda self, system, transcript, user_turn: "pong",
+    )
+    response = auth_client.post("/api/v1/auth/me/llm/test")
+    body = response.json()
+    assert response.status_code == 200
+    assert body["ok"] is True
+    assert body["provider"] == "openai"
+    assert body["provider_label"] == "OpenAI"
+    assert body["using_platform_default"] is False
+    assert body["using_user_key"] is True
+    assert body["key_required"] is True
+    assert body["model"] == "gpt-4.1-mini"
+    assert body["model_source"] == "custom"
+    assert "sk-test" not in str(body)
+
+
+def test_llm_probe_surfaces_openrouter_upstream_rate_limit(auth_client, monkeypatch):
+    import httpx
+
+    saved = auth_client.patch(
+        "/api/v1/auth/me/llm",
+        json={
+            "provider": "openrouter",
+            "api_key": "sk-or-test-secret-key-5555",
+            "model": "google/gemma-4-26b-a4b-it:free",
+        },
+    )
+    assert saved.status_code == 200
+
+    request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    response = httpx.Response(
+        429,
+        request=request,
+        json={
+            "error": {
+                "message": "Provider returned error",
+                "code": 429,
+                "metadata": {
+                    "raw": "google/gemma-4-26b-a4b-it:free is temporarily rate-limited upstream. Please retry shortly.",
+                    "provider_name": "Google",
+                },
+            }
+        },
+    )
+
+    def boom(self, system, transcript, user_turn):
+        raise httpx.HTTPStatusError("Client error '429 Too Many Requests'", request=request, response=response)
+
+    monkeypatch.setattr("app.interviews.providers.openrouter_provider.OpenRouterProvider.complete", boom)
+    body = auth_client.post("/api/v1/auth/me/llm/test").json()
+    assert body["ok"] is False
+    assert body["provider"] == "openrouter"
+    assert body["model_source"] == "platform_default"
+    assert "rate-limited" in body["error"].lower()
+    assert "Provider returned error" not in body["error"]
+
+
+def test_llm_probe_missing_key_is_not_ok(auth_client):
+    switched = auth_client.patch("/api/v1/auth/me/llm", json={"provider": "openai"})
+    assert switched.status_code == 200
+    response = auth_client.post("/api/v1/auth/me/llm/test")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is False
+    assert body["provider"] == "openai"
+    assert body["error"]
+    assert "key" in body["error"].lower()

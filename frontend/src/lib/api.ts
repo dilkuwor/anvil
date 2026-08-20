@@ -137,6 +137,21 @@ export type User = {
   llm_keys?: { provider: string; hint: string; model?: string | null }[];
 };
 
+export type LlmProbe = {
+  ok: boolean;
+  provider: string;
+  provider_label: string;
+  using_platform_default: boolean;
+  model: string;
+  model_source: "custom" | "platform_default" | string;
+  using_user_key: boolean;
+  key_required: boolean;
+  endpoint?: string | null;
+  latency_ms?: number | null;
+  reply?: string | null;
+  error?: string | null;
+};
+
 export type UpdateProfileRequest = {
   username: string;
   display_name: string;

@@ -11,7 +11,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "InterviewAnvil"
+    app_name: str = "Anvil"
     app_env: str = "development"
     log_level: str = "INFO"
 

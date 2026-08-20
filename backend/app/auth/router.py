@@ -2,7 +2,14 @@ from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth.schemas import LoginRequest, RegisterRequest, UpdateLlmSettingsRequest, UpdateProfileRequest, UserOut
+from app.auth.schemas import (
+    LlmProbeOut,
+    LoginRequest,
+    RegisterRequest,
+    UpdateLlmSettingsRequest,
+    UpdateProfileRequest,
+    UserOut,
+)
 from app.common.config import get_settings
 from app.common.database import get_db
 from app.common.deps import get_current_user, get_optional_user
@@ -11,6 +18,7 @@ from app.common.errors import AppError, ConflictError, NotFoundError, Unauthoriz
 from app.common.secrets import encrypt_secret, secret_hint
 from app.common.security import create_access_token, hash_password, verify_password
 from app.interviews.providers import normalize_provider_name
+from app.interviews.providers.probe import probe_llm_for_user
 from app.users.models import User, UserLlmKey
 
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -83,6 +91,11 @@ def logout(response: Response) -> dict:
 @router.get("/me", response_model=UserOut | None)
 def me(current_user: User | None = Depends(get_optional_user)) -> User | None:
     return current_user
+
+
+@router.post("/me/llm/test", response_model=LlmProbeOut)
+def test_my_llm_settings(current_user: User = Depends(get_current_user)) -> LlmProbeOut:
+    return LlmProbeOut.model_validate(probe_llm_for_user(current_user))
 
 
 @router.patch("/me/llm", response_model=UserOut)

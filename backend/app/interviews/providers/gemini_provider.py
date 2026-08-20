@@ -7,6 +7,7 @@ import httpx
 from app.common.config import get_settings
 from app.common.logging import get_logger
 from app.interviews.providers.base import LLMProvider, parse_json_object
+from app.interviews.providers.errors import raise_if_provider_error
 
 logger = get_logger(__name__)
 
@@ -17,6 +18,14 @@ class GeminiProvider(LLMProvider):
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self.api_key = (api_key or "").strip() or None
         self.model = (model or "").strip() or None
+
+    def describe(self) -> dict[str, str | None]:
+        settings = get_settings()
+        return {
+            "provider": self.name,
+            "model": self.model or settings.gemini_model.strip() or "gemini-2.5-flash",
+            "endpoint": settings.gemini_base_url,
+        }
 
     def complete(self, system: str, transcript: list[dict[str, str]], user_turn: str) -> str:
         contents = _to_gemini_contents([*transcript, {"role": "user", "content": user_turn}])
@@ -46,9 +55,12 @@ class GeminiProvider(LLMProvider):
             "generationConfig": generation,
         }
         with httpx.Client(timeout=60.0) as client:
-            response = client.post(url, params={"key": api_key}, json=payload)
-            response.raise_for_status()
-            data = response.json()
+            response = client.post(
+                url,
+                json=payload,
+                headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+            )
+            data = raise_if_provider_error(response)
         try:
             parts = data["candidates"][0]["content"]["parts"]
             text = "".join(str(part.get("text") or "") for part in parts).strip()

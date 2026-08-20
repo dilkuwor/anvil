@@ -69,6 +69,21 @@ class UpdateProfileRequest(BaseModel):
         return value
 
 
+class LlmProbeOut(BaseModel):
+    ok: bool
+    provider: str
+    provider_label: str
+    using_platform_default: bool
+    model: str
+    model_source: str
+    using_user_key: bool
+    key_required: bool
+    endpoint: str | None = None
+    latency_ms: int | None = None
+    reply: str | None = None
+    error: str | None = None
+
+
 class UpdateLlmSettingsRequest(BaseModel):
     provider: str | None = Field(default=None, max_length=40)
     api_key: str | None = Field(default=None, min_length=8, max_length=512)

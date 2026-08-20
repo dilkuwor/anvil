@@ -7,6 +7,7 @@ import httpx
 from app.common.config import get_settings
 from app.common.logging import get_logger
 from app.interviews.providers.base import LLMProvider, parse_json_object
+from app.interviews.providers.errors import raise_if_provider_error
 
 logger = get_logger(__name__)
 
@@ -17,6 +18,14 @@ class OpenRouterProvider(LLMProvider):
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self.api_key = (api_key or "").strip() or None
         self.model = (model or "").strip() or None
+
+    def describe(self) -> dict[str, str | None]:
+        settings = get_settings()
+        return {
+            "provider": self.name,
+            "model": self.model or settings.openrouter_model,
+            "endpoint": settings.openrouter_base_url,
+        }
 
     def complete(self, system: str, transcript: list[dict[str, str]], user_turn: str) -> str:
         messages = [{"role": "system", "content": system}, *transcript, {"role": "user", "content": user_turn}]
@@ -46,12 +55,11 @@ class OpenRouterProvider(LLMProvider):
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": settings.openrouter_referer,
-            "X-Title": settings.app_name,
+            "X-Title": "Anvil",
         }
         with httpx.Client(timeout=60.0) as client:
             response = client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
+            data = raise_if_provider_error(response)
         try:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:

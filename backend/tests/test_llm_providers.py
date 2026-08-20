@@ -58,6 +58,36 @@ def test_parse_json_object_extracts_object():
     assert parse_json_object('noise {"understanding": 8} trailing') == {"understanding": 8}
 
 
+def test_openrouter_style_rate_limit_uses_upstream_detail():
+    from app.interviews.providers.errors import format_provider_http_error
+
+    message = format_provider_http_error(
+        429,
+        {
+            "error": {
+                "message": "Provider returned error",
+                "code": 429,
+                "metadata": {
+                    "raw": "google/gemma-4-26b-a4b-it:free is temporarily rate-limited upstream.",
+                },
+            }
+        },
+    )
+    assert "rate-limited" in message.lower()
+    assert "Provider returned error" not in message
+
+
+def test_providers_describe_without_secrets():
+    openai = OpenAIProvider(api_key="sk-secret", model="gpt-4o-mini").describe()
+    assert openai["provider"] == "openai"
+    assert openai["model"] == "gpt-4o-mini"
+    assert "sk-secret" not in str(openai)
+    gemini = GeminiProvider(api_key="AIza-secret", model="").describe()
+    assert gemini["provider"] == "gemini"
+    assert gemini["model"]
+    assert "AIza" not in str(gemini)
+
+
 def test_openrouter_uses_explicit_model_then_config_default():
     provider = OpenRouterProvider(api_key="sk-or-test", model="nvidia/nemotron-3.5-lightning:free")
     assert provider.model == "nvidia/nemotron-3.5-lightning:free"
