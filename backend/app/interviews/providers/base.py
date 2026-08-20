@@ -18,6 +18,14 @@ class LLMProvider(ABC):
         """Public connection details for Settings. Never include secrets."""
         return {"provider": getattr(self, "name", None), "model": None, "endpoint": None}
 
+    def ping(self) -> str:
+        """Cheap connectivity check used by Settings → Test connection."""
+        return self.complete(
+            "You are a connection test. Reply with the single word pong and nothing else.",
+            [],
+            "ping",
+        )
+
     @abstractmethod
     def complete(self, system: str, transcript: list[dict[str, str]], user_turn: str) -> str:
         """Return a plain interviewer utterance."""

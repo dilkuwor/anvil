@@ -50,11 +50,7 @@ def probe_llm_for_user(user: Any) -> dict[str, Any]:
 
     started = time.perf_counter()
     try:
-        reply = provider.complete(
-            "You are a connection test. Reply with the single word pong and nothing else.",
-            [],
-            "ping",
-        )
+        reply = provider.ping()
         result["ok"] = True
         result["latency_ms"] = _elapsed_ms(started)
         result["reply"] = (reply or "").strip()[:160] or None

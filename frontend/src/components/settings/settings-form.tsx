@@ -240,7 +240,7 @@ function LlmSettings({ user }: { user: User }) {
   }
 
   const probe = useMutation({
-    mutationFn: () => api.post<LlmProbe>("/api/v1/auth/me/llm/test"),
+    mutationFn: () => api.post<LlmProbe>("/api/v1/auth/me/llm/test", {}),
     onError: (error) => toast.error(error instanceof ApiError ? error.message : "Unable to test the AI provider."),
   });
 

@@ -23,6 +23,7 @@ def chat(
     timeout: float = 60.0,
     num_predict: int = 220,
     max_chars: int = 900,
+    attempts: int = 3,
 ) -> str:
     settings = get_settings()
     url = f"{settings.ollama_base_url.rstrip('/')}/api/chat"
@@ -33,11 +34,12 @@ def chat(
         "options": {"temperature": 0.45, "num_predict": num_predict},
     }
     last_error: Exception | None = None
+    tries = max(1, attempts)
     with httpx.Client(timeout=timeout) as client:
-        for attempt in range(3):
+        for attempt in range(tries):
             try:
                 response = client.post(url, json=payload)
-                if response.status_code >= 500 and attempt < 2:
+                if response.status_code >= 500 and attempt < tries - 1:
                     logger.warning(
                         "ollama_retry",
                         status=response.status_code,
@@ -54,7 +56,7 @@ def chat(
                 return _clean_reply(content, max_chars=max_chars)
             except (httpx.TimeoutException, httpx.TransportError, ValueError) as exc:
                 last_error = exc
-                if attempt == 2:
+                if attempt == tries - 1:
                     break
                 logger.warning("ollama_retry", error=str(exc), attempt=attempt + 1)
     if last_error:

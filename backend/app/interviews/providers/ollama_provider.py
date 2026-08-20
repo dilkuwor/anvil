@@ -14,6 +14,21 @@ class OllamaProvider(LLMProvider):
         settings = get_settings()
         return {"provider": self.name, "model": settings.ollama_model, "endpoint": settings.ollama_base_url}
 
+    def ping(self) -> str:
+        return ollama.chat(
+            [
+                {
+                    "role": "system",
+                    "content": "You are a connection test. Reply with the single word pong and nothing else.",
+                },
+                {"role": "user", "content": "ping"},
+            ],
+            timeout=25.0,
+            num_predict=16,
+            max_chars=32,
+            attempts=1,
+        )
+
     def complete(self, system: str, transcript: list[dict[str, str]], user_turn: str) -> str:
         return ollama.interviewer_reply(system, transcript, user_turn)
 

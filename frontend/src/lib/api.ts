@@ -28,7 +28,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const message = data?.error?.message ?? "Request failed.";
+    const message =
+      data?.error?.message ??
+      (response.status === 504
+        ? "The request timed out before the provider replied."
+        : response.status === 502
+          ? "The API proxy could not reach the backend."
+          : "Request failed.");
     const code = data?.error?.code ?? "error";
     throw new ApiError(response.status, message, code);
   }

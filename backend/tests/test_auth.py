@@ -193,8 +193,8 @@ def test_llm_probe_requires_auth(client):
 
 def test_llm_probe_platform_default(auth_client, monkeypatch):
     monkeypatch.setattr(
-        "app.interviews.providers.ollama_provider.OllamaProvider.complete",
-        lambda self, system, transcript, user_turn: "pong",
+        "app.interviews.providers.ollama_provider.OllamaProvider.ping",
+        lambda self: "pong",
     )
     response = auth_client.post("/api/v1/auth/me/llm/test")
     assert response.status_code == 200
