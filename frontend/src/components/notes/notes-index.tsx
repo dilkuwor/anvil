@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Notebook, Pencil, Search, Trash2, X } from "lucide-react";
+import { ChevronRight, Eye, Notebook, Pencil, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -72,21 +72,24 @@ export function NotesIndex() {
           </p>
           {signedIn ? (
             <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex h-8 items-center rounded-lg border border-steel-800 p-0.5">
                 {FILTERS.map((item) => (
-                  <Button
+                  <button
                     key={item.id}
                     type="button"
-                    size="sm"
-                    variant={filter === item.id ? "default" : "secondary"}
-                    className="h-7 px-2.5 text-[11px]"
+                    className={cn(
+                      "inline-flex h-7 items-center rounded-md px-2.5 text-[13px]",
+                      filter === item.id
+                        ? "bg-steel-800 font-medium text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
                     onClick={() => {
                       setFilter(item.id);
                       setPage(1);
                     }}
                   >
                     {item.label}
-                  </Button>
+                  </button>
                 ))}
               </div>
               <span className="hidden h-5 w-px shrink-0 bg-steel-800 sm:block" aria-hidden />
@@ -148,9 +151,8 @@ export function NotesIndex() {
                     <td className="px-4 py-3 font-medium">
                       <span className="line-clamp-1">{displayNoteTitle(note)}</span>
                     </td>
-                    <td className="px-4 py-3 align-top text-muted-foreground">
-                      <span className="block">{sourceLabel(note.source_type)}</span>
-                      <span className="mt-0.5 block max-w-[14rem] truncate text-[12px]">{note.source_title}</span>
+                    <td className="px-4 py-3 align-top">
+                      <NoteSourcePath type={note.source_type} title={note.source_title} />
                     </td>
                     <td className="px-4 py-3 align-top text-muted-foreground">
                       {note.kind === "AI_RESPONSE" ? "Saved from AI" : "Manual"}
@@ -161,13 +163,14 @@ export function NotesIndex() {
                     <td className="px-4 py-3 align-top text-right">
                       <button
                         type="button"
-                        className="text-accent hover:text-accent-light"
+                        aria-label="View note"
+                        className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
                         onClick={(event) => {
                           event.stopPropagation();
                           setSelected(note);
                         }}
                       >
-                        View
+                        <Eye className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
@@ -184,9 +187,12 @@ export function NotesIndex() {
                 className="flex w-full flex-col gap-1 px-4 py-3 text-left hover:bg-steel-950/50"
               >
                 <span className="truncate text-sm font-medium">{displayNoteTitle(note)}</span>
-                <span className="text-[12px] text-muted-foreground">
-                  {sourceLabel(note.source_type)} · {note.kind === "AI_RESPONSE" ? "Saved from AI" : "Manual"} ·{" "}
-                  {formatRelative(note.updated_at)}
+                <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
+                  <NoteSourcePath type={note.source_type} title={note.source_title} />
+                  <span aria-hidden>·</span>
+                  <span className="shrink-0">{note.kind === "AI_RESPONSE" ? "Saved from AI" : "Manual"}</span>
+                  <span aria-hidden>·</span>
+                  <span className="shrink-0">{formatRelative(note.updated_at)}</span>
                 </span>
               </button>
             ))}
@@ -436,5 +442,19 @@ function NoteDetailOverlay({
         )}
       </article>
     </div>
+  );
+}
+
+function NoteSourcePath({ type, title }: { type: NoteSourceType; title: string }) {
+  return (
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1 text-[13px]">
+      <span className="shrink-0 text-muted-foreground">{sourceLabel(type)}</span>
+      {title ? (
+        <>
+          <ChevronRight className="h-3 w-3 shrink-0 text-steel-600" aria-hidden />
+          <span className="min-w-0 truncate text-foreground">{title}</span>
+        </>
+      ) : null}
+    </span>
   );
 }
