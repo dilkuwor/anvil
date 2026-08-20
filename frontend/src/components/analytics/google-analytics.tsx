@@ -2,9 +2,10 @@
 
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useSyncExternalStore } from "react";
 
 import { GA_MEASUREMENT_ID, isAnalyticsEnabled, trackPageView } from "@/lib/analytics";
+import { readAnalyticsConsent, subscribeAnalyticsConsent } from "@/lib/consent";
 
 function AnalyticsRouteTracker() {
   const pathname = usePathname();
@@ -19,7 +20,8 @@ function AnalyticsRouteTracker() {
 }
 
 export function GoogleAnalytics() {
-  if (!isAnalyticsEnabled) return null;
+  const consent = useSyncExternalStore(subscribeAnalyticsConsent, readAnalyticsConsent, () => null);
+  if (!isAnalyticsEnabled || consent !== "granted") return null;
 
   return (
     <>

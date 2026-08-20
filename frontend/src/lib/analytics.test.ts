@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { writeAnalyticsConsent } from "@/lib/consent";
+
 async function loadAnalytics(measurementId: string) {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_GA_MEASUREMENT_ID", measurementId);
@@ -12,6 +14,7 @@ describe("analytics helpers", () => {
     vi.resetModules();
     delete window.gtag;
     delete window.dataLayer;
+    localStorage.clear();
   });
 
   it("does not send when the measurement ID is missing", async () => {
@@ -22,7 +25,16 @@ describe("analytics helpers", () => {
     expect(gtag).not.toHaveBeenCalled();
   });
 
+  it("does not send before analytics consent", async () => {
+    const gtag = vi.fn();
+    window.gtag = gtag as typeof window.gtag;
+    const { trackEvent, AnalyticsEvent } = await loadAnalytics("G-7Q1GX64YSR");
+    trackEvent(AnalyticsEvent.Login, { method: "password" });
+    expect(gtag).not.toHaveBeenCalled();
+  });
+
   it("sends typed events through gtag when present", async () => {
+    writeAnalyticsConsent("granted");
     const gtag = vi.fn();
     window.gtag = gtag as typeof window.gtag;
     const { trackEvent, AnalyticsEvent } = await loadAnalytics("G-7Q1GX64YSR");
@@ -31,6 +43,7 @@ describe("analytics helpers", () => {
   });
 
   it("sends page_view with path and location", async () => {
+    writeAnalyticsConsent("granted");
     const gtag = vi.fn();
     window.gtag = gtag as typeof window.gtag;
     const { trackPageView } = await loadAnalytics("G-7Q1GX64YSR");

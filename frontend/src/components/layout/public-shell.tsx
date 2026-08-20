@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
+import { SiteFooter } from "@/components/layout/site-footer";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { BrandMark } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="ia-content flex-1 py-6">{children}</main>
+      <SiteFooter />
     </div>
   );
 }

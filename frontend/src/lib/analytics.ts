@@ -1,3 +1,5 @@
+import { hasAnalyticsConsent } from "@/lib/consent";
+
 export const AnalyticsEvent = {
   SignUp: "sign_up",
   Login: "login",
@@ -45,6 +47,7 @@ export const isAnalyticsEnabled = Boolean(GA_MEASUREMENT_ID);
 
 function send(...args: unknown[]): void {
   if (!isAnalyticsEnabled || typeof window === "undefined") return;
+  if (!hasAnalyticsConsent()) return;
   if (typeof window.gtag === "function") {
     window.gtag(...(args as Parameters<GtagFn>));
     return;

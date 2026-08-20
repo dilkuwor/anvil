@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { PublicHeader } from "@/components/layout/public-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -19,6 +20,17 @@ export default function AboutPage() {
         <p className="mt-5 max-w-2xl text-[15px] leading-7 text-muted-foreground">
           Anvil is a ByteTech LLC product built to help software engineers prepare for technical interviews through
           deliberate, realistic practice.
+        </p>
+        <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted-foreground">
+          How we handle information is described in the{" "}
+          <Link className="font-medium text-foreground hover:text-accent" href="/privacy">
+            Privacy Policy
+          </Link>
+          . Using the product is subject to the{" "}
+          <Link className="font-medium text-foreground hover:text-accent" href="/terms">
+            Terms of Service
+          </Link>
+          .
         </p>
       </main>
       <SiteFooter />

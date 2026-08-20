@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { LegalLinks } from "@/components/layout/legal-links";
 import { DesktopNav, MobileNavSheet, MobileNavTrigger, useMobileMenu } from "@/components/layout/site-nav";
 import { UserAvatar } from "@/components/settings/user-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -139,6 +140,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
+      {lockViewport ? null : (
+        <footer className="border-t border-steel-800 py-3">
+          <div className={cn(wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content")}>
+            <LegalLinks />
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

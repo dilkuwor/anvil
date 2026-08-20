@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+import { LegalLinks } from "@/components/layout/legal-links";
 import { PublicHeader } from "@/components/layout/public-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,19 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <Button className="w-full" type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? "Working…" : mode === "login" ? "Log in" : "Create account"}
             </Button>
+            {mode === "register" ? (
+              <p className="text-center text-[12px] leading-5 text-muted-foreground">
+                By creating an account you agree to the{" "}
+                <Link className="font-medium text-foreground hover:text-accent" href="/terms">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link className="font-medium text-foreground hover:text-accent" href="/privacy">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            ) : null}
           </form>
           <p className="mt-5 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
@@ -122,6 +136,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
           </p>
         </div>
       </main>
+      <footer className="border-t border-steel-800 py-3">
+        <div className="flex justify-center">
+          <LegalLinks />
+        </div>
+      </footer>
     </div>
   );
 }

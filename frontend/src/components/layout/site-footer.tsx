@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LegalLinks } from "@/components/layout/legal-links";
 import { BrandMark } from "@/components/ui/section";
 
 const FOOTER_NAV = [
@@ -22,12 +23,20 @@ export function SiteFooter() {
           <p className="text-[13px] leading-6 text-muted-foreground">
             Build skills. Break limits. Ace the interview.
           </p>
-          <p className="text-[12px] text-muted-foreground">© 2026 ByteTech LLC. All rights reserved.</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-foreground">
+            <p>© 2026 ByteTech LLC. All rights reserved.</p>
+            <span aria-hidden>·</span>
+            <LegalLinks className="text-[12px]" />
+          </div>
         </div>
         <nav className="flex flex-wrap items-center text-[13px] text-muted-foreground" aria-label="Footer">
           {FOOTER_NAV.map((item, index) => (
             <span key={item.href} className="inline-flex items-center">
-              {index > 0 ? <span aria-hidden className="px-2">·</span> : null}
+              {index > 0 ? (
+                <span aria-hidden className="px-2">
+                  ·
+                </span>
+              ) : null}
               <Link href={item.href} className="hover:text-foreground">
                 {item.label}
               </Link>
