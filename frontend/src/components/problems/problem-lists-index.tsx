@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/state";
 import { api, ApiError } from "@/lib/api";
-import { formatListUpdated, type ProblemListCard } from "@/lib/lists";
+import { formatListUpdated, listRoadmapHref, type ProblemListCard } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
 
@@ -72,9 +72,12 @@ export function ProblemListsIndex() {
   if (!ready) return <CardSkeleton rows={4} />;
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Problems" description="Organize problems into custom lists for focused practice." />
-      <ProblemsTabs onCreate={requestCreate} />
+    <div className="space-y-4">
+      <PageHeader
+        title="Problems"
+        description="Organize problems into custom lists for focused practice."
+        actions={<ProblemsTabs onCreate={requestCreate} />}
+      />
 
       {!signedIn ? (
         <SectionCard className="px-4 py-10 text-center">
@@ -92,27 +95,15 @@ export function ProblemListsIndex() {
           <EmptyState title="No lists yet" body="Create a list to group problems for focused practice." />
         </SectionCard>
       ) : (
-        <SectionCard className="divide-y divide-steel-800 p-0">
+        <div className="grid gap-3 md:grid-cols-2">
           {lists.data?.map((list) => (
-            <div key={list.id} className="px-4 py-3.5 hover:bg-steel-950/40">
-              <div className="flex items-start gap-3">
-                <Link href={`/problems/lists/${list.id}`} className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <h2 className="text-sm font-semibold tracking-tight">{list.name}</h2>
-                    <span className="text-[13px] tabular-nums text-muted-foreground">{list.problem_count} problems</span>
-                  </div>
-                  {list.description ? (
-                    <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{list.description}</p>
-                  ) : null}
-                  <div className="mt-3">
-                    <Meter value={list.percent} label={`${list.name} solved`} />
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-                      <span>
-                        {list.solved_count} solved · {list.remaining_count} remaining
-                      </span>
-                      <span>{formatListUpdated(list.updated_at)}</span>
-                    </div>
-                  </div>
+            <SectionCard key={list.id} className="flex flex-col overflow-visible p-4">
+              <div className="flex items-start gap-2">
+                <Link href={`/problems/lists/${list.id}`} className="min-w-0 flex-1 hover:text-accent">
+                  <h2 className="text-sm font-semibold tracking-tight">{list.name}</h2>
+                  <p className="mt-0.5 text-[12px] tabular-nums text-muted-foreground">
+                    {list.problem_count} {list.problem_count === 1 ? "problem" : "problems"}
+                  </p>
                 </Link>
                 <ListOverflowMenu
                   onRename={() => setEditing({ id: list.id, name: list.name, description: list.description, mode: "rename" })}
@@ -126,9 +117,27 @@ export function ProblemListsIndex() {
                   }}
                 />
               </div>
-            </div>
+              {list.description ? (
+                <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted-foreground">{list.description}</p>
+              ) : null}
+              <div className="mt-auto pt-4">
+                <Meter value={list.percent} label={`${list.name} solved`} />
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[12px] text-muted-foreground">
+                    <span className="tabular-nums">
+                      {list.solved_count} solved · {list.remaining_count} remaining
+                    </span>
+                    <span className="mx-1.5 text-steel-700">·</span>
+                    <span>{formatListUpdated(list.updated_at)}</span>
+                  </div>
+                  <Button asChild size="sm" variant="secondary">
+                    <Link href={listRoadmapHref(list.id)}>View Road Map</Link>
+                  </Button>
+                </div>
+              </div>
+            </SectionCard>
           ))}
-        </SectionCard>
+        </div>
       )}
 
       {creating ? (

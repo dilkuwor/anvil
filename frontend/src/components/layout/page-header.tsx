@@ -7,20 +7,36 @@ export function PageHeader({
   title,
   description,
   meta,
+  actions,
   className,
 }: {
   title: string;
   description?: string;
   meta?: ReactNode;
+  actions?: ReactNode;
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-wrap items-end justify-between gap-3", className)}>
-      <div className="min-w-0">
+    <div className={cn("space-y-1", className)}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="mt-0.5 max-w-2xl text-[13px] leading-5 text-muted-foreground">{description}</p> : null}
+        {meta ? <div className="ml-auto text-[13px] tabular-nums text-muted-foreground">{meta}</div> : null}
       </div>
-      {meta ? <div className="text-[13px] tabular-nums text-muted-foreground">{meta}</div> : null}
+      {description || actions ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {actions ? <div className="shrink-0">{actions}</div> : null}
+          {description ? (
+            <p
+              className={cn(
+                "min-w-0 text-[13px] leading-5 text-muted-foreground",
+                actions && "ml-auto max-w-xl text-right",
+              )}
+            >
+              {description}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -31,11 +47,11 @@ export function Breadcrumbs({
   items: { href?: string; label: string }[];
 }) {
   return (
-    <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted-foreground">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-muted-foreground">
       {items.map((item, index) => {
         const last = index === items.length - 1;
         return (
-          <span key={`${item.label}-${index}`} className="inline-flex items-center gap-1.5">
+          <span key={`${item.label}-${index}`} className="inline-flex min-w-0 items-center gap-1.5">
             {index > 0 ? <span aria-hidden>/</span> : null}
             {item.href && !last ? (
               <Link href={item.href} className="hover:text-accent">

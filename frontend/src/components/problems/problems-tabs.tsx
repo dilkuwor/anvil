@@ -11,12 +11,12 @@ export function ProblemsTabs({ onCreate }: { onCreate: () => void }) {
   const lists = pathname.startsWith("/problems/lists");
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-1 rounded-lg border border-steel-800 p-0.5">
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex h-8 items-center rounded-lg border border-steel-800 p-0.5">
         <Link
           href="/problems"
           className={cn(
-            "rounded-md px-3 py-1.5 text-[13px]",
+            "inline-flex h-7 items-center rounded-md px-2.5 text-[13px]",
             !lists ? "bg-steel-800 font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -25,7 +25,7 @@ export function ProblemsTabs({ onCreate }: { onCreate: () => void }) {
         <Link
           href="/problems/lists"
           className={cn(
-            "rounded-md px-3 py-1.5 text-[13px]",
+            "inline-flex h-7 items-center rounded-md px-2.5 text-[13px]",
             lists ? "bg-steel-800 font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >

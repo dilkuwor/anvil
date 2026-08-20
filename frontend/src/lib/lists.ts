@@ -25,3 +25,7 @@ export function formatListUpdated(iso: string): string {
   if (days === 1) return "Updated yesterday";
   return `Updated ${days} days ago`;
 }
+
+export function listRoadmapHref(listId: string): string {
+  return `/roadmap?list=${encodeURIComponent(listId)}`;
+}

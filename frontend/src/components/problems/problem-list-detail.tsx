@@ -5,17 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { Meter } from "@/components/dashboard/meter";
 import { Breadcrumbs, PageHeader } from "@/components/layout/page-header";
 import { AddProblemsModal } from "@/components/problems/add-problems-modal";
+import { CatalogStats } from "@/components/problems/catalog-stats";
 import { CreateListModal } from "@/components/problems/create-list-modal";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { ListOverflowMenu } from "@/components/problems/list-overflow-menu";
 import { StatusPip } from "@/components/problems/status-pip";
+import { TopicTags } from "@/components/problems/topic-tags";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/state";
 import { api, ApiError } from "@/lib/api";
-import type { ProblemListDetail } from "@/lib/lists";
+import { listRoadmapHref, type ProblemListDetail } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
 
 export function ProblemListDetailView({ id }: { id: string }) {
@@ -85,40 +88,50 @@ export function ProblemListDetailView({ id }: { id: string }) {
   if (list.isError || !data) return <ErrorState message="Unable to load this list." onRetry={() => list.refetch()} />;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="space-y-2">
-        <Breadcrumbs items={[{ href: "/problems", label: "Problems" }, { href: "/problems/lists", label: "My Lists" }, { label: data.name }]} />
+        <Breadcrumbs items={[{ href: "/problems", label: "Problems" }, { href: "/problems/lists", label: "My Lists" }]} />
         <PageHeader
           title={data.name}
-          description={data.description || "Custom problem list."}
-          meta={`${data.problem_count} problems · ${data.solved_count} solved · ${data.remaining_count} remaining`}
+          description={data.description || undefined}
+          meta={<CatalogStats total={data.problem_count} solved={data.solved_count} remaining={data.remaining_count} />}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              {nextUnsolved ? (
+                <Button asChild size="sm">
+                  <Link href={`/problems/${nextUnsolved.slug}`}>Start Practicing</Link>
+                </Button>
+              ) : (
+                <Button size="sm" disabled>
+                  All solved
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
+                Add Problems
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href={listRoadmapHref(id)}>View Road Map</Link>
+              </Button>
+              <ListOverflowMenu
+                onRename={() => setEditing("rename")}
+                onEditDescription={() => setEditing("description")}
+                onDelete={() => {
+                  if (window.confirm(`Delete “${data.name}”? Problems themselves are not deleted.`)) {
+                    destroy.mutate();
+                  }
+                }}
+              />
+            </div>
+          }
         />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {nextUnsolved ? (
-            <Button asChild size="sm">
-              <Link href={`/problems/${nextUnsolved.slug}`}>Start Practicing</Link>
-            </Button>
-          ) : (
-            <Button size="sm" disabled>
-              All solved
-            </Button>
-          )}
-          <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
-            Add Problems
-          </Button>
-        </div>
-        <ListOverflowMenu
-          onRename={() => setEditing("rename")}
-          onEditDescription={() => setEditing("description")}
-          onDelete={() => {
-            if (window.confirm(`Delete “${data.name}”? Problems themselves are not deleted.`)) {
-              destroy.mutate();
-            }
-          }}
-        />
+        {data.problem_count > 0 ? (
+          <Meter
+            value={data.percent}
+            tone={data.percent === 100 ? "bg-success" : "bg-accent"}
+            label={`${data.name} solved`}
+            className="h-1.5"
+          />
+        ) : null}
       </div>
 
       <SectionCard className="p-0">
@@ -142,7 +155,7 @@ export function ProblemListDetailView({ id }: { id: string }) {
           <>
             <div className="hidden md:block">
               <table className="w-full table-fixed text-left text-[13px]">
-                <thead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <thead className="bg-steel-950/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                   <tr>
                     <th className="w-[38%] px-4 py-2.5 font-medium">Problem</th>
                     <th className="w-[8.5rem] px-4 py-2.5 font-medium">Difficulty</th>
@@ -162,8 +175,8 @@ export function ProblemListDetailView({ id }: { id: string }) {
                       <td className="px-4 py-2.5">
                         <DifficultyBadge difficulty={item.difficulty} />
                       </td>
-                      <td className="px-4 py-2.5 text-muted-foreground">
-                        {item.tags.map((tag) => tag.name).join(" · ") || "—"}
+                      <td className="px-4 py-2.5">
+                        <TopicTags tags={item.tags} />
                       </td>
                       <td className="px-4 py-2.5">
                         <StatusPip status={item.status} />
