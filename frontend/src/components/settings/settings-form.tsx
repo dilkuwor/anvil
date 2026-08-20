@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { KeyRound, Loader2, PlugZap, Save, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -90,132 +91,132 @@ function ProfileEditor({ user }: { user: User }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader title="Settings" description="How you appear across InterviewAnvil." />
 
       <form
-        className="space-y-5"
         onSubmit={(event) => {
           event.preventDefault();
           save.mutate();
         }}
       >
-        <SectionCard>
-          <SectionTitle>Identity</SectionTitle>
-          <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-start">
-            <div className="flex shrink-0 flex-col items-center gap-3 sm:w-40">
-              <UserAvatar user={current} size="lg" version={avatarVersion} />
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                onChange={(event) => {
-                  onPickFile(event.target.files?.[0]);
-                  event.target.value = "";
-                }}
-              />
-              <div className="flex flex-wrap justify-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={upload.isPending}
-                  onClick={() => fileInput.current?.click()}
-                >
-                  {upload.isPending ? "Uploading…" : "Upload"}
-                </Button>
-                {current.has_avatar ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={removeAvatar.isPending}
-                    onClick={() => removeAvatar.mutate()}
+        <SectionCard className="p-0">
+          <PanelHeader title="Profile" body="Name, photo, and public profile details." />
+          <div className="space-y-8 px-5 py-5">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+              <div className="flex shrink-0 flex-col items-center gap-3 sm:w-48">
+                <UserAvatar user={current} size="lg" version={avatarVersion} />
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(event) => {
+                    onPickFile(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+                <div className="flex flex-nowrap items-center justify-center gap-1.5">
+                  <IconAction
+                    text="Upload"
+                    label="Upload photo"
+                    pending={upload.isPending}
+                    variant="secondary"
+                    onClick={() => fileInput.current?.click()}
                   >
-                    Remove
-                  </Button>
-                ) : null}
+                    <Upload className="h-3.5 w-3.5" />
+                  </IconAction>
+                  {current.has_avatar ? (
+                    <IconAction
+                      text="Delete"
+                      label="Remove photo"
+                      pending={removeAvatar.isPending}
+                      variant="ghost"
+                      onClick={() => removeAvatar.mutate()}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </IconAction>
+                  ) : null}
+                </div>
+                <p className="text-center text-[11px] leading-4 text-muted-foreground">JPEG, PNG, or WebP. 1 MB max.</p>
               </div>
-              <p className="text-center text-[11px] leading-4 text-muted-foreground">JPEG, PNG, or WebP. 1 MB max.</p>
+
+              <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
+                <Field label="Display name" hint="Shown in the header and on your profile." className="sm:col-span-2">
+                  <Input
+                    value={form.display_name}
+                    onChange={(event) => setForm({ ...form, display_name: event.target.value })}
+                    maxLength={80}
+                    placeholder={user.username}
+                  />
+                </Field>
+                <Field label="Username" hint="Unique handle. Letters, numbers, and underscores.">
+                  <Input
+                    value={form.username}
+                    onChange={(event) => setForm({ ...form, username: event.target.value })}
+                    minLength={3}
+                    maxLength={50}
+                    pattern="^[a-zA-Z0-9_]+$"
+                    required
+                  />
+                </Field>
+                <Field label="Email">
+                  <Input value={user.email} disabled />
+                </Field>
+                <Field label="Country" className="sm:col-span-2">
+                  <select
+                    className="select-field"
+                    value={form.country}
+                    onChange={(event) => setForm({ ...form, country: event.target.value })}
+                  >
+                    <option value="">Select a country</option>
+                    {COUNTRIES.map((country) => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
             </div>
 
-            <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
-              <Field label="Display name" hint="Shown in the header and on your profile." className="sm:col-span-2">
-                <Input
-                  value={form.display_name}
-                  onChange={(event) => setForm({ ...form, display_name: event.target.value })}
-                  maxLength={80}
-                  placeholder={user.username}
-                />
-              </Field>
-              <Field label="Username" hint="Unique handle. Letters, numbers, and underscores.">
-                <Input
-                  value={form.username}
-                  onChange={(event) => setForm({ ...form, username: event.target.value })}
-                  minLength={3}
-                  maxLength={50}
-                  pattern="^[a-zA-Z0-9_]+$"
-                  required
-                />
-              </Field>
-              <Field label="Email">
-                <Input value={user.email} disabled />
-              </Field>
-              <Field label="Country" className="sm:col-span-2">
-                <select
-                  className="select-field"
-                  value={form.country}
-                  onChange={(event) => setForm({ ...form, country: event.target.value })}
-                >
-                  <option value="">Select a country</option>
-                  {COUNTRIES.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+            <div className="border-t border-steel-800 pt-6">
+              <p className="text-[13px] font-medium">Profile links</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">Optional. Shown if you share your public profile.</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="LinkedIn" className="sm:col-span-2">
+                  <Input
+                    type="url"
+                    placeholder="https://www.linkedin.com/in/you"
+                    value={form.linkedin_url}
+                    onChange={(event) => setForm({ ...form, linkedin_url: event.target.value })}
+                  />
+                </Field>
+                <Field label="GitHub">
+                  <Input
+                    type="url"
+                    placeholder="https://github.com/you"
+                    value={form.github_url}
+                    onChange={(event) => setForm({ ...form, github_url: event.target.value })}
+                  />
+                </Field>
+                <Field label="Website">
+                  <Input
+                    type="url"
+                    placeholder="https://your-site.com"
+                    value={form.website_url}
+                    onChange={(event) => setForm({ ...form, website_url: event.target.value })}
+                  />
+                </Field>
+              </div>
             </div>
           </div>
+          <PanelFooter>
+            <IconAction text="Save" label="Save profile" pending={save.isPending} type="submit">
+              <Save className="h-3.5 w-3.5" />
+            </IconAction>
+          </PanelFooter>
         </SectionCard>
-
-        <SectionCard>
-          <SectionTitle>Links</SectionTitle>
-          <p className="mt-1 text-[13px] text-muted-foreground">Optional. Used if you share your InterviewAnvil profile.</p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="LinkedIn" className="sm:col-span-2">
-              <Input
-                type="url"
-                placeholder="https://www.linkedin.com/in/you"
-                value={form.linkedin_url}
-                onChange={(event) => setForm({ ...form, linkedin_url: event.target.value })}
-              />
-            </Field>
-            <Field label="GitHub">
-              <Input
-                type="url"
-                placeholder="https://github.com/you"
-                value={form.github_url}
-                onChange={(event) => setForm({ ...form, github_url: event.target.value })}
-              />
-            </Field>
-            <Field label="Website">
-              <Input
-                type="url"
-                placeholder="https://your-site.com"
-                value={form.website_url}
-                onChange={(event) => setForm({ ...form, website_url: event.target.value })}
-              />
-            </Field>
-          </div>
-        </SectionCard>
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={save.isPending}>
-            {save.isPending ? "Saving…" : "Save changes"}
-          </Button>
-        </div>
       </form>
 
       <LlmSettings user={current} />
@@ -275,96 +276,103 @@ function LlmSettings({ user }: { user: User }) {
   });
 
   return (
-    <SectionCard>
-      <SectionTitle>Interview AI</SectionTitle>
-      <p className="mt-1 text-[13px] text-muted-foreground">
-        Platform default uses the shared Ollama interviewer. Paid providers need your own API key. Each provider keeps
-        its own key, so switching models does not erase the others.
-      </p>
-      <form
-        className="mt-5 space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          save.mutate();
-        }}
-      >
-        <Field label="Provider">
-          <select className="select-field" value={provider} onChange={(event) => selectProvider(event.target.value)}>
-            <option value="">Platform default</option>
-            <option value="openai">OpenAI</option>
-            <option value="gemini">Google Gemini</option>
-            <option value="openrouter">OpenRouter</option>
-          </select>
-        </Field>
-        {paid ? (
-          <Field
-            label="API key"
-            hint={
-              savedKey
-                ? `Saved key ${savedKey.hint}. Leave blank to keep it.`
-                : "Required for this provider. The full key is never shown again."
-            }
-          >
-            <Input
-              type="password"
-              autoComplete="off"
-              placeholder={
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        save.mutate();
+      }}
+    >
+      <SectionCard className="p-0">
+        <PanelHeader
+          title="Interview AI"
+          body="Platform default uses the shared Ollama interviewer. Paid providers need your own API key. Each provider keeps its own key."
+        />
+        <div className="space-y-4 px-5 py-5">
+          <Field label="Provider">
+            <select className="select-field" value={provider} onChange={(event) => selectProvider(event.target.value)}>
+              <option value="">Platform default</option>
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
+          </Field>
+          {paid ? (
+            <Field
+              label="API key"
+              hint={
                 savedKey
-                  ? "••••••••••••"
-                  : provider === "gemini"
-                    ? "AIza…"
-                    : provider === "openrouter"
-                      ? "sk-or-…"
-                      : "sk-…"
+                  ? `Saved key ${savedKey.hint}. Leave blank to keep it.`
+                  : "Required for this provider. The full key is never shown again."
               }
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-            />
-          </Field>
-        ) : null}
-        {paid ? (
-          <Field
-            label="Model"
-            hint="Leave blank to use the server default. OpenRouter example: nvidia/nemotron-3.5-lightning:free"
-          >
-            <Input
-              value={model}
-              onChange={(event) => setModel(event.target.value)}
-              placeholder={
-                provider === "openrouter"
-                  ? "nvidia/nemotron-3.5-lightning:free"
-                  : provider === "gemini"
-                    ? "gemini-2.5-flash"
-                    : "gpt-4o-mini"
-              }
-            />
-          </Field>
-        ) : null}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button
-            type="button"
+            >
+              <Input
+                type="password"
+                autoComplete="off"
+                placeholder={
+                  savedKey
+                    ? "••••••••••••"
+                    : provider === "gemini"
+                      ? "AIza…"
+                      : provider === "openrouter"
+                        ? "sk-or-…"
+                        : "sk-…"
+                }
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+              />
+            </Field>
+          ) : null}
+          {paid ? (
+            <Field
+              label="Model"
+              hint="Leave blank to use the server default. OpenRouter example: nvidia/nemotron-3.5-lightning:free"
+            >
+              <Input
+                value={model}
+                onChange={(event) => setModel(event.target.value)}
+                placeholder={
+                  provider === "openrouter"
+                    ? "nvidia/nemotron-3.5-lightning:free"
+                    : provider === "gemini"
+                      ? "gemini-2.5-flash"
+                      : "gpt-4o-mini"
+                }
+              />
+            </Field>
+          ) : null}
+          <p className="text-[12px] text-muted-foreground">
+            Test uses the saved provider. Save first if you just changed these settings.
+          </p>
+          {probe.data ? <LlmProbeResult result={probe.data} /> : null}
+        </div>
+        <PanelFooter>
+          <IconAction
+            text="Test"
+            label="Test connection"
+            pending={probe.isPending}
             variant="secondary"
-            size="sm"
             disabled={probe.isPending || save.isPending}
             onClick={() => probe.mutate()}
           >
-            {probe.isPending ? "Testing…" : "Test connection"}
-          </Button>
-          <div className="flex flex-wrap gap-2">
-            {savedKey ? (
-              <Button type="button" variant="ghost" size="sm" disabled={clearKey.isPending} onClick={() => clearKey.mutate()}>
-                {clearKey.isPending ? "Removing…" : "Remove key"}
-              </Button>
-            ) : null}
-            <Button type="submit" disabled={save.isPending}>
-              {save.isPending ? "Saving…" : "Save AI settings"}
-            </Button>
-          </div>
-        </div>
-        <p className="text-[12px] text-muted-foreground">Tests the saved provider used in interviews. Save first if you just changed these settings.</p>
-        {probe.data ? <LlmProbeResult result={probe.data} /> : null}
-      </form>
-    </SectionCard>
+            <PlugZap className="h-3.5 w-3.5" />
+          </IconAction>
+          {savedKey ? (
+            <IconAction
+              text="Delete"
+              label="Remove key"
+              pending={clearKey.isPending}
+              variant="ghost"
+              onClick={() => clearKey.mutate()}
+            >
+              <KeyRound className="h-3.5 w-3.5" />
+            </IconAction>
+          ) : null}
+          <IconAction text="Save" label="Save AI settings" pending={save.isPending} type="submit">
+            <Save className="h-3.5 w-3.5" />
+          </IconAction>
+        </PanelFooter>
+      </SectionCard>
+    </form>
   );
 }
 
@@ -399,6 +407,58 @@ function LlmProbeResult({ result }: { result: LlmProbe }) {
         ))}
       </dl>
     </div>
+  );
+}
+
+function PanelHeader({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="border-b border-steel-800 px-5 py-4">
+      <SectionTitle>{title}</SectionTitle>
+      <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{body}</p>
+    </div>
+  );
+}
+
+function PanelFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-end gap-1.5 border-t border-steel-800 bg-steel-950/50 px-5 py-3">
+      {children}
+    </div>
+  );
+}
+
+function IconAction({
+  text,
+  label,
+  pending,
+  children,
+  type = "button",
+  variant,
+  disabled,
+  onClick,
+}: {
+  text: string;
+  label: string;
+  pending?: boolean;
+  children: React.ReactNode;
+  type?: "button" | "submit";
+  variant?: "default" | "secondary" | "ghost";
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Button
+      type={type}
+      size="sm"
+      variant={variant}
+      disabled={disabled || pending}
+      title={pending ? `${label}…` : label}
+      aria-label={pending ? `${label}…` : label}
+      onClick={onClick}
+    >
+      {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : children}
+      {text}
+    </Button>
   );
 }
 
