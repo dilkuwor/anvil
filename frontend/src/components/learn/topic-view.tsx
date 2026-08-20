@@ -10,7 +10,7 @@ import { Breadcrumbs, PageHeader } from "@/components/layout/page-header";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
-import { CardSkeleton, ErrorState } from "@/components/ui/state";
+import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import { actionLabel, type LearningLessonSummary, type LearningTopicDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
@@ -124,7 +124,7 @@ function DesignProblemsCatalog({ lessons }: { lessons: LearningLessonSummary[] }
   const catalog = useSystemDesignCatalog();
   const interview = useStartDesignInterview();
 
-  if (catalog.isLoading) return <CardSkeleton rows={6} />;
+  if (catalog.isLoading) return <PageLoader variant="inline" />;
   if (catalog.isError || !catalog.data?.length) {
     return (
       <SectionCard className="p-0">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Eye, Notebook, Pencil, Search, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Eye, FileText, Loader2, Maximize2, Minimize2, Notebook, Pencil, Search, Trash2, Undo2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -248,6 +248,7 @@ function NoteDetailOverlay({
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(NOTE_PAPER_KEY) === "1";
   });
+  const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
 
@@ -298,7 +299,7 @@ function NoteDetailOverlay({
     "flex w-full rounded-md border border-input-border bg-background px-3 py-2 text-sm text-input-foreground shadow-sm outline-none placeholder:text-input-placeholder";
 
   return (
-    <div className="fixed inset-0 z-[55] flex items-center justify-center p-3 sm:p-6">
+    <div className={cn("fixed inset-0 z-[55] flex items-center justify-center", expanded ? "p-0" : "p-3 sm:p-6")}>
       <button
         type="button"
         className="absolute inset-0 bg-background/70"
@@ -309,34 +310,52 @@ function NoteDetailOverlay({
         role="dialog"
         aria-modal="true"
         aria-labelledby="note-detail-title"
-        className="relative flex h-[min(90vh,44rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 shadow-2xl"
+        className={cn(
+          "relative flex w-full flex-col overflow-hidden border border-steel-800 bg-steel-900 shadow-2xl",
+          expanded ? "h-dvh max-w-none rounded-none" : "h-[min(90vh,44rem)] max-w-3xl rounded-2xl",
+        )}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-steel-800 px-5 py-4 sm:px-6">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              {sourceLabel(note.source_type)}
-              {note.kind === "AI_RESPONSE" ? " · Saved from Ask AI" : null}
-            </p>
-            <h2 id="note-detail-title" className="mt-1.5 text-lg font-semibold tracking-tight">
-              {editing ? "Edit note" : displayNoteTitle(note)}
-            </h2>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-              <Link href={note.source_href} className="hover:text-accent">
-                {note.source_title} →
-              </Link>
-              <span aria-hidden className="hidden h-3 w-px bg-steel-700 sm:block" />
-              <span>Updated {formatRelative(note.updated_at)}</span>
+        <header className="border-b border-steel-800">
+          <div className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
+            <div className="min-w-0 flex-1">
+              {note.kind === "AI_RESPONSE" ? null : (
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  {sourceLabel(note.source_type)}
+                </p>
+              )}
+              <h2
+                id="note-detail-title"
+                className={note.kind === "AI_RESPONSE" ? "text-lg font-semibold tracking-tight" : "mt-1.5 text-lg font-semibold tracking-tight"}
+              >
+                {editing ? "Edit note" : displayNoteTitle(note)}
+              </h2>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+                <Link href={note.source_href} className="hover:text-accent">
+                  {note.source_title} →
+                </Link>
+                <span aria-hidden className="hidden h-3 w-px bg-steel-700 sm:block" />
+                <span>Updated {formatRelative(note.updated_at)}</span>
+              </div>
             </div>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+              aria-label="Close note"
+              title="Close"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          <div className="flex h-11 w-full items-center gap-1 border-t border-steel-800 px-2 sm:px-3">
             {editing ? null : (
               <button
                 type="button"
                 aria-pressed={paper}
                 aria-label={paper ? "Switch to plain view" : "Switch to paper view"}
-                title={paper ? "Plain view" : "Paper view"}
+                title={paper ? "Paper view" : "Plain view"}
                 className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] text-muted-foreground hover:bg-background hover:text-foreground",
+                  "inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground",
                   paper && "bg-background text-foreground",
                 )}
                 onClick={() => {
@@ -347,43 +366,64 @@ function NoteDetailOverlay({
                   });
                 }}
               >
-                <Notebook className="h-4 w-4" aria-hidden />
-                Paper
+                {paper ? <Notebook className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
               </button>
             )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-coral"
-              disabled={remove.isPending || save.isPending}
-              onClick={() => remove.mutate()}
-            >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
-              Delete
-            </Button>
             {editing ? (
               <>
-                <Button type="button" variant="secondary" size="sm" onClick={cancelEdit}>
-                  Cancel
-                </Button>
-                <Button type="submit" form="note-edit-form" size="sm" disabled={save.isPending || !body.trim()}>
-                  {save.isPending ? "Saving…" : "Save"}
-                </Button>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+                  aria-label="Cancel editing"
+                  title="Cancel"
+                  onClick={cancelEdit}
+                >
+                  <Undo2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="submit"
+                  form="note-edit-form"
+                  disabled={save.isPending || !body.trim()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-50"
+                  aria-label={save.isPending ? "Saving" : "Save"}
+                  title="Save"
+                >
+                  {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                </button>
               </>
             ) : (
-              <Button type="button" size="sm" onClick={() => setEditing(true)}>
-                <Pencil className="h-3.5 w-3.5" aria-hidden />
-                Edit
-              </Button>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+                aria-label="Edit note"
+                title="Edit"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
             )}
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
-              aria-label="Close note"
-              onClick={onClose}
+              aria-pressed={expanded}
+              aria-label={expanded ? "Exit full width" : "Maximize note"}
+              title={expanded ? "Minimize" : "Maximize"}
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground",
+                expanded && "bg-background text-foreground",
+              )}
+              onClick={() => setExpanded((value) => !value)}
             >
-              <X className="h-4 w-4" />
+              {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-coral disabled:opacity-50"
+              aria-label="Delete note"
+              title="Delete"
+              disabled={remove.isPending || save.isPending}
+              onClick={() => remove.mutate()}
+            >
+              {remove.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             </button>
           </div>
         </header>

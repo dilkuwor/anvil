@@ -12,7 +12,7 @@ import { ListOverflowMenu } from "@/components/problems/list-overflow-menu";
 import { ProblemsTabs } from "@/components/problems/problems-tabs";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section";
-import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/state";
+import { CardSkeleton, EmptyState, ErrorState, PageLoader } from "@/components/ui/state";
 import { api, ApiError } from "@/lib/api";
 import { formatListUpdated, listRoadmapHref, type ProblemListCard } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
@@ -87,7 +87,7 @@ export function ProblemListsIndex() {
           </Button>
         </SectionCard>
       ) : lists.isLoading ? (
-        <CardSkeleton rows={4} />
+        <PageLoader variant="inline" />
       ) : lists.isError ? (
         <ErrorState message="Unable to load lists." onRetry={() => lists.refetch()} />
       ) : lists.data?.length === 0 ? (

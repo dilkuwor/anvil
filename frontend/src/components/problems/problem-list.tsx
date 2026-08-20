@@ -18,7 +18,7 @@ import { TopicTags } from "@/components/problems/topic-tags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionCard } from "@/components/ui/section";
-import { CardSkeleton, ErrorState } from "@/components/ui/state";
+import { ErrorState, PageLoader } from "@/components/ui/state";
 import { api, ApiError, type ProblemListItem, type ProblemListResponse, type ProgressSummary, type Tag } from "@/lib/api";
 import type { ProblemListCard } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
@@ -194,7 +194,7 @@ export function ProblemList() {
 
         {problems.isLoading ? (
           <div className="p-4">
-            <CardSkeleton rows={6} />
+            <PageLoader variant="inline" />
           </div>
         ) : null}
         {problems.isError ? (

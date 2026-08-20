@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RoadmapCanvas } from "@/components/roadmap/roadmap-canvas";
 import { RoadmapPanel } from "@/components/roadmap/roadmap-panel";
 import { Button } from "@/components/ui/button";
-import { CardSkeleton, ErrorState } from "@/components/ui/state";
+import { ErrorState, PageLoader } from "@/components/ui/state";
 import { api, type ProblemListResponse } from "@/lib/api";
 import type { ProblemListDetail } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
@@ -53,9 +53,7 @@ export function RoadmapView() {
   if (loading) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-xl">
-          <CardSkeleton rows={6} />
-        </div>
+        <PageLoader variant="inline" />
       </div>
     );
   }

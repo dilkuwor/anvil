@@ -9,9 +9,9 @@ export function PageLoader({
   return (
     <div
       className={cn(
-        "flex items-center justify-center",
-        variant === "screen" && "min-h-screen",
-        variant === "page" && "min-h-[16rem]",
+        "flex w-full items-center justify-center",
+        variant === "screen" && "min-h-dvh",
+        variant === "page" && "min-h-[calc(100dvh-8rem)] flex-1",
         variant === "inline" && "py-10",
       )}
       aria-busy="true"

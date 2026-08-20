@@ -114,8 +114,7 @@ export function NotesDrawer({
           </button>
         </header>
 
-        <div className="flex items-center justify-between gap-2 border-b border-steel-800 px-4 py-2.5">
-          <p className="text-[12px] text-muted-foreground">{sourceLabel(context.sourceType)}</p>
+        <div className="flex items-center justify-end gap-2 border-b border-steel-800 px-4 py-2.5">
           <div className="flex items-center gap-2">
             {showAllLink ? (
               <Link href="/notes" className="text-[12px] text-muted-foreground hover:text-accent">
@@ -258,12 +257,12 @@ export function NoteCard({ note, showSource = false }: { note: Note; showSource?
             <Link href={note.source_href} className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground hover:text-accent">
               {sourceLabel(note.source_type)} · {note.source_title}
             </Link>
-          ) : (
-            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              {note.kind === "AI_RESPONSE" ? "Ask AI" : "Note"}
-            </p>
+          ) : note.kind === "AI_RESPONSE" ? null : (
+            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Note</p>
           )}
-          <h3 className="mt-1 truncate text-sm font-medium">{displayNoteTitle(note)}</h3>
+          <h3 className={note.kind === "AI_RESPONSE" && !showSource ? "truncate text-sm font-medium" : "mt-1 truncate text-sm font-medium"}>
+            {note.kind === "AI_RESPONSE" && !showSource ? "Ask AI" : displayNoteTitle(note)}
+          </h3>
         </div>
         <button
           type="button"
