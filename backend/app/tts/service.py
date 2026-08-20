@@ -4,8 +4,29 @@ import httpx
 
 from app.common.config import get_settings
 from app.common.errors import AppError, ServiceUnavailableError
+from app.common.logging import get_logger
 
 MAX_TTS_CHARS = 6000
+
+logger = get_logger(__name__)
+
+
+def _response_detail(response: httpx.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        return (response.text or "").strip()[:300]
+    if isinstance(body, dict):
+        detail = body.get("detail") or body.get("error") or body.get("message")
+        if isinstance(detail, str):
+            return detail.strip()[:300]
+    return (response.text or "").strip()[:300]
+
+
+def _unknown_voice(response: httpx.Response) -> bool:
+    if response.status_code < 400:
+        return False
+    return "unknown voice" in _response_detail(response).lower()
 
 
 def synthesize(text: str) -> tuple[bytes, str]:
@@ -24,10 +45,14 @@ def synthesize(text: str) -> tuple[bytes, str]:
     try:
         with httpx.Client(timeout=180.0) as client:
             response = client.post(url, json=payload)
+            if _unknown_voice(response) and "voice" in payload:
+                logger.warning("tts_unknown_voice", voice=payload["voice"], detail=_response_detail(response))
+                response = client.post(url, json={"text": cleaned})
     except httpx.HTTPError as exc:
         raise ServiceUnavailableError("The reader is unavailable right now.") from exc
 
     if response.status_code >= 400:
+        logger.warning("tts_speak_failed", status=response.status_code, detail=_response_detail(response))
         raise ServiceUnavailableError("The reader could not generate audio.")
     audio = response.content
     if not audio:

@@ -146,7 +146,7 @@ def test_learn_seed_is_idempotent(db):
     )
     assert first == second
     assert first[0] == 7
-    assert first[2] == 183
+    assert first[2] == 184
 
 
 def test_system_design_problems_topic(auth_client, db):
@@ -163,6 +163,16 @@ def test_system_design_problems_topic(auth_client, db):
     assert "ASK → SIZE → SHAPE → STRESS → SELL" in template["content"]
     assert template["takeaways"]
     assert template["interview_questions"]
+
+    capacity = auth_client.get("/api/v1/learn/topics/capacity-estimation").json()
+    assert capacity["lesson_count"] == 2
+    capacity_titles = {lesson["title"] for lesson in capacity["lessons"]}
+    assert "Capacity Estimation" in capacity_titles
+    assert "Back-of-the-Envelope Estimation" in capacity_titles
+    envelope = auth_client.get("/api/v1/learn/lessons/back-of-the-envelope-estimation").json()
+    assert envelope["topic_slug"] == "capacity-estimation"
+    assert "USS-B" in envelope["content"]
+    assert "100M req/day ≈ 1K QPS" in envelope["content"]
 
     topic = auth_client.get("/api/v1/learn/topics/sd-design-problems").json()
     assert topic["category_slug"] == "system-design"

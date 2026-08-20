@@ -6,7 +6,9 @@ import {
   ClipboardList,
   Code2,
   Flag,
+  Gauge,
   GraduationCap,
+  HardDrive,
   Lightbulb,
   ListChecks,
   ListOrdered,
@@ -19,9 +21,14 @@ import {
   Search,
   ShieldAlert,
   Sparkles,
+  Timer,
   TriangleAlert,
+  Users,
+  Wifi,
   Workflow,
 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 function escapeHtml(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -50,6 +57,16 @@ function HeadingIcon({ title }: { title: string }) {
       return <GraduationCap {...props} />;
     case "formula":
       return <Sparkles {...props} />;
+    case "qps":
+      return <Gauge {...props} />;
+    case "latency":
+      return <Timer {...props} />;
+    case "storage":
+      return <HardDrive {...props} />;
+    case "users":
+      return <Users {...props} />;
+    case "bandwidth":
+      return <Wifi {...props} />;
     case "flow":
       return <ListOrdered {...props} />;
     case "ask":
@@ -88,17 +105,24 @@ function headingKey(title: string): string {
   if (t === "tradeoffs" || t.startsWith("trade-off")) return "tradeoffs";
   if (t === "common mistakes") return "mistakes";
   if (t === "interview tip") return "tip";
-  if (t.includes("memory formula") || t.includes("one-line")) return "formula";
+  if (t.includes("study priority") || t.includes("30-second") || t.includes("review before")) return "checklist";
+  if (t.includes("interview rule") || t.includes("what to say")) return "ask";
+  if (t.includes("memory formula") || t.includes("one-line") || t.includes("golden number") || t.includes("mental math") || t.includes("powers of")) return "formula";
   if (t.includes("interview flow")) return "flow";
+  if (t.includes("qps")) return "qps";
+  if (t.includes("latency")) return "latency";
   if (t.startsWith("clarify")) return "ask";
   if (t.includes("non-functional") || t.includes("functional")) return "requirements";
+  if (t.includes("users estimation") || t.startsWith("users")) return "users";
+  if (t.includes("storage")) return "storage";
+  if (t.includes("bandwidth") || t.includes("network")) return "bandwidth";
   if (t.includes("estimation") || t.includes("envelope")) return "size";
   if (t.startsWith("api") || t.includes("data model")) return "shape";
   if (t.includes("architecture")) return "architecture";
   if (t.includes("deep dive")) return "dive";
   if (t.includes("bottleneck") || t.includes("failure")) return "stress";
   if (t.includes("summary")) return "sell";
-  if (t.includes("memory map") || t.includes("visual memory")) return "map";
+  if (t.includes("memory map") || t.includes("visual memory") || t.includes("memory card")) return "map";
   if (t.includes("checklist")) return "checklist";
   if (t.includes("practice")) return "practice";
   if (t.includes("golden")) return "golden";
@@ -157,6 +181,28 @@ function isTableBlock(block: string): boolean {
   return /^[\s:|-]+$/.test(lines[1].replaceAll("|", ""));
 }
 
+function isFormulaBlock(block: string): boolean {
+  const line = block.trim();
+  if (!line || line.includes("\n") || line.length > 140) return false;
+  if (line.startsWith("#") || line.startsWith(">") || line.startsWith("|") || line.startsWith("- ") || /^\d+\.\s/.test(line)) {
+    return false;
+  }
+  if (/^(example|tip|memory cue|useful phrase|interview rule|final tip)\b/i.test(line)) return false;
+  return /^(?:[^:=\n]{1,72}?)\s*(?:=|≈)\s*\S/.test(line);
+}
+
+function isExampleBlock(block: string): boolean {
+  const line = block.trim();
+  return !line.includes("\n") && /^example:/i.test(line);
+}
+
+function isStatList(block: string): boolean {
+  if (!isListBlock(block)) return false;
+  const items = block.split("\n").map((line) => line.slice(2).trim());
+  if (items.length < 4) return false;
+  return items.every((item) => item.length <= 88 && /≈|→|×|÷/.test(item));
+}
+
 function isSpecialBlock(block: string): boolean {
   return (
     isHeadingBlock(block) ||
@@ -164,8 +210,36 @@ function isSpecialBlock(block: string): boolean {
     isOrderedListBlock(block) ||
     isQuoteBlock(block) ||
     isArrowFlow(block) ||
-    isTableBlock(block)
+    isTableBlock(block) ||
+    isFormulaBlock(block) ||
+    isExampleBlock(block)
   );
+}
+
+function bucketTone(text: string): string | null {
+  const t = text.toLowerCase();
+  if (t.includes("instant") || t.includes("very fast") || t.includes("carrier")) return "teal";
+  if (t.includes("fast enough") || t.includes("common sla")) return "success";
+  if (/\bfast\b/.test(t)) return "success";
+  if (t.includes("expensive") || t.includes("slow")) return "coral";
+  if (t.includes("high availability")) return "accent";
+  if (t.includes("basic")) return "muted";
+  return null;
+}
+
+function toneClass(tone: string): string {
+  switch (tone) {
+    case "teal":
+      return "bg-teal-dim text-teal";
+    case "success":
+      return "bg-success/15 text-success";
+    case "coral":
+      return "bg-coral-dim text-coral";
+    case "accent":
+      return "bg-accent/15 text-accent";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
 }
 
 function splitTableRow(line: string): string[] {
@@ -205,16 +279,69 @@ function ArrowFlow({ parts }: { parts: string[] }) {
 function QuoteCallout({ lines }: { lines: string[] }) {
   const body = lines.map((line) => line.slice(2)).join(" ");
   const lower = body.toLowerCase();
-  const iconProps = { className: "mt-0.5 h-4 w-4 shrink-0 text-accent", strokeWidth: 2.25, "aria-hidden": true as const };
-  const Icon = lower.startsWith("useful phrase")
-    ? MessageSquare
-    : lower.startsWith("memory cue")
-      ? Sparkles
-      : Lightbulb;
+  const isPhrase =
+    lower.startsWith("useful phrase") ||
+    lower.startsWith("say this") ||
+    lower.startsWith("i’ll make") ||
+    lower.startsWith("i'll make") ||
+    body.startsWith("“") ||
+    body.startsWith('"');
+  const isMemory = lower.startsWith("memory cue") || lower.startsWith("memory aid") || lower.startsWith("memory pattern");
+  const isRule = lower.startsWith("do not") || lower.startsWith("interview rule") || lower.startsWith("final tip");
+  const Icon = isPhrase ? MessageSquare : isMemory ? Sparkles : isRule ? TriangleAlert : Lightbulb;
+  const wrap = isPhrase
+    ? "border-teal/25 bg-teal-dim/70"
+    : isRule
+      ? "border-coral/25 bg-coral-dim/70"
+      : "border-accent/15 bg-accent/[0.05]";
+  const iconColor = isPhrase ? "text-teal" : isRule ? "text-coral" : "text-accent";
+  const iconProps = { className: cn("mt-0.5 h-4 w-4 shrink-0", iconColor), strokeWidth: 2.25, "aria-hidden": true as const };
   return (
-    <div className="flex gap-2.5 rounded-xl border border-accent/15 bg-accent/[0.05] px-3.5 py-3">
+    <div className={cn("flex gap-2.5 rounded-xl border px-3.5 py-3", wrap)}>
       <Icon {...iconProps} />
       <p className="text-[13px] leading-6 text-foreground/90" dangerouslySetInnerHTML={{ __html: inline(body) }} />
+    </div>
+  );
+}
+
+function FormulaCard({ text }: { text: string }) {
+  const [left, right] = text.split(/\s*(?:=|≈)\s*/, 2);
+  const operator = text.includes("=") && text.indexOf("=") <= (text.indexOf("≈") === -1 ? 999 : text.indexOf("≈")) ? "=" : "≈";
+  return (
+    <div className="rounded-xl border border-accent/20 bg-steel-950 px-3.5 py-3">
+      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-accent">Formula</p>
+      <p className="mt-1.5 font-mono text-[13px] leading-6 text-foreground">
+        <span className="font-semibold text-accent" dangerouslySetInnerHTML={{ __html: inline(left) }} />
+        <span className="px-1.5 text-muted-foreground">{operator}</span>
+        <span dangerouslySetInnerHTML={{ __html: inline(right || "") }} />
+      </p>
+    </div>
+  );
+}
+
+function ExampleCard({ text }: { text: string }) {
+  const body = text.replace(/^example:\s*/i, "");
+  return (
+    <div className="flex gap-2.5 rounded-xl border border-teal/20 bg-teal-dim/50 px-3.5 py-3">
+      <Code2 className="mt-0.5 h-4 w-4 shrink-0 text-teal" strokeWidth={2.25} aria-hidden />
+      <p className="text-[13px] leading-6 text-foreground/90">
+        <span className="mr-1.5 font-semibold text-teal">Example</span>
+        <span dangerouslySetInnerHTML={{ __html: inline(body) }} />
+      </p>
+    </div>
+  );
+}
+
+function StatGrid({ items }: { items: string[] }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {items.map((item) => (
+        <div
+          key={item}
+          className="rounded-xl border border-accent/20 bg-accent/[0.06] px-3 py-2 text-[13px] leading-6 text-foreground"
+          dangerouslySetInnerHTML={{ __html: inline(item) }}
+        />
+      ))}
     </div>
   );
 }
@@ -223,26 +350,47 @@ function MarkdownTable({ block }: { block: string }) {
   const lines = block.split("\n").map((line) => line.trim());
   const headers = splitTableRow(lines[0]);
   const rows = lines.slice(2).map(splitTableRow);
+  const pillHeaders = headers.map((header) => /bucket|memory tip|latency/i.test(header));
   return (
-    <div className="overflow-x-auto rounded-xl border border-steel-800">
+    <div className="overflow-x-auto rounded-xl border border-accent/20">
       <table className="w-full min-w-[28rem] border-collapse text-left text-[13px] leading-6">
         <thead>
-          <tr className="border-b border-steel-800 bg-steel-950/60">
+          <tr className="border-b border-accent/15 bg-accent/[0.12]">
             {headers.map((header) => (
-              <th key={header} className="px-3 py-2 font-semibold" dangerouslySetInnerHTML={{ __html: inline(header) }} />
+              <th
+                key={header}
+                className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent"
+                dangerouslySetInnerHTML={{ __html: inline(header) }}
+              />
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.join("|")} className="border-b border-steel-800 last:border-b-0">
-              {row.map((cell, index) => (
-                <td
-                  key={`${cell}-${index}`}
-                  className="px-3 py-2 text-foreground/90"
-                  dangerouslySetInnerHTML={{ __html: inline(cell) }}
-                />
-              ))}
+          {rows.map((row, rowIndex) => (
+            <tr
+              key={row.join("|")}
+              className={cn("border-b border-steel-800 last:border-b-0", rowIndex % 2 === 1 && "bg-steel-950/55")}
+            >
+              {row.map((cell, index) => {
+                const tone = pillHeaders[index] ? bucketTone(cell) : null;
+                if (tone) {
+                  return (
+                    <td key={`${cell}-${index}`} className="px-3 py-2">
+                      <span
+                        className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide", toneClass(tone))}
+                        dangerouslySetInnerHTML={{ __html: inline(cell) }}
+                      />
+                    </td>
+                  );
+                }
+                return (
+                  <td
+                    key={`${cell}-${index}`}
+                    className={cn("px-3 py-2 text-foreground/90", index === 0 && "font-semibold text-foreground")}
+                    dangerouslySetInnerHTML={{ __html: inline(cell) }}
+                  />
+                );
+              })}
             </tr>
           ))}
         </tbody>
@@ -294,6 +442,12 @@ export function LessonMarkdown({
         if (isTableBlock(block)) {
           return <MarkdownTable key={index} block={block} />;
         }
+        if (isFormulaBlock(block)) {
+          return <FormulaCard key={index} text={block.trim()} />;
+        }
+        if (isExampleBlock(block)) {
+          return <ExampleCard key={index} text={block.trim()} />;
+        }
         if (isQuoteBlock(block)) {
           return <QuoteCallout key={index} lines={lines} />;
         }
@@ -317,6 +471,9 @@ export function LessonMarkdown({
           );
         }
         if (isListBlock(block)) {
+          if (isStatList(block)) {
+            return <StatGrid key={index} items={lines.map((line) => line.slice(2).trim())} />;
+          }
           return (
             <ul key={index} className="list-disc space-y-1 pl-5 text-foreground/90">
               {lines.map((line) => (

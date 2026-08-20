@@ -1122,6 +1122,245 @@ Do not memorize solutions. Memorize the questions you ask yourself.
     )
 
 
+def _back_of_envelope_lesson() -> dict:
+    return {
+        "slug": "back-of-the-envelope-estimation",
+        "title": "Back-of-the-Envelope Estimation",
+        "short": "Tricks, formulas, and memory aids for QPS, storage, bandwidth, and latency.",
+        "minutes": 16,
+        "content": """# Back-of-the-Envelope Estimation
+
+A fast study filter for system design interviews. Memorize the first section; understand the second. Structured reasoning beats exact arithmetic.
+
+## Study Priority
+
+| A. Must memorize | B. Know conceptually |
+| --- | --- |
+| Time, QPS, and storage anchors | Exact L1/L2 cache latency |
+| Peak ≈ 3× average | Powers of 2 (2¹⁰, 2²⁰, 2³⁰) |
+| 1 Gbps ≈ 125 MB/s | Common object-size ranges |
+| Replication ×3 | Read/write ratios and availability nines |
+| Latency hierarchy + USS-B sequence | Pareto 80/20 cache heuristic |
+
+> Interview rule: Do not try to recall every number. State assumptions, calculate the order of magnitude, keep units visible, and explain how the result affects architecture.
+
+## 1. The CORE Framework: USS-B
+
+Users → Storage → Speed → Bandwidth
+
+| U — Users | S — Storage | S — Speed | B — Bandwidth |
+| --- | --- | --- | --- |
+| How many people use the system? | How much data must be stored? | QPS, latency, throughput | How much data moves on the network? |
+
+> Memory cue: USS-B = Users, Storage, Speed, Bandwidth. Estimate in that order.
+
+## 2. Golden Numbers to Memorize
+
+| Anchor | Meaning / use |
+| --- | --- |
+| 10⁶ | 1 million |
+| 10⁹ | 1 billion |
+| 1 day ≈ 10⁵ s | Use 100,000 instead of 86,400 |
+| 1 year ≈ 3×10⁷ s | Use 30 million |
+| 100M req/day ≈ 1K QPS | Critical QPS anchor |
+| Peak QPS ≈ 3× average | Default unless the traffic pattern says otherwise |
+| 1M × 1 KB ≈ 1 GB | Storage / memory anchor |
+| 1M × 1 MB ≈ 1 TB | Storage anchor |
+| 1B × 1 KB ≈ 1 TB | Storage anchor |
+| 1 Gbps ≈ 125 MB/s | Network throughput (÷ 8 for bytes) |
+| Replication ≈ 3× | Always multiply storage for durability |
+
+## 3. The Most Important Formula: QPS
+
+Average QPS = Requests per day ÷ 100,000
+
+Example: 100 million requests/day ÷ 100,000 ≈ 1,000 QPS
+
+- **1M**/day → ~10 QPS
+- **10M**/day → ~100 QPS
+- **100M**/day → ~1K QPS
+- **1B**/day → ~10K QPS
+- **10B**/day → ~100K QPS
+
+Peak QPS = Average QPS × 3
+
+> Memory cue: drop two zeros from millions-of-requests-per-day to get QPS (100M → 1K).
+
+## 4. Latency Numbers Every Engineer Must Know
+
+CPU (ns) → RAM (100 ns) → SSD (μs) → Disk (ms) → Cross-region (100+ ms)
+
+| Operation | Latency | Mental bucket |
+| --- | --- | --- |
+| L1 cache reference | ~0.5 ns | Instant (CPU) |
+| L2 cache reference | ~7 ns | Instant |
+| Main memory (RAM) | ~100 ns | Very fast |
+| SSD random read (4 KB) | ~100–150 μs | Fast |
+| HDD disk seek | ~10 ms | Slow |
+| Same-datacenter RTT | ~0.5 ms | Fast enough |
+| Cross-region RTT (US–EU) | ~80–150 ms | Expensive |
+
+Key ratios: RAM ≫ SSD (~1,000×) ≫ HDD (~100×). Same-DC ≫ cross-region (~200–300×). These gaps are why you cache, shard, and put replicas in other regions.
+
+## 5. Powers of 2 (Storage Sizes)
+
+> Memory aid: 10 → thousand (KB), 20 → million (MB), 30 → billion (GB), 40 → trillion (TB).
+
+| Power | Exact | Approx | Name |
+| --- | --- | --- | --- |
+| 2¹⁰ | 1,024 | ~10³ | 1 KB |
+| 2²⁰ | 1,048,576 | ~10⁶ | 1 MB |
+| 2³⁰ | ~1.07B | ~10⁹ | 1 GB |
+| 2⁴⁰ | ~1.1T | ~10¹² | 1 TB |
+| 2⁵⁰ | ~1.1Q | ~10¹⁵ | 1 PB |
+
+## 6. Users Estimation
+
+MAU → DAU → Concurrent Users
+
+- DAU ≈ 10–20% of MAU for general consumer products (higher for social / messaging)
+- Concurrent ≈ DAU × (avg session minutes / 1,440) — e.g. 30 min session → ~2% of DAU online
+- Always state the assumption out loud. Reasoning beats an exact percentage
+
+## 7. Storage Estimation
+
+Storage = items × size per item × replication × overhead
+
+Example: 100M photos/day × 1 MB = 100 TB/day → with 3× replication ≈ 300 TB/day
+
+- Tweet / short message ≈ 200–500 bytes
+- Profile / small JSON ≈ 1–10 KB
+- Photo (compressed) ≈ 0.5–5 MB
+- 1-min 1080p video ≈ 50–150 MB
+
+Always project to 1 year and 5 years of retention, and add 20–30% overhead on top of replication.
+
+## 8. Bandwidth Estimation
+
+Bandwidth = QPS × data per request
+
+Example: 10K QPS × 100 KB/request ≈ 1 GB/s → immediately suggests CDN, object storage, or streaming
+
+1 Gbps ≈ 125 MB/s
+
+If the number exceeds a few Gbps, you need multiple NICs, sharding, or a CDN.
+
+## 9. Cache Estimation
+
+Cache size = cached objects × size (Pareto: top 20% of data often serves 80% of traffic)
+
+Example: 10M profiles × 10 KB = 100 GB → practical size 120–150 GB (overhead + growth)
+
+## 10. Read vs Write Ratio
+
+| System type | Typical starting assumption |
+| --- | --- |
+| Social feed / timeline | Very read-heavy, e.g. **100:1** or higher |
+| Typical web / e-commerce | Read-heavy, e.g. **10:1 – 50:1** |
+| Chat / messaging | Closer to balanced (depends on fan-out) |
+| Write-heavy analytics | Often write-heavy or near **1:1** |
+
+These are starting points only. Adjust and say the assumption out loud.
+
+## 11. Universal Estimation Sequence
+
+Users → Active Users → Actions/User → Requests/Day → QPS → Peak QPS → Storage
+
+1. **100M users**
+2. **10% DAU** → 10M daily active
+3. **10 actions / user / day** → 100M requests/day
+4. **100M ÷ 100K s/day** → ~1K average QPS
+5. **Peak = 3×** → ~3K peak QPS
+6. Then storage and bandwidth from item size, retention, and payload
+
+## 12. Interview Example: Video Platform
+
+1. Assume **1B** total users
+2. **10% DAU** → 100M daily active
+3. **10 views / active user / day** → 1B views/day
+4. **1B ÷ 100K s/day** → ~10K average QPS
+5. **Peak 3×** → ~30K peak QPS
+6. Then bandwidth (views × bitrate) and storage (uploads × size × retention × resolutions × replication)
+
+## 13. Mental Math Tricks
+
+- Round aggressively: 86,400 → 100,000; 365 → 400 (or 300)
+- Powers of ten: KB=10³, MB=10⁶, GB=10⁹, TB=10¹², PB=10¹⁵
+- Keep units visible throughout the calculation
+- Order-of-magnitude only — within 2–5× is excellent
+- State assumptions first so the interviewer can course-correct
+- Sanity-check: does the final number feel reasonable for the product?
+
+## 14. Availability (The 9s)
+
+| Availability | Downtime / year | Memory tip |
+| --- | --- | --- |
+| 99% (2 nines) | ~3.65 days | Basic |
+| 99.9% (3 nines) | ~8.76 hours | Common SLA |
+| 99.99% (4 nines) | ~52.6 minutes | High availability |
+| 99.999% (5 nines) | ~5.26 minutes | Carrier-grade |
+
+## 15. The BIG Memory Card
+
+| Time | QPS anchors |
+| --- | --- |
+| 1 day ≈ 100K seconds | 100M req/day ≈ 1K QPS |
+| 1 year ≈ 30M seconds | 1B req/day ≈ 10K QPS |
+| Peak ≈ 3× average QPS | 10B req/day ≈ 100K QPS |
+
+| Storage anchors | Latency hierarchy |
+| --- | --- |
+| 1M × 1 KB ≈ 1 GB | RAM ~100 ns |
+| 1M × 1 MB ≈ 1 TB | SSD ~100 μs (1,000× slower) |
+| 1B × 1 KB ≈ 1 TB | HDD ~10 ms · cross-region ~100 ms |
+| Always ×3 replication | Same-DC RTT ~0.5 ms |
+
+| Network | Quick rules |
+| --- | --- |
+| 1 Gbps ≈ 125 MB/s | Round to powers of 10 |
+| Sequence: Users → Actions → QPS | Pareto 20/80 for cache |
+| Then storage / bandwidth | State assumptions first |
+
+## 16. What to Say in the Interview
+
+> I'll make a few reasonable assumptions for a back-of-the-envelope estimate. I'll estimate active users, actions per user, requests per day, average and peak QPS, then storage and bandwidth. These numbers are approximate and intended only to determine the order of magnitude so we can choose the right architecture.
+
+## 17. Practice Systems
+
+- **URL shortener** — classic storage + QPS
+- **Twitter / X** — read-heavy feed + fan-out
+- **YouTube / video** — bandwidth + multi-resolution storage
+- **WhatsApp / messaging** — concurrent connections + fan-out
+- **Google Drive / Dropbox** — storage growth + sync bandwidth
+- **Instagram / photos** — write + read amplification
+
+> Final tip: The interviewer cares more about structured thinking and clear assumptions than hitting the exact number. Practice the sequence until it is automatic.
+
+## 18. 30-Second Review Before an Interview
+
+- Time: 1 day ≈ 100K seconds · 1 year ≈ 30M seconds
+- Traffic: 100M/day ≈ 1K QPS · 1B/day ≈ 10K QPS · peak ≈ 3×
+- Storage: 1M×1KB ≈ 1GB · 1M×1MB ≈ 1TB · include replication
+- Network: 1 Gbps ≈ 125 MB/s
+- Flow: Users → Actions → Requests → QPS → Peak → Storage/Bandwidth
+- Always state assumptions and aim for order-of-magnitude accuracy
+""",
+        "takeaways": [
+            "USS-B: Users, Storage, Speed, Bandwidth — estimate in that order.",
+            "100M requests/day ≈ 1K QPS. Peak is ~3× average. 1 day ≈ 100K seconds.",
+            "Storage: 1M × 1 KB ≈ 1 GB. Always multiply by ~3 for replication.",
+            "Order-of-magnitude plus stated assumptions beats fake precision.",
+        ],
+        "questions": [
+            "How do you estimate QPS from daily requests?",
+            "Why multiply storage by about 3×?",
+            "Which latency gaps justify a cache vs a multi-region replica?",
+            "Walk through back-of-the-envelope numbers for a video platform.",
+        ],
+        "problems": [],
+    }
+
+
 def _system_design_topics() -> list[dict]:
     rows = [
         ("system-design-fundamentals", "System Design Fundamentals", "A repeatable 45-minute structure: requirements, API, data, scale, deepen.", "Start every design with users, constraints, and a single request path before you draw boxes.", "Interviewers grade structure more than whether you picked Kafka.", "Clarify functional + non-functional requirements. Estimate QPS and storage. Sketch API and a single-box design. Then split bottlenecks: load balancer, app, cache, DB, queue.", "Design URL shortener: write, read, 100:1 read ratio. Start with one app + SQL, then add cache and a key generator.", "Any 45-minute design", "Depth in one area beats a crowded diagram.", "Jumping to microservices first", "Say the numbers out loud. They justify every later box.", ["Requirements, then a simple design, then scale.", "Numbers justify architecture."], ["How do you start a system design interview?", "What do you estimate first?"]),
@@ -1147,25 +1386,27 @@ def _system_design_topics() -> list[dict]:
     out = []
     for i, row in enumerate(rows):
         slug, title, desc, why, how, example, uses, tradeoffs, mistakes, tip, takeaways, questions = _twelve(row)
-        out.append(
-            _one(
-                "system-design",
-                slug,
-                title,
-                desc,
-                i + 2,
-                concept=desc,
-                why=why,
-                how=how,
-                example=example,
-                uses=uses,
-                tradeoffs=tradeoffs,
-                mistakes=mistakes,
-                tip=tip,
-                takeaways=takeaways,
-                questions=questions,
-            )
+        topic = _one(
+            "system-design",
+            slug,
+            title,
+            desc,
+            i + 2,
+            concept=desc,
+            why=why,
+            how=how,
+            example=example,
+            uses=uses,
+            tradeoffs=tradeoffs,
+            mistakes=mistakes,
+            tip=tip,
+            takeaways=takeaways,
+            questions=questions,
         )
+        if slug == "capacity-estimation":
+            topic["lessons"].append(_back_of_envelope_lesson())
+            topic["minutes"] = 24
+        out.append(topic)
     return out
 
 
