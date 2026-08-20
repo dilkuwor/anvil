@@ -38,11 +38,47 @@ function Sparkline({ points, className }: { points: readonly number[]; className
   );
 }
 
-function TrafficEdge() {
+function HandleDot({ side }: { side: "left" | "right" }) {
   return (
-    <div className="relative mx-px flex h-10 min-w-2 flex-1 items-center sm:mx-0.5 sm:min-w-5" aria-hidden>
-      <div className="h-px w-full bg-steel-600" />
-      <span className="absolute right-0 -mt-px border-y-[4px] border-l-[6px] border-y-transparent border-l-steel-500" />
+    <span
+      aria-hidden
+      className={cn(
+        "absolute top-1/2 z-10 h-2 w-2 -translate-y-1/2 rounded-full border border-accent bg-background",
+        side === "left" ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2",
+      )}
+    />
+  );
+}
+
+function DiagramNode({
+  label,
+  Icon,
+  source,
+  target,
+}: {
+  label: string;
+  Icon: LucideIcon;
+  source?: boolean;
+  target?: boolean;
+}) {
+  return (
+    <div className="flex w-9 shrink-0 flex-col items-center sm:w-10">
+      <div className="relative">
+        {target ? <HandleDot side="left" /> : null}
+        {source ? <HandleDot side="right" /> : null}
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(249,115,22,0.55)] text-accent sm:h-10 sm:w-10">
+          <Icon className="h-4 w-4" strokeWidth={1.75} />
+        </span>
+      </div>
+      <span className="mt-1.5 w-[4.25rem] text-center text-[8px] leading-tight text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function DiagramEdge() {
+  return (
+    <div className="relative z-0 -mx-1 flex h-9 min-w-3 flex-1 items-center sm:h-10 sm:min-w-5" aria-hidden>
+      <div className="h-[1.5px] w-full bg-steel-600" />
       {[0, 1, 2].map((index) => (
         <span
           key={index}
@@ -73,16 +109,16 @@ export function HeroDesignFloat() {
           </span>
         </div>
 
-        <div className="mt-3.5 flex min-w-0 items-start">
+        <div className="mt-3.5 flex min-w-0 items-start justify-center px-2">
           {NODES.map((node, index) => (
             <Fragment key={node.id}>
-              {index > 0 ? <TrafficEdge /> : null}
-              <div className="flex min-w-0 flex-1 flex-col items-center sm:w-[4.15rem] sm:flex-none">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-accent/70 text-accent sm:h-10 sm:w-10">
-                  <node.Icon className="h-4 w-4" strokeWidth={1.75} />
-                </span>
-                <span className="mt-1.5 max-w-full text-center text-[8px] leading-tight text-muted-foreground">{node.label}</span>
-              </div>
+              {index > 0 ? <DiagramEdge /> : null}
+              <DiagramNode
+                label={node.label}
+                Icon={node.Icon}
+                target={index > 0}
+                source={index < NODES.length - 1}
+              />
             </Fragment>
           ))}
         </div>
