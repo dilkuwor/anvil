@@ -77,22 +77,66 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect changed images
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          backend=false
+          frontend=false
+          runner=false
+          if [ -z "${BEFORE}" ] || [ "${BEFORE}" = "0000000000000000000000000000000000000000" ]; then
+            backend=true
+            frontend=true
+            runner=true
+          else
+            changed="$(git diff --name-only "$BEFORE" "$GITHUB_SHA")"
+            echo "$changed"
+            echo "$changed" | grep -q '^backend/' && backend=true || true
+            echo "$changed" | grep -q '^frontend/' && frontend=true || true
+            echo "$changed" | grep -q '^code-runner/' && runner=true || true
+          fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "runner=$runner" >> "$GITHUB_OUTPUT"
+          echo "any=false" >> "$GITHUB_OUTPUT"
+          if [ "$backend" = true ] || [ "$frontend" = true ] || [ "$runner" = true ]; then
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: docker/setup-buildx-action@v3
+        if: steps.changes.outputs.any == 'true'
       - uses: docker/login-action@v3
+        if: steps.changes.outputs.any == 'true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
+      - name: Build and push API
+        if: steps.changes.outputs.backend == 'true'
         env:
           SHA: ${{ github.sha }}
           NS: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           docker build -t "$NS/interview-anvil-api:$SHA" -t "$NS/interview-anvil-api:latest" ./backend
-          docker build -t "$NS/interview-anvil-frontend:$SHA" -t "$NS/interview-anvil-frontend:latest" ./frontend
-          docker build -t "$NS/interview-anvil-java-runner:$SHA" -t "$NS/interview-anvil-java-runner:latest" ./code-runner/java
           docker push "$NS/interview-anvil-api:$SHA"
           docker push "$NS/interview-anvil-api:latest"
+      - name: Build and push frontend
+        if: steps.changes.outputs.frontend == 'true'
+        env:
+          SHA: ${{ github.sha }}
+          NS: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          docker build -t "$NS/interview-anvil-frontend:$SHA" -t "$NS/interview-anvil-frontend:latest" ./frontend
           docker push "$NS/interview-anvil-frontend:$SHA"
           docker push "$NS/interview-anvil-frontend:latest"
+      - name: Build and push Java runner
+        if: steps.changes.outputs.runner == 'true'
+        env:
+          SHA: ${{ github.sha }}
+          NS: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          docker build -t "$NS/interview-anvil-java-runner:$SHA" -t "$NS/interview-anvil-java-runner:latest" ./code-runner/java
           docker push "$NS/interview-anvil-java-runner:$SHA"
           docker push "$NS/interview-anvil-java-runner:latest"
