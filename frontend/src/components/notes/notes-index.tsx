@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { NoteBody } from "@/components/notes/note-body";
+import { ListenButton } from "@/components/tts/listen-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import type { Note, NoteSourceType } from "@/lib/notes";
 import { displayNoteTitle, sourceLabel } from "@/lib/notes";
 import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
+import { speakableText } from "@/lib/tts";
 import { cn, formatRelative } from "@/lib/utils";
 
 const NOTE_PAPER_KEY = "anvil-note-paper";
@@ -431,6 +433,12 @@ function NoteDetailOverlay({
               >
                 {paper ? <Notebook className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
               </button>
+            )}
+            {editing ? null : (
+              <ListenButton
+                iconOnly
+                text={speakableText([displayNoteTitle(note), body || note.body].filter(Boolean).join(". "))}
+              />
             )}
             {editing ? (
               <>

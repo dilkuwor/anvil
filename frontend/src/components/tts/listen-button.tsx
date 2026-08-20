@@ -11,9 +11,11 @@ import { cn } from "@/lib/utils";
 export function ListenButton({
   text,
   className,
+  iconOnly = false,
 }: {
   text: string;
   className?: string;
+  iconOnly?: boolean;
 }) {
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -83,18 +85,27 @@ export function ListenButton({
     }
   }
 
+  const label = state === "playing" ? "Stop reading" : state === "loading" ? "Loading audio" : "Listen";
+
   return (
     <Button
       type="button"
-      size="sm"
+      size={iconOnly ? "icon" : "sm"}
       variant="ghost"
-      className={cn("shrink-0 text-muted-foreground hover:text-accent", className)}
-      aria-label={state === "playing" ? "Stop reading" : state === "loading" ? "Loading audio" : "Listen"}
+      title={label}
+      className={cn(
+        "shrink-0 text-muted-foreground hover:text-accent",
+        iconOnly && "h-9 w-9 hover:bg-background hover:text-foreground",
+        className,
+      )}
+      aria-label={label}
       aria-pressed={state !== "idle"}
       onClick={() => void toggle()}
     >
       {state === "idle" ? <Volume2 className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-      <span className="ml-1.5">{state === "idle" ? "Listen" : state === "loading" ? "Loading…" : "Stop"}</span>
+      {iconOnly ? null : (
+        <span className="ml-1.5">{state === "idle" ? "Listen" : state === "loading" ? "Loading…" : "Stop"}</span>
+      )}
     </Button>
   );
 }
