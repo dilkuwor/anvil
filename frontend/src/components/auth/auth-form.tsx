@@ -9,6 +9,7 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AnalyticsEvent, trackEvent } from "@/lib/analytics";
 import { api, ApiError, type User } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 
@@ -31,6 +32,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return api.post<User>("/api/v1/auth/login", { username, password });
     },
     onSuccess: (user) => {
+      trackEvent(mode === "register" ? AnalyticsEvent.SignUp : AnalyticsEvent.Login, { method: "password" });
       queryClient.setQueryData(queryKeys.me, user);
       router.push(params.get("next") || "/dashboard");
     },
