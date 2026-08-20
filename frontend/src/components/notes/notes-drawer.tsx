@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bookmark, NotebookPen, Plus, StickyNote, Trash2, X } from "lucide-react";
+import { Bookmark, NotebookPen, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ export function NotesButton({ onClick, count }: { onClick: () => void; count?: n
       title="Notes"
     >
       <span className="relative">
-        <StickyNote className="h-4 w-4" />
+        <NotebookPen className="h-4 w-4" />
         {count ? (
           <span className="absolute -right-1.5 -top-1.5 min-w-3.5 rounded-full bg-accent px-1 text-[9px] font-semibold leading-3.5 text-primary-foreground">
             {count > 9 ? "9+" : count}
