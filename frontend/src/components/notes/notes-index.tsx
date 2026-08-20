@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronRight, Eye, FileText, Loader2, Maximize2, Minimize2, Notebook, Pencil, Search, Trash2, Undo2, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
@@ -249,8 +249,40 @@ function NoteDetailOverlay({
     return window.localStorage.getItem(NOTE_PAPER_KEY) === "1";
   });
   const [expanded, setExpanded] = useState(false);
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const hideHeaderTimer = useRef<number | null>(null);
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
+
+  function clearHideHeader() {
+    if (hideHeaderTimer.current != null) {
+      window.clearTimeout(hideHeaderTimer.current);
+      hideHeaderTimer.current = null;
+    }
+  }
+
+  function scheduleHideHeader() {
+    if (!expanded) return;
+    clearHideHeader();
+    hideHeaderTimer.current = window.setTimeout(() => setHeaderVisible(false), 800);
+  }
+
+  function revealHeader() {
+    if (!expanded) return;
+    clearHideHeader();
+    setHeaderVisible(true);
+  }
+
+  useEffect(() => {
+    if (!expanded) {
+      clearHideHeader();
+      setHeaderVisible(true);
+      return;
+    }
+    setHeaderVisible(true);
+    scheduleHideHeader();
+    return clearHideHeader;
+  }, [expanded]);
 
   const remove = useMutation({
     mutationFn: () => api.delete(`/api/v1/notes/${note.id}`),
@@ -315,39 +347,67 @@ function NoteDetailOverlay({
           expanded ? "h-dvh max-w-none rounded-none" : "h-[min(90vh,44rem)] max-w-3xl rounded-2xl",
         )}
       >
-        <header className="border-b border-steel-800">
-          <div className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
-            <div className="min-w-0 flex-1">
-              {note.kind === "AI_RESPONSE" ? null : (
-                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  {sourceLabel(note.source_type)}
-                </p>
-              )}
-              <h2
-                id="note-detail-title"
-                className={note.kind === "AI_RESPONSE" ? "text-lg font-semibold tracking-tight" : "mt-1.5 text-lg font-semibold tracking-tight"}
+        <header
+          className="border-b border-steel-800"
+          onMouseEnter={revealHeader}
+          onMouseLeave={scheduleHideHeader}
+        >
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows] duration-500 ease-in-out",
+              expanded && !headerVisible ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div
+                className={cn(
+                  "flex items-center justify-between gap-3",
+                  expanded ? "h-11 px-3 sm:px-4" : "px-5 py-4 sm:px-6",
+                )}
               >
-                {editing ? "Edit note" : displayNoteTitle(note)}
-              </h2>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-                <Link href={note.source_href} className="hover:text-accent">
-                  {note.source_title} →
-                </Link>
-                <span aria-hidden className="hidden h-3 w-px bg-steel-700 sm:block" />
-                <span>Updated {formatRelative(note.updated_at)}</span>
+                <div className="min-w-0 flex-1">
+                  {expanded || note.kind === "AI_RESPONSE" ? null : (
+                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      {sourceLabel(note.source_type)}
+                    </p>
+                  )}
+                  <h2
+                    id="note-detail-title"
+                    className={cn(
+                      "truncate font-semibold tracking-tight",
+                      expanded ? "text-sm" : note.kind === "AI_RESPONSE" ? "text-lg" : "mt-1.5 text-lg",
+                    )}
+                  >
+                    {editing ? "Edit note" : displayNoteTitle(note)}
+                  </h2>
+                  {expanded ? null : (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+                      <Link href={note.source_href} className="hover:text-accent">
+                        {note.source_title} →
+                      </Link>
+                      <span aria-hidden className="hidden h-3 w-px bg-steel-700 sm:block" />
+                      <span>Updated {formatRelative(note.updated_at)}</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+                  aria-label="Close note"
+                  title="Close"
+                  onClick={onClose}
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
-            <button
-              type="button"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
-              aria-label="Close note"
-              title="Close"
-              onClick={onClose}
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
-          <div className="flex h-11 w-full items-center gap-1 border-t border-steel-800 px-2 sm:px-3">
+          <div
+            className={cn(
+              "flex h-11 w-full items-center gap-1 px-2 sm:px-3",
+              (!expanded || headerVisible) && "border-t border-steel-800",
+            )}
+          >
             {editing ? null : (
               <button
                 type="button"
