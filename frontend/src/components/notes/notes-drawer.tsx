@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
+import { NoteBody } from "@/components/notes/note-body";
 import { Button } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api";
 import type { Note, NoteContext, NoteCreate, NoteKind } from "@/lib/notes";
@@ -209,20 +210,23 @@ function NoteEditor({
 
   return (
     <div className="rounded-xl border border-steel-800 bg-background/40 p-3">
-      <input
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        placeholder="Title (optional)"
-        className="h-8 w-full bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground"
-      />
-      <textarea
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder="Write a note…"
-        rows={5}
-        className="mt-2 w-full resize-y bg-transparent text-[13px] leading-6 outline-none placeholder:text-muted-foreground"
-      />
-      <div className="mt-2 flex justify-end gap-2">
+      <div className="space-y-1.5">
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Title (optional)"
+          maxLength={120}
+          className="h-9 w-full rounded-md border border-steel-600 bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-copper/60"
+        />
+        <textarea
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          placeholder="Write a note…"
+          rows={6}
+          className="w-full resize-y rounded-md border border-steel-600 bg-background px-3 py-2 text-[13px] leading-6 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-copper/60"
+        />
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" className="h-7 px-2.5 text-[11px]" onClick={onDone}>
           Cancel
         </Button>
@@ -270,7 +274,9 @@ export function NoteCard({ note, showSource = false }: { note: Note; showSource?
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
-      <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-6 text-foreground/90">{note.body}</p>
+      <div className="mt-1.5">
+        <NoteBody content={note.body} compact />
+      </div>
     </article>
   );
 }
