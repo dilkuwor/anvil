@@ -228,13 +228,16 @@ export function NoteBody({ content, compact = false }: { content: string; compac
             </div>
           );
         }
-        return (
-          <p
-            key={index}
-            className="text-foreground/90"
-            dangerouslySetInnerHTML={{ __html: block.lines.map(inline).join("<br />") }}
-          />
-        );
+        if (block.type === "p") {
+          return (
+            <p
+              key={index}
+              className="text-foreground/90"
+              dangerouslySetInnerHTML={{ __html: block.lines.map(inline).join("<br />") }}
+            />
+          );
+        }
+        return null;
       })}
     </div>
   );
