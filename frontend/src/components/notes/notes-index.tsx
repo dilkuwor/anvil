@@ -62,51 +62,51 @@ export function NotesIndex() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight">Notes</h1>
-          <p className="mt-0.5 max-w-2xl text-[13px] leading-5 text-muted-foreground">
+      <div className="space-y-1">
+        <h1 className="text-lg font-semibold tracking-tight">Notes</h1>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <p className="min-w-0 text-[13px] leading-5 text-muted-foreground">
             Everything you saved from lessons, problems, and system design.
           </p>
-        </div>
-        {signedIn ? (
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-            <div className="flex flex-wrap gap-1.5">
-              {FILTERS.map((item) => (
-                <Button
-                  key={item.id}
-                  type="button"
-                  size="sm"
-                  variant={filter === item.id ? "default" : "secondary"}
-                  className="h-7 px-2.5 text-[11px]"
-                  onClick={() => {
-                    setFilter(item.id);
+          {signedIn ? (
+            <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap gap-1.5">
+                {FILTERS.map((item) => (
+                  <Button
+                    key={item.id}
+                    type="button"
+                    size="sm"
+                    variant={filter === item.id ? "default" : "secondary"}
+                    className="h-7 px-2.5 text-[11px]"
+                    onClick={() => {
+                      setFilter(item.id);
+                      setPage(1);
+                    }}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+              <span className="hidden h-5 w-px shrink-0 bg-steel-800 sm:block" aria-hidden />
+              <div className="relative w-52 max-w-full">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
                     setPage(1);
                   }}
-                >
-                  {item.label}
-                </Button>
-              ))}
+                  placeholder="Search notes…"
+                  className="h-8 pl-8 text-[13px]"
+                  aria-label="Search notes"
+                />
+              </div>
             </div>
-            <span className="hidden h-5 w-px shrink-0 bg-steel-800 sm:block" aria-hidden />
-            <div className="relative w-full max-w-xs sm:w-52">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search notes…"
-                className="h-8 pl-8 text-[13px]"
-                aria-label="Search notes"
-              />
-            </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
       {!signedIn ? (
         <div className="rounded-2xl border border-dashed border-steel-700 px-5 py-10 text-center">
