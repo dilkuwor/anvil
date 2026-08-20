@@ -261,3 +261,29 @@ select.select-field:focus-visible {
 .hero-live-dot {
   animation: hero-live-blink 1.4s ease-in-out infinite;
 }
+
+.note-paper {
+  --note-paper: #faf6ee;
+  --note-line: rgba(80, 96, 120, 0.11);
+  --note-margin: rgba(226, 112, 90, 0.38);
+  background-color: var(--note-paper);
+  background-image:
+    linear-gradient(var(--note-margin), var(--note-margin)),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      var(--note-line) 27px,
+      var(--note-line) 28px
+    );
+  background-size: 1px 100%, 100% 28px;
+  background-position: 2.75rem 0, 0 0.5rem;
+  background-repeat: no-repeat, repeat;
+  background-attachment: local;
+}
+
+.dark .note-paper {
+  --note-paper: #1f1d1b;
+  --note-line: rgba(255, 255, 255, 0.055);
+  --note-margin: rgba(249, 115, 22, 0.32);
+}

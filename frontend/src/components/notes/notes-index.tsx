@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Search, Trash2, X } from "lucide-react";
+import { Notebook, Pencil, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -18,7 +18,9 @@ import type { Note, NoteSourceType } from "@/lib/notes";
 import { displayNoteTitle, sourceLabel } from "@/lib/notes";
 import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
-import { formatRelative } from "@/lib/utils";
+import { cn, formatRelative } from "@/lib/utils";
+
+const NOTE_PAPER_KEY = "anvil-note-paper";
 
 const FILTERS: { id: "ALL" | NoteSourceType; label: string }[] = [
   { id: "ALL", label: "All" },
@@ -236,6 +238,10 @@ function NoteDetailOverlay({
 }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [paper, setPaper] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(NOTE_PAPER_KEY) === "1";
+  });
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
 
@@ -316,14 +322,64 @@ function NoteDetailOverlay({
               <span>Updated {formatRelative(note.updated_at)}</span>
             </div>
           </div>
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
-            aria-label="Close note"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            {editing ? null : (
+              <button
+                type="button"
+                aria-pressed={paper}
+                aria-label={paper ? "Switch to plain view" : "Switch to paper view"}
+                title={paper ? "Plain view" : "Paper view"}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] text-muted-foreground hover:bg-background hover:text-foreground",
+                  paper && "bg-background text-foreground",
+                )}
+                onClick={() => {
+                  setPaper((value) => {
+                    const next = !value;
+                    window.localStorage.setItem(NOTE_PAPER_KEY, next ? "1" : "0");
+                    return next;
+                  });
+                }}
+              >
+                <Notebook className="h-4 w-4" aria-hidden />
+                Paper
+              </button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-coral"
+              disabled={remove.isPending || save.isPending}
+              onClick={() => remove.mutate()}
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              Delete
+            </Button>
+            {editing ? (
+              <>
+                <Button type="button" variant="secondary" size="sm" onClick={cancelEdit}>
+                  Cancel
+                </Button>
+                <Button type="submit" form="note-edit-form" size="sm" disabled={save.isPending || !body.trim()}>
+                  {save.isPending ? "Saving…" : "Save"}
+                </Button>
+              </>
+            ) : (
+              <Button type="button" size="sm" onClick={() => setEditing(true)}>
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                Edit
+              </Button>
+            )}
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+              aria-label="Close note"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </header>
         {editing ? (
           <form
@@ -368,38 +424,16 @@ function NoteDetailOverlay({
             </div>
           </form>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+          <div
+            className={
+              paper
+                ? "note-paper min-h-0 flex-1 overflow-y-auto px-5 py-5 pl-14 sm:px-8 sm:pl-16"
+                : "min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6"
+            }
+          >
             <NoteBody content={note.body} />
           </div>
         )}
-        <footer className="flex items-center justify-between gap-2 border-t border-steel-800 px-5 py-3.5 sm:px-6">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-coral"
-            disabled={remove.isPending || save.isPending}
-            onClick={() => remove.mutate()}
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            Delete
-          </Button>
-          {editing ? (
-            <div className="flex gap-2">
-              <Button type="button" variant="secondary" size="sm" onClick={cancelEdit}>
-                Cancel
-              </Button>
-              <Button type="submit" form="note-edit-form" size="sm" disabled={save.isPending || !body.trim()}>
-                {save.isPending ? "Saving…" : "Save"}
-              </Button>
-            </div>
-          ) : (
-            <Button type="button" size="sm" onClick={() => setEditing(true)}>
-              <Pencil className="h-3.5 w-3.5" aria-hidden />
-              Edit
-            </Button>
-          )}
-        </footer>
       </article>
     </div>
   );
