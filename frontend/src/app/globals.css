@@ -31,6 +31,12 @@
   --heat-2: #fdba74;
   --heat-3: #fb923c;
   --heat-4: #f97316;
+  --input-border: #c8cdd4;
+  --input-foreground: #3f4650;
+  --input-placeholder: #7a838f;
+  --input-focus-border: #f97316;
+  --input-focus-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
+  --input-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%233F4650' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 .dark {
@@ -62,6 +68,12 @@
   --heat-2: #7a4314;
   --heat-3: #c25d12;
   --heat-4: #f97316;
+  --input-border: var(--steel-600);
+  --input-foreground: var(--foreground);
+  --input-placeholder: var(--muted-foreground);
+  --input-focus-border: #f97316;
+  --input-focus-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
+  --input-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%23f0f0f2' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 @theme inline {
@@ -95,6 +107,9 @@
   --color-heat-2: var(--heat-2);
   --color-heat-3: var(--heat-3);
   --color-heat-4: var(--heat-4);
+  --color-input-border: var(--input-border);
+  --color-input-foreground: var(--input-foreground);
+  --color-input-placeholder: var(--input-placeholder);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -136,20 +151,52 @@ pre {
   outline-offset: 2px;
 }
 
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]),
+textarea,
+select {
+  color: var(--input-foreground);
+  caret-color: var(--input-foreground);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([class*="border-0"]):not([class*="border-transparent"]),
+textarea,
+select {
+  border-color: var(--input-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--input-placeholder);
+  opacity: 1;
+}
+
 select.select-field {
   height: 2.25rem;
   width: 100%;
+  appearance: none;
   border-radius: 0.5rem;
-  border: 1px solid var(--steel-600);
-  background: var(--steel-900);
-  padding: 0 0.75rem;
+  border: 1px solid var(--input-border);
+  background-color: var(--steel-900);
+  background-image: var(--input-chevron);
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 0.75rem;
+  padding: 0 2rem 0 0.75rem;
   font-size: 0.875rem;
-  color: var(--foreground);
+  color: var(--input-foreground);
 }
 
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible,
+select.select-field:focus,
 select.select-field:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--input-focus-border);
+  box-shadow: var(--input-focus-shadow);
 }
 
 .react-flow {

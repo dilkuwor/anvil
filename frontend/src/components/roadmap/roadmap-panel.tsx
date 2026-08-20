@@ -38,7 +38,7 @@ export function RoadmapPanel({
       role="dialog"
       aria-modal="true"
       aria-labelledby="roadmap-topic-title"
-      className="ia-slide-in absolute inset-y-0 right-0 z-30 flex w-full flex-col overflow-y-auto border-l border-steel-800 bg-steel-900 p-6 shadow-2xl sm:w-1/2"
+      className="ia-slide-in absolute inset-y-0 right-0 z-30 flex w-full max-w-md flex-col overflow-y-auto border-l border-steel-800 bg-steel-900 p-6 shadow-2xl md:w-[26rem]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>

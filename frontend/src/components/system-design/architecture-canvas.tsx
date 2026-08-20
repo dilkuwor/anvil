@@ -196,7 +196,7 @@ export function ArchitectureCanvas({
                   event.currentTarget.blur();
                 }
               }}
-              className="h-8 w-40 rounded-md border border-steel-800 bg-background px-2 text-[12px] outline-none focus-visible:ring-2 focus-visible:ring-copper/70"
+              className="h-8 w-40 rounded-md border border-input-border bg-background px-2 text-[12px] text-input-foreground outline-none"
               aria-label="Component name"
             />
             <Button variant="ghost" size="sm" onClick={() => removeNode(selectedNode.id)}>

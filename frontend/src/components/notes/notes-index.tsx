@@ -283,7 +283,7 @@ function NoteDetailOverlay({
   }, [editing, note.body, note.title, onClose]);
 
   const fieldClass =
-    "flex w-full rounded-md border border-steel-600 bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-copper/60";
+    "flex w-full rounded-md border border-input-border bg-background px-3 py-2 text-sm text-input-foreground shadow-sm outline-none placeholder:text-input-placeholder";
 
   return (
     <div className="fixed inset-0 z-[55] flex items-center justify-center p-3 sm:p-6">

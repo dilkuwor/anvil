@@ -252,7 +252,7 @@ export function AskAiPanel() {
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Ask a question about this lesson..."
           disabled={pending}
-          className="h-9 min-w-0 w-full flex-1 rounded-md border border-steel-600 bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-copper/70 disabled:opacity-60"
+          className="h-9 min-w-0 w-full flex-1 rounded-md border border-input-border bg-background px-3 text-sm text-input-foreground outline-none placeholder:text-input-placeholder disabled:opacity-60"
         />
         <Button type="submit" size="sm" className="sm:h-9" disabled={pending || !draft.trim()}>
           {pending ? "Thinking..." : "Send"}

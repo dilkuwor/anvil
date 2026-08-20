@@ -216,14 +216,14 @@ function NoteEditor({
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Title (optional)"
           maxLength={120}
-          className="h-9 w-full rounded-md border border-steel-600 bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-copper/60"
+          className="h-9 w-full rounded-md border border-input-border bg-background px-3 text-sm text-input-foreground outline-none placeholder:text-input-placeholder"
         />
         <textarea
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder="Write a note…"
           rows={6}
-          className="w-full resize-y rounded-md border border-steel-600 bg-background px-3 py-2 text-[13px] leading-6 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-copper/60"
+          className="w-full resize-y rounded-md border border-input-border bg-background px-3 py-2 text-[13px] leading-6 text-input-foreground outline-none placeholder:text-input-placeholder"
         />
       </div>
       <div className="mt-3 flex justify-end gap-2">

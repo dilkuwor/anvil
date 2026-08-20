@@ -65,7 +65,7 @@ export function CreateListModal({
               onChange={(event) => setDescription(event.target.value)}
               maxLength={400}
               rows={3}
-              className="flex w-full rounded-md border border-steel-600 bg-steel-900 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-copper/60"
+              className="flex w-full rounded-md border border-input-border bg-steel-900 px-3 py-2 text-sm text-input-foreground outline-none placeholder:text-input-placeholder"
             />
           </div>
         </div>

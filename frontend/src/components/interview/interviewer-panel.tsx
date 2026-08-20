@@ -123,7 +123,7 @@ export function InterviewerPanel({
               value={draft}
               disabled={busy}
               placeholder="Type your response..."
-              className="w-full resize-none rounded-lg border border-steel-800 bg-background px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-copper/70"
+              className="w-full resize-none rounded-lg border border-input-border bg-background px-3 py-2 text-sm leading-6 text-input-foreground outline-none placeholder:text-input-placeholder"
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
