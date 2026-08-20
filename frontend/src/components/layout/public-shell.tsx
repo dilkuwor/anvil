@@ -22,8 +22,8 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 backdrop-blur-md">
         <div className="ia-content flex h-12 items-center justify-between">
-          <Link href={signedIn ? "/dashboard" : "/"} className="shrink-0 text-sm">
-            <BrandMark compact />
+          <Link href={signedIn ? "/dashboard" : "/"} className="inline-flex h-8 shrink-0 items-center">
+            <BrandMark compact wordmarkClassName="text-[15px]" />
           </Link>
           <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
             <ThemeToggle />

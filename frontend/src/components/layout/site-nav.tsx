@@ -44,7 +44,7 @@ function NavLink({
       href={href}
       onClick={onClick}
       className={cn(
-        "rounded-md px-2.5 py-1 text-[13px] hover:text-foreground",
+        "inline-flex items-center rounded-md px-2.5 text-[13px] leading-none hover:text-foreground",
         active ? "font-medium text-foreground" : "text-muted-foreground",
         className,
       )}
@@ -56,9 +56,9 @@ function NavLink({
 
 export function DesktopNav({ pathname }: { pathname: string }) {
   return (
-    <nav className="hidden items-center gap-0.5 md:flex" aria-label="Primary">
+    <nav className="hidden h-8 items-center gap-0.5 md:flex" aria-label="Primary">
       {SITE_NAV.map((item) => (
-        <NavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
+        <NavLink key={item.href} href={item.href} label={item.label} pathname={pathname} className="h-8" />
       ))}
     </nav>
   );

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import type { LucideIcon } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 const NODES: { id: string; label: string; Icon: LucideIcon }[] = [
   { id: "users", label: "Users", Icon: Users },
   { id: "lb", label: "Load Balancer", Icon: Scale },
@@ -44,7 +46,14 @@ function TrafficEdge() {
       {[0, 1, 2].map((index) => (
         <span
           key={index}
-          className="hero-traffic-dot absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_70%,transparent)] motion-reduce:hidden"
+          className={cn(
+            "hero-traffic-dot absolute top-1/2 -translate-y-1/2 rounded-full motion-reduce:hidden",
+            index === 0
+              ? "h-1.5 w-1.5 bg-accent shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_70%,transparent)]"
+              : index === 1
+                ? "h-1 w-1 bg-accent/45"
+                : "h-1 w-1 bg-accent/25",
+          )}
           style={{ animationDelay: `${index * 0.28}s` }}
         />
       ))}

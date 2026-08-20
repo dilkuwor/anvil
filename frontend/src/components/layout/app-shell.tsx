@@ -78,8 +78,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className={cn(wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content")}>
           <div className="flex h-12 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-5">
-              <Link href={signedIn ? "/dashboard" : "/"} className="shrink-0 text-sm">
-                <BrandMark compact wordmarkClassName="max-md:sr-only" />
+              <Link href={signedIn ? "/dashboard" : "/"} className="inline-flex h-8 shrink-0 items-center">
+                <BrandMark compact wordmarkClassName="text-[15px] max-md:sr-only" />
               </Link>
               <DesktopNav pathname={pathname} />
             </div>
