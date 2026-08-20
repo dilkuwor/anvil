@@ -48,8 +48,15 @@ def get_llm_provider(name: str | None = None, *, api_key: str | None = None, mod
     return provider_cls()
 
 
+UNREADABLE_KEY_MESSAGE = (
+    "The saved API key cannot be decrypted. Paste the key again in Settings and save. "
+    "This usually happens after JWT_SECRET changes on the server."
+)
+
+
 def get_llm_provider_for_user(user) -> LLMProvider:
-    from app.common.secrets import decrypt_secret
+    from app.common.errors import AppError
+    from app.common.secrets import SecretDecryptError, decrypt_secret
 
     name = getattr(user, "llm_provider", None) if user is not None else None
     resolved = normalize_provider_name(name) or (get_settings().interview_llm_provider or "ollama").strip().lower()
@@ -58,7 +65,10 @@ def get_llm_provider_for_user(user) -> LLMProvider:
     if user is not None:
         row = user.llm_key_for(resolved)
         if row is not None:
-            api_key = decrypt_secret(row.api_key_encrypted)
+            try:
+                api_key = decrypt_secret(row.api_key_encrypted)
+            except SecretDecryptError as exc:
+                raise AppError(UNREADABLE_KEY_MESSAGE, status_code=409, code="llm_key_undecryptable") from exc
             model = (row.model or "").strip() or None
     return get_llm_provider(name, api_key=api_key, model=model)
 

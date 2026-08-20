@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from app.common.config import get_settings
+from app.common.errors import AppError
 from app.interviews.providers import PAID_PROVIDERS, get_llm_provider_for_user, normalize_provider_name
 from app.interviews.providers.errors import format_provider_http_error, redact
 
@@ -27,26 +28,31 @@ def probe_llm_for_user(user: Any) -> dict[str, Any]:
     model_override = ((key_row.model or "").strip() or None) if key_row is not None else None
     platform_model = _platform_model(resolved, settings)
 
-    provider = get_llm_provider_for_user(user)
-    meta = provider.describe()
-    model = (meta.get("model") or "").strip()
-    endpoint = _public_endpoint(meta.get("endpoint"))
     custom_model = bool(model_override and model_override != platform_model)
-
     result: dict[str, Any] = {
         "ok": False,
         "provider": resolved,
         "provider_label": PROVIDER_LABELS.get(resolved, resolved),
         "using_platform_default": not selected,
-        "model": model,
+        "model": model_override or platform_model,
         "model_source": "custom" if custom_model else "platform_default",
         "using_user_key": key_row is not None,
         "key_required": resolved in PAID_PROVIDERS,
-        "endpoint": endpoint,
+        "endpoint": None,
         "latency_ms": None,
         "reply": None,
         "error": None,
     }
+
+    try:
+        provider = get_llm_provider_for_user(user)
+    except AppError as exc:
+        result["error"] = exc.message
+        return result
+
+    meta = provider.describe()
+    result["model"] = (meta.get("model") or "").strip() or result["model"]
+    result["endpoint"] = _public_endpoint(meta.get("endpoint"))
 
     started = time.perf_counter()
     try:

@@ -10,6 +10,10 @@ from cryptography.fernet import Fernet, InvalidToken
 from app.common.config import get_settings
 
 
+class SecretDecryptError(ValueError):
+    """Stored ciphertext cannot be read with the current JWT_SECRET."""
+
+
 def _fernet() -> Fernet:
     digest = hashlib.sha256(get_settings().jwt_secret.encode("utf-8")).digest()
     return Fernet(base64.urlsafe_b64encode(digest))
@@ -23,7 +27,7 @@ def decrypt_secret(token: str) -> str:
     try:
         return _fernet().decrypt(token.encode("ascii")).decode("utf-8")
     except InvalidToken as exc:
-        raise ValueError("Stored secret could not be decrypted.") from exc
+        raise SecretDecryptError("Stored secret could not be decrypted.") from exc
 
 
 def secret_hint(value: str) -> str:

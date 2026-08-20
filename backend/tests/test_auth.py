@@ -277,6 +277,27 @@ def test_llm_probe_surfaces_openrouter_upstream_rate_limit(auth_client, monkeypa
     assert "Provider returned error" not in body["error"]
 
 
+def test_llm_probe_undecryptable_key_is_not_ok(auth_client, monkeypatch):
+    saved = auth_client.patch(
+        "/api/v1/auth/me/llm",
+        json={"provider": "openai", "api_key": "sk-test-secret-key-1234"},
+    )
+    assert saved.status_code == 200
+
+    def boom(token: str) -> str:
+        from app.common.secrets import SecretDecryptError
+
+        raise SecretDecryptError("Stored secret could not be decrypted.")
+
+    monkeypatch.setattr("app.common.secrets.decrypt_secret", boom)
+    response = auth_client.post("/api/v1/auth/me/llm/test")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is False
+    assert "decrypt" in body["error"].lower()
+    assert "save" in body["error"].lower()
+
+
 def test_llm_probe_missing_key_is_not_ok(auth_client):
     switched = auth_client.patch("/api/v1/auth/me/llm", json={"provider": "openai"})
     assert switched.status_code == 200
