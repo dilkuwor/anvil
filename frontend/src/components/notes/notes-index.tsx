@@ -250,6 +250,7 @@ function NoteDetailOverlay({
   });
   const [expanded, setExpanded] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
+  const expandedRef = useRef(false);
   const hideHeaderTimer = useRef<number | null>(null);
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
@@ -262,27 +263,29 @@ function NoteDetailOverlay({
   }
 
   function scheduleHideHeader() {
-    if (!expanded) return;
+    if (!expandedRef.current) return;
     clearHideHeader();
     hideHeaderTimer.current = window.setTimeout(() => setHeaderVisible(false), 800);
   }
 
   function revealHeader() {
-    if (!expanded) return;
+    if (!expandedRef.current) return;
     clearHideHeader();
     setHeaderVisible(true);
   }
 
-  useEffect(() => {
-    if (!expanded) {
-      clearHideHeader();
-      setHeaderVisible(true);
-      return;
-    }
+  function toggleExpanded() {
+    const next = !expandedRef.current;
+    expandedRef.current = next;
+    setExpanded(next);
+    clearHideHeader();
     setHeaderVisible(true);
-    scheduleHideHeader();
-    return clearHideHeader;
-  }, [expanded]);
+    if (next) {
+      hideHeaderTimer.current = window.setTimeout(() => setHeaderVisible(false), 800);
+    }
+  }
+
+  useEffect(() => () => clearHideHeader(), []);
 
   const remove = useMutation({
     mutationFn: () => api.delete(`/api/v1/notes/${note.id}`),
@@ -471,7 +474,7 @@ function NoteDetailOverlay({
                 "inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground",
                 expanded && "bg-background text-foreground",
               )}
-              onClick={() => setExpanded((value) => !value)}
+              onClick={toggleExpanded}
             >
               {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
