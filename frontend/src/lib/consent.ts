@@ -1,5 +1,6 @@
 export const ANALYTICS_CONSENT_KEY = "ia-analytics-consent";
 export const ANALYTICS_CONSENT_EVENT = "ia-analytics-consent";
+export const COOKIE_PREFERENCES_EVENT = "ia-cookie-preferences";
 
 export type AnalyticsConsent = "granted" | "denied";
 
@@ -19,6 +20,9 @@ export function writeAnalyticsConsent(value: AnalyticsConsent): void {
     localStorage.setItem(ANALYTICS_CONSENT_KEY, value);
   } catch {
     /* ignore quota / private mode */
+  }
+  if (value === "denied") {
+    clearFirstPartyGaCookies();
   }
   window.dispatchEvent(new Event(ANALYTICS_CONSENT_EVENT));
 }
@@ -45,4 +49,33 @@ export function subscribeAnalyticsConsent(onChange: () => void): () => void {
 
 export function hasAnalyticsConsent(): boolean {
   return readAnalyticsConsent() === "granted";
+}
+
+export function openCookiePreferences(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(COOKIE_PREFERENCES_EVENT));
+}
+
+export function subscribeCookiePreferences(onOpen: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(COOKIE_PREFERENCES_EVENT, onOpen);
+  return () => window.removeEventListener(COOKIE_PREFERENCES_EVENT, onOpen);
+}
+
+function isGaCookieName(name: string): boolean {
+  return name === "_ga" || name === "_gid" || name === "_gat" || name.startsWith("_ga_") || name.startsWith("_gac_");
+}
+
+export function clearFirstPartyGaCookies(): void {
+  if (typeof document === "undefined") return;
+  const hostname = window.location.hostname;
+  const domains = ["", hostname, `.${hostname}`];
+  const names = document.cookie.split(";").map((part) => part.split("=")[0]?.trim() ?? "");
+  for (const name of names) {
+    if (!name || !isGaCookieName(name)) continue;
+    for (const domain of domains) {
+      const domainPart = domain ? `; domain=${domain}` : "";
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${domainPart}`;
+    }
+  }
 }

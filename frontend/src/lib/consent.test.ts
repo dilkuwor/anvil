@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  clearFirstPartyGaCookies,
   readAnalyticsConsent,
   resetAnalyticsConsent,
   writeAnalyticsConsent,
@@ -26,5 +27,15 @@ describe("analytics consent", () => {
     writeAnalyticsConsent("granted");
     resetAnalyticsConsent();
     expect(readAnalyticsConsent()).toBeNull();
+  });
+
+  it("clears first-party GA cookies without touching the session cookie", () => {
+    document.cookie = "ia_access_token=secret; path=/";
+    document.cookie = "_ga=GA1.1.x; path=/";
+    document.cookie = "_ga_ABC123=GS1.1.x; path=/";
+    clearFirstPartyGaCookies();
+    expect(document.cookie).toContain("ia_access_token");
+    expect(document.cookie).not.toMatch(/(?:^|; )_ga=/);
+    expect(document.cookie).not.toMatch(/(?:^|; )_ga_/);
   });
 });

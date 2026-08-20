@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { isAnalyticsEnabled } from "@/lib/analytics";
-import { resetAnalyticsConsent } from "@/lib/consent";
+import { openCookiePreferences } from "@/lib/consent";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -31,7 +31,7 @@ export function LegalLinks({ className }: { className?: string }) {
           <span aria-hidden className="px-2">
             ·
           </span>
-          <button type="button" className="hover:text-foreground" onClick={() => resetAnalyticsConsent()}>
+          <button type="button" className="hover:text-foreground" onClick={() => openCookiePreferences()}>
             Cookie settings
           </button>
         </span>
