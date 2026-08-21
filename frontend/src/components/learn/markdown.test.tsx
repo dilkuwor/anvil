@@ -73,4 +73,30 @@ Example: 100 million requests/day ÷ 100,000 ≈ 1,000 QPS
     expect(screen.getByText("Very fast")).toBeInTheDocument();
     expect(screen.getByText("Slow")).toBeInTheDocument();
   });
+
+  it("styles section numbers differently from nested step numbers", () => {
+    render(
+      <LessonMarkdown
+        content={`# Back-of-the-Envelope Estimation
+
+Intro.
+
+## 11. Universal Estimation Sequence
+
+1. **100M users**
+2. **10% DAU**
+`}
+      />,
+    );
+
+    const section = screen.getByText("11");
+    const step = screen.getByText("1");
+    expect(section.tagName).toBe("SPAN");
+    expect(step.tagName).toBe("SPAN");
+    expect(section.className).toContain("bg-accent");
+    expect(section.className).toContain("rounded-lg");
+    expect(step.className).toContain("rounded-full");
+    expect(step.className).toContain("text-muted-foreground");
+    expect(step.className).not.toContain("bg-accent");
+  });
 });

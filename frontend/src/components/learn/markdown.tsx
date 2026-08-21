@@ -134,7 +134,7 @@ function LessonHeading({ title }: { title: string }) {
   if (numbered) {
     return (
       <h2 className="flex items-center gap-2.5 pt-2 text-[15px] font-semibold tracking-tight">
-        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent/15 text-[12px] font-bold tabular-nums text-accent">
+        <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg bg-accent px-1.5 text-[12px] font-bold tabular-nums text-primary-foreground">
           {numbered[1]}
         </span>
         {numbered[2]}
@@ -402,9 +402,11 @@ function MarkdownTable({ block }: { block: string }) {
 export function LessonMarkdown({
   content,
   skipLeadingTitle = true,
+  className,
 }: {
   content: string;
   skipLeadingTitle?: boolean;
+  className?: string;
 }) {
   const blocks = content.replaceAll("\r\n", "\n").trim().split(/\n{2,}/);
   const skipFirstTitle = skipLeadingTitle && Boolean(blocks[0]?.startsWith("# "));
@@ -413,7 +415,7 @@ export function LessonMarkdown({
     return !isSpecialBlock(block);
   });
   return (
-    <div className="w-full space-y-5 text-sm leading-7 text-foreground">
+    <div className={cn("w-full space-y-5 text-sm leading-7 text-foreground", className)}>
       {blocks.map((block, index) => {
         if (index === 0 && skipFirstTitle) return null;
         const lines = block.split("\n");
@@ -453,14 +455,14 @@ export function LessonMarkdown({
         }
         if (isOrderedListBlock(block)) {
           return (
-            <ol key={index} className="space-y-2">
+            <ol key={index} className="ml-1 space-y-2 border-l border-steel-800 pl-4">
               {lines.map((line) => {
                 const match = line.match(/^(\d+)\.\s(.*)$/);
                 const n = match?.[1] ?? "";
                 const text = match?.[2] ?? line;
                 return (
                   <li key={line} className="flex items-start gap-2.5">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent/10 text-[11px] font-semibold tabular-nums text-accent">
+                    <span className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full border border-steel-700 bg-steel-950 px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
                       {n}
                     </span>
                     <span className="text-foreground/90" dangerouslySetInnerHTML={{ __html: inline(text) }} />

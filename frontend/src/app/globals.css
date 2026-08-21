@@ -287,3 +287,42 @@ select.select-field:focus-visible {
   --note-line: rgba(255, 255, 255, 0.055);
   --note-margin: rgba(249, 115, 22, 0.32);
 }
+
+.lesson-reader {
+  --lesson-reader-well: #e8e4dc;
+  --lesson-reader-page: #f7f4ee;
+  --lesson-reader-edge: rgba(58, 48, 36, 0.08);
+  background: var(--lesson-reader-well);
+}
+
+.dark .lesson-reader {
+  --lesson-reader-well: #121110;
+  --lesson-reader-page: #1c1b18;
+  --lesson-reader-edge: rgba(0, 0, 0, 0.35);
+}
+
+.lesson-reader-page {
+  width: min(46rem, calc(100% - 1.5rem));
+  margin: 1.25rem auto 3rem;
+  padding: 2rem 1.35rem 3rem;
+  background: var(--lesson-reader-page);
+  border: 1px solid var(--lesson-reader-edge);
+  border-radius: 1rem;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 18px 40px var(--lesson-reader-edge);
+}
+
+.dark .lesson-reader-page {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 48px rgba(0, 0, 0, 0.4);
+}
+
+@media (min-width: 640px) {
+  .lesson-reader-page {
+    width: min(46rem, calc(100% - 3rem));
+    margin-top: 1.75rem;
+    padding: 2.5rem 2.25rem 3.5rem;
+  }
+}

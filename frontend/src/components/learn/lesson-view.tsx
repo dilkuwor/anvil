@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, CircleCheck, CircleHelp, Clock, Sparkles } from "lucide-react";
+import { BookOpen, CircleCheck, CircleHelp, Clock, Maximize2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AskAiButton, AskAiController, AskAiPanel } from "@/components/learn/ask-ai-panel";
+import { LessonOverlay } from "@/components/learn/lesson-overlay";
 import { NotesPanel } from "@/components/notes/notes-drawer";
 import { LessonMarkdown } from "@/components/learn/markdown";
 import { ListenButton } from "@/components/tts/listen-button";
@@ -26,6 +27,7 @@ export function LessonView({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
   const { signedIn } = useSession();
   const [authPrompt, setAuthPrompt] = useState<AuthPromptKind | null>(null);
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const lesson = useQuery({
     queryKey: queryKeys.learnLesson(slug),
     queryFn: () => api.get<LearningLessonDetail>(`/api/v1/learn/lessons/${slug}`),
@@ -88,6 +90,17 @@ export function LessonView({ slug }: { slug: string }) {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-steel-800 pb-4">
               <h1 className="min-w-0 text-lg font-semibold tracking-tight">{data.title}</h1>
               <div className="flex shrink-0 items-center gap-1.5">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-accent"
+                  aria-label="Maximize lesson"
+                  title="Maximize"
+                  onClick={() => setOverlayOpen(true)}
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
                 <ListenButton
                   text={lessonSpeech({
                     title: data.title,
@@ -109,7 +122,7 @@ export function LessonView({ slug }: { slug: string }) {
                 )}
               </div>
             </div>
-            {signedIn ? <AskAiPanel /> : null}
+            {signedIn && !overlayOpen ? <AskAiPanel /> : null}
             <LessonMarkdown content={data.content} />
           </SectionCard>
 
@@ -222,6 +235,14 @@ export function LessonView({ slug }: { slug: string }) {
             )}
           </div>
         </div>
+      {overlayOpen ? (
+        <LessonOverlay
+          lesson={data}
+          signedIn={signedIn}
+          onClose={() => setOverlayOpen(false)}
+          onAskAiAuth={() => setAuthPrompt("ask-ai")}
+        />
+      ) : null}
       {authPrompt ? <AuthPrompt kind={authPrompt} onClose={() => setAuthPrompt(null)} /> : null}
       </div>
   );

@@ -9,6 +9,7 @@ import { TutorMarkdown } from "@/components/learn/markdown";
 import { Button } from "@/components/ui/button";
 import { SectionTitle } from "@/components/ui/section";
 import { ApiError, streamSsePost } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   suggestedLessonQuestions,
   type LearningLessonDetail,
@@ -139,8 +140,26 @@ export function AskAiController({ lesson, children }: { lesson: LearningLessonDe
   return <AskAiContext.Provider value={value}>{children}</AskAiContext.Provider>;
 }
 
-export function AskAiButton() {
+export function AskAiButton({ iconOnly = false }: { iconOnly?: boolean }) {
   const { open, toggle } = useAskAi();
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        aria-pressed={open}
+        aria-expanded={open}
+        aria-label="Ask AI"
+        title="Ask AI"
+        className={cn(
+          "inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground",
+          open && "bg-background text-foreground",
+        )}
+        onClick={toggle}
+      >
+        <Sparkles className="h-4 w-4" />
+      </button>
+    );
+  }
   return (
     <Button size="sm" variant={open ? "secondary" : "default"} aria-expanded={open} onClick={toggle}>
       <Sparkles className="h-3.5 w-3.5" aria-hidden />
@@ -149,7 +168,7 @@ export function AskAiButton() {
   );
 }
 
-export function AskAiPanel() {
+export function AskAiPanel({ className }: { className?: string }) {
   const { lesson, open, pending, error, draft, messages, suggestions, setDraft, clearConversation, send } = useAskAi();
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -160,7 +179,7 @@ export function AskAiPanel() {
   if (!open) return null;
 
   return (
-    <div className="mb-5 w-full border-b border-steel-800 pb-5">
+    <div className={cn("mb-5 w-full border-b border-steel-800 pb-5", className)}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <SectionTitle className="inline-flex items-center gap-1.5">
