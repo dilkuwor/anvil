@@ -18,11 +18,13 @@ describe("seo helpers", () => {
     expect(siteUrl()).toBe("https://anvil.example.com");
     expect(absoluteUrl("/learn")).toBe("https://anvil.example.com/learn");
     expect(absoluteUrl("/")).toBe("https://anvil.example.com/");
-    expect(originFromHost("anvil.example.com", "https")).toBe("https://anvil.example.com");
-    expect(originFromHost("anvil.example.com, other", "https, http")).toBe("https://anvil.example.com");
+    expect(originFromHost("anvilprep.dev", "https")).toBe("https://anvilprep.dev");
+    expect(originFromHost("anvilprep.dev", "http")).toBe("https://anvilprep.dev");
+    expect(originFromHost("localhost:3000", "http")).toBeNull();
+    expect(originFromHost("frontend:3000", "http")).toBeNull();
     delete process.env.SITE_URL;
     delete process.env.NEXT_PUBLIC_SITE_URL;
-    expect(siteUrl("https://anvil.example.com")).toBe("https://anvil.example.com");
+    expect(siteUrl("https://anvilprep.dev")).toBe("https://anvilprep.dev");
   });
 
   it("truncates meta descriptions", () => {

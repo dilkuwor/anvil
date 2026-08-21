@@ -20,6 +20,8 @@ const PRIVATE_PATHS = [
 
 export const ROBOTS_DISALLOW = [...PRIVATE_PATHS, "/api/"];
 
+export const PRODUCTION_SITE_URL = "https://anvilprep.dev";
+
 function runtimeEnv(name: string): string {
   return String((process.env as Record<string, string | undefined>)[name] ?? "").trim();
 }
@@ -36,13 +38,22 @@ export function normalizeOrigin(raw: string | null | undefined): string | null {
   }
 }
 
+export function isPublicHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (!host || host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") return false;
+  if (host === "frontend" || host === "api") return false;
+  if (!host.includes(".")) return false;
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return false;
+  return true;
+}
+
 export function originFromHost(hostHeader?: string | null, protoHeader?: string | null): string | null {
   const host = hostHeader?.split(",")[0]?.trim();
   if (!host) return null;
   const hostname = host.split(":")[0]?.toLowerCase() ?? "";
-  const local = hostname === "localhost" || hostname === "127.0.0.1";
-  const proto = protoHeader?.split(",")[0]?.trim() || (local ? "http" : "https");
-  return normalizeOrigin(`${proto}://${host}`);
+  if (!isPublicHostname(hostname)) return null;
+  const proto = protoHeader?.split(",")[0]?.trim() === "http" ? "https" : protoHeader?.split(",")[0]?.trim() || "https";
+  return normalizeOrigin(`${proto}://${hostname}`);
 }
 
 export function siteUrl(requestOrigin?: string | null): string {
@@ -50,7 +61,7 @@ export function siteUrl(requestOrigin?: string | null): string {
     normalizeOrigin(runtimeEnv("SITE_URL")) ||
     normalizeOrigin(runtimeEnv("NEXT_PUBLIC_SITE_URL")) ||
     normalizeOrigin(requestOrigin) ||
-    "http://localhost:3000"
+    (runtimeEnv("NODE_ENV") === "production" ? PRODUCTION_SITE_URL : "http://localhost:3000")
   );
 }
 
