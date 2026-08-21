@@ -6,20 +6,22 @@ import {
   type ProblemListResponse,
   fetchPublicJson,
 } from "@/lib/public-api";
+import { publicSiteUrl } from "@/lib/seo-origin";
 import { absoluteUrl } from "@/lib/seo";
 
-export const revalidate = 3600;
-
-function entry(path: string, priority: number, changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] = "weekly"): MetadataRoute.Sitemap[number] {
-  return {
-    url: absoluteUrl(path),
-    lastModified: new Date(),
-    changeFrequency,
-    priority,
-  };
-}
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const origin = await publicSiteUrl();
+  function entry(path: string, priority: number, changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] = "weekly"): MetadataRoute.Sitemap[number] {
+    return {
+      url: absoluteUrl(path, origin),
+      lastModified: new Date(),
+      changeFrequency,
+      priority,
+    };
+  }
+
   const routes: MetadataRoute.Sitemap = [
     entry("/", 1, "weekly"),
     entry("/about", 0.6, "monthly"),

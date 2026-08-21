@@ -1,9 +1,12 @@
 import type { MetadataRoute } from "next";
 
-import { ROBOTS_DISALLOW, siteUrl } from "@/lib/seo";
+import { ROBOTS_DISALLOW } from "@/lib/seo";
+import { publicSiteUrl } from "@/lib/seo-origin";
 
-export default function robots(): MetadataRoute.Robots {
-  const base = siteUrl();
+export const dynamic = "force-dynamic";
+
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const base = await publicSiteUrl();
   return {
     rules: [
       {

@@ -20,21 +20,42 @@ const PRIVATE_PATHS = [
 
 export const ROBOTS_DISALLOW = [...PRIVATE_PATHS, "/api/"];
 
-export function siteUrl(): string {
-  const raw =
-    process.env.SITE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    "http://localhost:3000";
-  const cleaned = raw.replace(/\/+$/, "");
+function runtimeEnv(name: string): string {
+  return String((process.env as Record<string, string | undefined>)[name] ?? "").trim();
+}
+
+export function normalizeOrigin(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  const value = raw.trim();
   try {
-    return new URL(cleaned).origin;
+    const url = new URL(value.includes("://") ? value : `https://${value}`);
+    if (!url.hostname || url.hostname === "0.0.0.0") return null;
+    return url.origin;
   } catch {
-    return "http://localhost:3000";
+    return null;
   }
 }
 
-export function absoluteUrl(path = "/"): string {
-  const prefix = siteUrl();
+export function originFromHost(hostHeader?: string | null, protoHeader?: string | null): string | null {
+  const host = hostHeader?.split(",")[0]?.trim();
+  if (!host) return null;
+  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
+  const local = hostname === "localhost" || hostname === "127.0.0.1";
+  const proto = protoHeader?.split(",")[0]?.trim() || (local ? "http" : "https");
+  return normalizeOrigin(`${proto}://${host}`);
+}
+
+export function siteUrl(requestOrigin?: string | null): string {
+  return (
+    normalizeOrigin(runtimeEnv("SITE_URL")) ||
+    normalizeOrigin(runtimeEnv("NEXT_PUBLIC_SITE_URL")) ||
+    normalizeOrigin(requestOrigin) ||
+    "http://localhost:3000"
+  );
+}
+
+export function absoluteUrl(path = "/", origin?: string | null): string {
+  const prefix = siteUrl(origin);
   if (!path || path === "/") return `${prefix}/`;
   return `${prefix}${path.startsWith("/") ? path : `/${path}`}`;
 }
@@ -74,18 +95,18 @@ export function pageMeta({
   path: string;
   noIndex?: boolean;
 }): Metadata {
-  const url = absoluteUrl(path);
+  const canonical = !path || path === "/" ? "/" : path.startsWith("/") ? path : `/${path}`;
   const desc = truncateMeta(description);
   const ogTitle = typeof title === "string" ? title : title.absolute;
   return {
     title,
     description: desc,
-    alternates: { canonical: url },
+    alternates: { canonical },
     robots: noIndex ? noIndexRobots : indexRobots,
     openGraph: {
       title: ogTitle,
       description: desc,
-      url,
+      url: canonical,
       type: "website",
       siteName: SITE_NAME,
       locale: "en_US",
@@ -102,54 +123,57 @@ export function noIndexMeta(title: string, path: string, description = SITE_DESC
   return pageMeta({ title, description, path, noIndex: true });
 }
 
-export function organizationJsonLd() {
+export function organizationJsonLd(origin?: string | null) {
+  const base = siteUrl(origin);
   return {
     "@type": "Organization",
-    "@id": `${siteUrl()}/#organization`,
+    "@id": `${base}/#organization`,
     name: SITE_PUBLISHER,
-    url: siteUrl(),
-    logo: absoluteUrl("/logo-app-v6.png"),
+    url: base,
+    logo: absoluteUrl("/logo-app-v6.png", base),
     brand: SITE_NAME,
   };
 }
 
-export function websiteJsonLd() {
+export function websiteJsonLd(origin?: string | null) {
+  const base = siteUrl(origin);
   return {
     "@type": "WebSite",
-    "@id": `${siteUrl()}/#website`,
+    "@id": `${base}/#website`,
     name: SITE_NAME,
-    url: siteUrl(),
+    url: base,
     description: SITE_DESCRIPTION,
-    publisher: { "@id": `${siteUrl()}/#organization` },
+    publisher: { "@id": `${base}/#organization` },
     inLanguage: "en-US",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${siteUrl()}/problems?q={search_term_string}`,
+        urlTemplate: `${base}/problems?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
   };
 }
 
-export function softwareJsonLd() {
+export function softwareJsonLd(origin?: string | null) {
+  const base = siteUrl(origin);
   return {
     "@type": "SoftwareApplication",
     name: SITE_NAME,
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
-    url: siteUrl(),
+    url: base,
     description: SITE_DESCRIPTION,
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-    publisher: { "@id": `${siteUrl()}/#organization` },
+    publisher: { "@id": `${base}/#organization` },
   };
 }
 
-export function rootJsonLd() {
+export function rootJsonLd(origin?: string | null) {
   return {
     "@context": "https://schema.org",
-    "@graph": [organizationJsonLd(), websiteJsonLd(), softwareJsonLd()],
+    "@graph": [organizationJsonLd(origin), websiteJsonLd(origin), softwareJsonLd(origin)],
   };
 }
 
@@ -174,3 +198,4 @@ export function learningResourceJsonLd(input: {
     publisher: { "@id": `${siteUrl()}/#organization` },
   };
 }
+
