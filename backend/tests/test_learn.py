@@ -35,6 +35,15 @@ def test_learn_catalog_is_public(client, db):
     assert lesson.status_code == 200
     assert lesson.json()["status"] == "NOT_STARTED"
 
+    tree = client.get("/api/v1/learn/catalog")
+    assert tree.status_code == 200
+    slugs = {item["slug"] for item in tree.json()}
+    assert "dsa" in slugs
+    dsa = next(item for item in tree.json() if item["slug"] == "dsa")
+    assert dsa["topics"]
+    arrays = next(topic for topic in dsa["topics"] if topic["slug"] == "arrays-hashing")
+    assert arrays["lessons"]
+
 
 def test_learn_progress_requires_auth(client):
     assert client.get("/api/v1/learn/progress").status_code == 401

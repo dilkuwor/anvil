@@ -20,6 +20,9 @@ from app.learn.models import (
     UserLearningProgress,
 )
 from app.learn.schemas import (
+    CatalogCategory,
+    CatalogLesson,
+    CatalogTopic,
     LearningCategoryCard,
     LearningCategoryDetail,
     LearningLessonDetail,
@@ -135,6 +138,29 @@ _INTENT_INSTRUCTIONS = {
         "outside the lesson, answer briefly and connect it back."
     ),
 }
+
+
+def catalog_tree(db: Session) -> list[CatalogCategory]:
+    categories = db.scalars(
+        select(LearningCategory)
+        .options(selectinload(LearningCategory.topics).selectinload(LearningTopic.lessons))
+        .where(LearningCategory.is_active.is_(True))
+        .order_by(LearningCategory.display_order, LearningCategory.title)
+    ).all()
+    tree: list[CatalogCategory] = []
+    for category in categories:
+        topics: list[CatalogTopic] = []
+        for topic in sorted(category.topics, key=lambda item: (item.display_order, item.title)):
+            if not topic.is_active:
+                continue
+            lessons = [
+                CatalogLesson(slug=lesson.slug, title=lesson.title)
+                for lesson in sorted(topic.lessons, key=lambda item: (item.display_order, item.title))
+                if lesson.is_published
+            ]
+            topics.append(CatalogTopic(slug=topic.slug, title=topic.title, lessons=lessons))
+        tree.append(CatalogCategory(slug=category.slug, title=category.title, topics=topics))
+    return tree
 
 
 def list_categories(db: Session, user_id: UUID | None) -> list[LearningCategoryCard]:

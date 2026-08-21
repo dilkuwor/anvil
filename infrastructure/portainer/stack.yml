@@ -14,6 +14,7 @@
 #   DATABASE_PASSWORD
 #   JWT_SECRET          (long random string)
 #   CORS_ORIGINS        (public site origin, e.g. https://interview.example.com)
+#   SITE_URL            (public https origin for sitemap/canonical tags)
 # Optional:
 #   DATABASE_PORT       (default 5432)
 #   DATABASE_NAME       (default interview_anvil)
@@ -71,6 +72,10 @@ services:
   frontend:
     image: dilrecycle/interview-anvil-frontend:latest
     pull_policy: always
+    environment:
+      API_PROXY_TARGET: http://api:8000
+      SITE_URL: ${SITE_URL:-}
+      GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
     ports:
       - "3333:3000"
     depends_on:

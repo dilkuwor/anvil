@@ -3,10 +3,13 @@ import Link from "next/link";
 
 import { LegalPage } from "@/components/layout/legal-page";
 
-export const metadata: Metadata = {
+import { pageMeta } from "@/lib/seo";
+
+export const metadata: Metadata = pageMeta({
   title: "Privacy Policy",
   description: "How Anvil, a ByteTech LLC product, collects and uses information.",
-};
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

@@ -3,10 +3,13 @@ import Link from "next/link";
 
 import { LegalPage } from "@/components/layout/legal-page";
 
-export const metadata: Metadata = {
+import { pageMeta } from "@/lib/seo";
+
+export const metadata: Metadata = pageMeta({
   title: "Terms of Service",
   description: "Terms for using Anvil, a ByteTech LLC interview-preparation product.",
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

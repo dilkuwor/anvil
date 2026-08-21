@@ -12,6 +12,23 @@ class RelatedProblemOut(BaseModel):
     status: str
 
 
+class CatalogLesson(BaseModel):
+    slug: str
+    title: str
+
+
+class CatalogTopic(BaseModel):
+    slug: str
+    title: str
+    lessons: list[CatalogLesson]
+
+
+class CatalogCategory(BaseModel):
+    slug: str
+    title: str
+    topics: list[CatalogTopic]
+
+
 class LearningCategoryCard(BaseModel):
     id: UUID
     slug: str

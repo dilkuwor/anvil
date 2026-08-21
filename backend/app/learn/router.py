@@ -8,6 +8,7 @@ from app.common.database import get_db
 from app.common.deps import get_current_user, get_optional_user
 from app.learn import service
 from app.learn.schemas import (
+    CatalogCategory,
     LearningCategoryCard,
     LearningCategoryDetail,
     LearningLessonDetail,
@@ -24,6 +25,11 @@ from app.learn.schemas import (
 from app.users.models import User
 
 router = APIRouter(prefix="/api/v1/learn", tags=["learn"])
+
+
+@router.get("/catalog", response_model=list[CatalogCategory])
+def catalog_index(db: Session = Depends(get_db)) -> list[CatalogCategory]:
+    return service.catalog_tree(db)
 
 
 @router.get("/categories", response_model=list[LearningCategoryCard])

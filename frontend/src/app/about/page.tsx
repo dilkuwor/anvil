@@ -5,11 +5,14 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { PageHeader } from "@/components/layout/page-header";
 
-export const metadata: Metadata = {
+import { pageMeta } from "@/lib/seo";
+
+export const metadata: Metadata = pageMeta({
   title: "About",
   description:
     "Anvil is a ByteTech LLC product built to help software engineers prepare for technical interviews through deliberate, realistic practice.",
-};
+  path: "/about",
+});
 
 export default function AboutPage() {
   return (

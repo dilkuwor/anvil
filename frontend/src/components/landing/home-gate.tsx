@@ -16,7 +16,7 @@ export function HomeGate({ children }: { children: React.ReactNode }) {
     }
   }, [ready, signedIn, router]);
 
-  if (!ready || signedIn) {
+  if (ready && signedIn) {
     return <PageLoader variant="screen" />;
   }
 

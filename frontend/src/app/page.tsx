@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles, Zap } from "lucide-react";
 
@@ -7,6 +8,14 @@ import { HomeGate } from "@/components/landing/home-gate";
 import { PublicHeader } from "@/components/layout/public-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
+
+import { SITE_DEFAULT_TITLE, SITE_DESCRIPTION, pageMeta } from "@/lib/seo";
+
+export const metadata: Metadata = pageMeta({
+  title: { absolute: SITE_DEFAULT_TITLE },
+  description: SITE_DESCRIPTION,
+  path: "/",
+});
 
 const FEATURES = [
   {
