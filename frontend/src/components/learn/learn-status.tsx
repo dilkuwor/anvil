@@ -1,7 +1,5 @@
 import { CheckCircle2, Circle } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-
 export function LearnStatus({ status, compact = false }: { status: string; compact?: boolean }) {
   const s = status.toUpperCase();
 

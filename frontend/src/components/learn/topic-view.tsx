@@ -17,7 +17,6 @@ import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import { actionLabel, type LearningCategoryDetail, type LearningLessonSummary, type LearningTopicDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
-import { cn } from "@/lib/utils";
 import {
   DESIGN_LEARN_TOPIC,
   useStartDesignInterview,

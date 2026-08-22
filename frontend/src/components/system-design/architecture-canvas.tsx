@@ -35,6 +35,10 @@ type DragState =
   | { mode: "link"; from: string; x: number; y: number }
   | null;
 
+function createNodeId(): string {
+  return `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
 export function ArchitectureCanvas({
   value,
   onChange,
@@ -46,11 +50,14 @@ export function ArchitectureCanvas({
 }) {
   const graph = value ?? emptyArchitecture();
   const graphRef = useRef(graph);
-  graphRef.current = graph;
   const surface = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragState>(null);
   const [labelDraft, setLabelDraft] = useState("");
+
+  useEffect(() => {
+    graphRef.current = graph;
+  }, [graph]);
 
   const selectedNode = graph.nodes.find((node) => node.id === selected) ?? null;
 
@@ -94,21 +101,24 @@ export function ArchitectureCanvas({
 
   const nodeMap = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph.nodes]);
 
-  function addComponent(type: DesignNodeType) {
-    if (readOnly) return;
-    const count = graph.nodes.filter((node) => node.type === type).length;
-    const label = PALETTE.find((item) => item.type === type)?.label ?? type;
-    const index = graph.nodes.length;
-    const node: DesignNode = {
-      id: `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-      type,
-      label: count ? `${label} ${count + 1}` : label,
-      x: 48 + (index % 4) * 180,
-      y: 48 + Math.floor(index / 4) * 110,
-    };
-    emit({ ...graph, nodes: [...graph.nodes, node] });
-    selectNode(node.id, node.label);
-  }
+  const addComponent = useCallback(
+    (type: DesignNodeType) => {
+      if (readOnly) return;
+      const count = graph.nodes.filter((node) => node.type === type).length;
+      const label = PALETTE.find((item) => item.type === type)?.label ?? type;
+      const index = graph.nodes.length;
+      const node: DesignNode = {
+        id: createNodeId(),
+        type,
+        label: count ? `${label} ${count + 1}` : label,
+        x: 48 + (index % 4) * 180,
+        y: 48 + Math.floor(index / 4) * 110,
+      };
+      emit({ ...graph, nodes: [...graph.nodes, node] });
+      selectNode(node.id, node.label);
+    },
+    [emit, graph, readOnly],
+  );
 
   function renameSelected(label: string) {
     if (!selectedNode) return;

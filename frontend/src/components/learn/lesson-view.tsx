@@ -117,13 +117,14 @@ export function LessonView({ slug }: { slug: string }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [lessonData, signedIn, complete]);
 
+  const lessonContent = lessonData?.content;
   // Extract headings from markdown content for the in-page TOC
   const headings = useMemo(() => {
-    if (!lessonData?.content) return [];
+    if (!lessonContent) return [];
     const headingRegex = /^##\s+(.+)$/gm;
     const result: { id: string; text: string }[] = [];
     let match;
-    while ((match = headingRegex.exec(lessonData.content)) !== null) {
+    while ((match = headingRegex.exec(lessonContent)) !== null) {
       const raw = match[1].trim();
       result.push({
         id: headingSlug(raw),
@@ -131,7 +132,7 @@ export function LessonView({ slug }: { slug: string }) {
       });
     }
     return result;
-  }, [lessonData?.content]);
+  }, [lessonContent]);
 
   if (lesson.isLoading) return <CardSkeleton rows={8} />;
   if (lesson.isError || !lesson.data) {

@@ -17,7 +17,7 @@ import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-import { BookOpen, Flame, Search } from "lucide-react";
+import { Flame, Search } from "lucide-react";
 
 export function LearnIndex() {
   const [query, setQuery] = useState("");

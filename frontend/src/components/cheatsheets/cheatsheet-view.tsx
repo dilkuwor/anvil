@@ -4,21 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   BookOpen,
-  Check,
   Clock,
-  Copy,
   FileText,
-  Layers,
   ListOrdered,
   Maximize2,
   Minimize2,
   Printer,
   Search,
   Share2,
-  Sparkles,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -61,6 +58,7 @@ function CheatSheetBody({
   data: CheatSheetDetail;
   allSheets: CheatSheetCard[];
 }) {
+  const router = useRouter();
   const [compact, setCompact] = useState(false);
   const [sectionFilter, setSectionFilter] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -233,7 +231,7 @@ function CheatSheetBody({
                 className="select-field mt-2 w-full text-xs"
                 value={data.slug}
                 onChange={(e) => {
-                  window.location.href = `/cheatsheets/${e.target.value}`;
+                  router.push(`/cheatsheets/${e.target.value}`);
                 }}
               >
                 {allSheets.map((s) => (

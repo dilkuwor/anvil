@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Circle, Clock, ListOrdered, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Circle, Clock, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -194,7 +194,7 @@ export function LessonCurriculumCard({ lesson }: { lesson: LearningLessonDetail 
       </div>
 
       <ol className="mt-3 space-y-1.5">
-        {lessons.map((item, index) => {
+        {lessons.map((item) => {
           const active = item.slug === lesson.slug;
           const isCompleted = item.status === "COMPLETED";
           return (
