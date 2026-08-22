@@ -21,6 +21,17 @@
 #   OLLAMA_BASE_URL
 #   OLLAMA_MODEL
 #   COOKIE_SECURE       (true if the site is served over HTTPS)
+# Google sign-in (both must share the same OAuth client's ID):
+#   GOOGLE_CLIENT_ID
+#   NEXT_PUBLIC_GOOGLE_CLIENT_ID      (baked at build time — requires a
+#                                     frontend image built with this value)
+# Transactional email via Resend (empty RESEND_API_KEY disables email;
+# registration still works and verification emails can be sent later):
+#   RESEND_API_KEY
+#   EMAIL_FROM                        (default no-reply@anvilprep.dev)
+#   FRONTEND_BASE_URL                 (verification links; default https://anvilprep.dev in production)
+#   EMAIL_VERIFICATION_TOKEN_HOURS    (default 24)
+#   EMAIL_VERIFICATION_MAX_PER_HOUR   (default 5)
 
 services:
   api:
@@ -47,6 +58,12 @@ services:
       CODE_RUNNER_JOB_DIR: /var/tmp/interview-anvil-jobs
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://100.120.169.81:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:4b}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@anvilprep.dev}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://anvilprep.dev}
+      EMAIL_VERIFICATION_TOKEN_HOURS: ${EMAIL_VERIFICATION_TOKEN_HOURS:-24}
+      EMAIL_VERIFICATION_MAX_PER_HOUR: ${EMAIL_VERIFICATION_MAX_PER_HOUR:-5}
       INTERVIEW_DURATION_SECONDS: ${INTERVIEW_DURATION_SECONDS:-2700}
       TTS_BASE_URL: ${TTS_BASE_URL:-http://100.120.169.81:8091}
       TTS_VOICE: ${TTS_VOICE:-af_heart}
@@ -76,6 +93,9 @@ services:
       API_PROXY_TARGET: http://api:8000
       SITE_URL: ${SITE_URL:-https://anvilprep.dev}
       GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
+      # Baked into the standalone build — set as a build arg when building the
+      # frontend image (NEXT_PUBLIC_* is not read at runtime).
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     ports:
       - "3333:3000"
     depends_on:
