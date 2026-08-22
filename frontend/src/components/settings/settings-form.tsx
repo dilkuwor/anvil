@@ -711,16 +711,16 @@ function LlmProbeResult({ result }: { result: LlmProbe }) {
 
 function PanelHeader({ title, body }: { title: string; body: string }) {
   return (
-    <div className="border-b border-steel-800 px-5 py-4">
+    <div className="border-b border-steel-800/80 bg-steel-950/30 px-5 py-4">
       <SectionTitle>{title}</SectionTitle>
-      <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{body}</p>
+      <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{body}</p>
     </div>
   );
 }
 
 function PanelFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-end gap-1.5 border-t border-steel-800 bg-steel-950/50 px-5 py-3">
+    <div className="flex items-center justify-end gap-2 border-t border-steel-800/80 bg-steel-950/40 px-5 py-3.5">
       {children}
     </div>
   );

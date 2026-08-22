@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles, Zap } from "lucide-react";
 
 import { HeroDesignFloat } from "@/components/landing/hero-design-float";
 import { HeroPreview } from "@/components/landing/hero-preview";
@@ -59,36 +59,42 @@ export default function HomePage() {
       <main>
         <section className="relative overflow-hidden border-b border-steel-800">
           <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute left-1/2 top-0 h-[28rem] w-[46rem] -translate-x-1/2 bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_16%,transparent),transparent)]" />
+            <div className="absolute left-1/2 top-0 h-[28rem] w-[46rem] -translate-x-1/2 bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_18%,transparent),transparent)]" />
             <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(var(--steel-800)_1px,transparent_1px),linear-gradient(90deg,var(--steel-800)_1px,transparent_1px)] [background-size:52px_52px] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />
           </div>
           <div className="ia-content relative pt-14 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
             <div className="grid min-w-0 items-center gap-6 lg:grid-cols-[minmax(17rem,30rem)_minmax(0,1fr)] lg:gap-8">
             <div className="max-w-2xl">
-              <p className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[12px] font-medium text-accent">
+              <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[12px] font-medium text-accent shadow-xs">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
                 <Zap className="h-3.5 w-3.5" aria-hidden />
                 Forge Your Interview Skills
-              </p>
-              <h1 className="mt-3 text-[2rem] font-semibold leading-[1.1] tracking-tight text-balance sm:text-[3rem] lg:text-[3.15rem]">
+              </div>
+              <h1 className="mt-4 text-[2.25rem] font-bold leading-[1.08] tracking-tight text-balance sm:text-[3.25rem] lg:text-[3.4rem]">
                 Build skills.
                 <br />
                 Break limits.
                 <br />
-                Ace the interview.
+                <span className="bg-gradient-to-r from-accent via-amber-500 to-orange-500 bg-clip-text text-transparent">
+                  Ace the interview.
+                </span>
               </h1>
-              <p className="mt-4 max-w-xl text-[15px] leading-7 text-[#475569] dark:text-zinc-300">
+              <p className="mt-4 max-w-xl text-[15px] leading-7 text-muted-foreground">
                 Everything you need to prepare for software engineering interviews — coding, system design, AI/ML,
                 AI-powered mock interviews, and focused practice.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Button asChild size="lg">
-                  <Link href="/problems">Start Practicing</Link>
+                <Button asChild size="lg" className="gap-2 shadow-sm hover:shadow-md">
+                  <Link href="/problems">
+                    Start Practicing
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </Button>
                 <Button
                   asChild
                   size="lg"
                   variant="outline"
-                  className="border-[#CBD5E1] bg-white/80 text-foreground hover:bg-white dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-400 dark:hover:bg-zinc-800"
+                  className="bg-card/70 backdrop-blur-sm"
                 >
                   <Link href="/learn">Explore Learning</Link>
                 </Button>
@@ -104,25 +110,27 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="border-b border-steel-800 bg-steel-900">
-          <div className="ia-content py-10 lg:py-12">
-            <p className="text-center text-[11px] font-medium uppercase tracking-[0.16em] text-accent">Features</p>
-            <h2 className="mt-1.5 text-center text-xl font-semibold tracking-tight sm:text-2xl">
+        <section className="border-b border-steel-800 bg-steel-900/60">
+          <div className="ia-content py-12 lg:py-14">
+            <p className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Features</p>
+            <h2 className="mt-1.5 text-center text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">
               Everything you need for the interview.
             </h2>
-            <div className="mt-6 overflow-hidden rounded-2xl border border-steel-800">
+            <div className="mt-8 overflow-hidden rounded-2xl border border-steel-800 shadow-xs">
               <div className="grid gap-px bg-steel-800 sm:grid-cols-2">
                 {FEATURES.map((item) => (
                   <Link
                     key={item.title}
                     href={item.href}
-                    className="group flex cursor-pointer items-start gap-3.5 bg-steel-900 px-5 py-5 transition-colors hover:bg-steel-950/60 sm:px-6 sm:py-6"
+                    className="group flex cursor-pointer items-start gap-4 bg-steel-900 px-6 py-6 transition-all duration-200 hover:bg-steel-950/70"
                   >
-                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 text-accent transition-colors group-hover:border-accent/35 group-hover:bg-accent/15">
+                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent transition-all duration-200 group-hover:scale-105 group-hover:border-accent/40 group-hover:bg-accent/15 group-hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]">
                       <item.icon className="h-5 w-5" aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-semibold tracking-tight">{item.title}</h3>
+                      <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-accent">
+                        {item.title}
+                      </h3>
                       <p className="mt-1 max-w-sm text-[13px] leading-6 text-muted-foreground">{item.body}</p>
                     </div>
                   </Link>

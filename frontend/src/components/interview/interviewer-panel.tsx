@@ -56,13 +56,13 @@ export function InterviewerPanel({
         compact ? "min-h-[18rem]" : "min-h-[22rem] rounded-2xl border border-steel-800 xl:min-h-0",
       )}
     >
-      <div className="flex items-start justify-between gap-3 border-b border-steel-800 px-4 py-3">
+      <div className="flex items-start justify-between gap-3 border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
         <div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Interviewer</div>
-          <div className="mt-1 flex items-center gap-2 text-[12px] text-muted-foreground">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Interviewer</div>
+          <div className="mt-1 flex items-center gap-2 text-[12px] text-muted-foreground font-medium">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-40" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-40" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
             Active
           </div>
@@ -75,7 +75,7 @@ export function InterviewerPanel({
               </Button>
             ) : null}
             {showEndButton ? (
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={onEnd}>
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-rose-400" onClick={onEnd}>
                 End Interview
               </Button>
             ) : null}
@@ -83,33 +83,41 @@ export function InterviewerPanel({
         )}
       </div>
 
-      <div ref={scroller} className="min-h-0 flex-1 space-y-5 overflow-auto px-4 py-4">
+      <div ref={scroller} className="min-h-0 flex-1 space-y-4 overflow-auto px-5 py-4">
         {session.messages.filter((message) => !isProblemHandout(message.content, session.problem_title)).map((message) => {
           const interviewer = message.role === "INTERVIEWER";
           return (
-            <article key={message.id} className={cn(interviewer ? "pr-4" : "pl-6")}>
+            <article
+              key={message.id}
+              className={cn(
+                "rounded-2xl p-3.5 transition-colors",
+                interviewer
+                  ? "border border-steel-800/80 bg-steel-950/50 mr-4"
+                  : "border border-accent/25 bg-accent/5 ml-4",
+              )}
+            >
               <div
                 className={cn(
-                  "text-[11px] font-medium uppercase tracking-[0.14em]",
+                  "text-[11px] font-semibold uppercase tracking-[0.14em]",
                   interviewer ? "text-muted-foreground" : "text-accent",
                 )}
               >
                 {interviewer ? "Interviewer" : "You"}
               </div>
               {interviewer ? (
-                <blockquote className="mt-1.5 text-sm leading-7 text-foreground">
+                <blockquote className="mt-1 text-sm leading-relaxed text-foreground">
                   “{message.content.replace(/^["“]|["”]$/g, "")}”
                 </blockquote>
               ) : (
-                <p className="mt-1.5 text-sm leading-7 text-foreground/90">{message.content}</p>
+                <p className="mt-1 text-sm leading-relaxed text-foreground/90">{message.content}</p>
               )}
             </article>
           );
         })}
-        {busy ? <p className="text-[12px] italic text-muted-foreground">The interviewer is listening…</p> : null}
+        {busy ? <p className="text-[12px] italic text-muted-foreground animate-pulse">The interviewer is listening…</p> : null}
       </div>
 
-      <div className="border-t border-steel-800 p-3">
+      <div className="border-t border-steel-800/80 bg-steel-950/30 p-3.5">
         {locked ? (
           lockFooter
         ) : (
@@ -123,7 +131,7 @@ export function InterviewerPanel({
               value={draft}
               disabled={busy}
               placeholder="Type your response..."
-              className="w-full resize-none rounded-lg border border-input-border bg-background px-3 py-2 text-sm leading-6 text-input-foreground outline-none placeholder:text-input-placeholder"
+              className="w-full resize-none rounded-xl border border-steel-800/80 bg-background px-3.5 py-2.5 text-sm leading-6 text-foreground placeholder:text-muted-foreground/60 focus:border-accent/50 focus:ring-1 focus:ring-accent/50 outline-none transition-colors"
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
@@ -132,7 +140,7 @@ export function InterviewerPanel({
                 }
               }}
             />
-            <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="mt-2.5 flex items-center justify-between gap-2">
               {compact || !showHint ? (
                 <span />
               ) : (

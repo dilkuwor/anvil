@@ -40,35 +40,40 @@ export function SystemDesignHub() {
         title="System Design"
         description="Simulate architectures like an engineer: traffic, capacity, latency, storage, and cost — then iterate."
       />
-      <article className="flex flex-col gap-4 rounded-2xl border border-steel-800 bg-steel-900 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <article className="relative overflow-hidden flex flex-col gap-5 rounded-2xl border border-accent/30 bg-gradient-to-r from-steel-900 via-steel-900 to-accent/10 p-6 shadow-md sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">Featured Design</div>
-          <h2 className="mt-1 text-sm font-semibold tracking-tight">URL Shortener</h2>
-          <p className="mt-1 max-w-xl text-[13px] leading-6 text-muted-foreground">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/15 px-3 py-0.5 text-[11px] font-bold text-accent shadow-xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+            Featured Architecture
+          </div>
+          <h2 className="mt-2.5 text-lg font-bold tracking-tight text-foreground">URL Shortener</h2>
+          <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
             A wired architecture you can simulate immediately: DNS, rate limit, load balancer, API, Redis, Postgres, and
             Kafka for click events. Change a box, hit Simulate again.
           </p>
         </div>
-        <Button asChild>
+        <Button asChild size="lg" className="gap-2 shadow-sm shrink-0">
           <Link href="/system-design/simulator?sample=url-shortener">
-            <Play className="h-3.5 w-3.5" />
-            Load & simulate
+            <Play className="h-4 w-4 fill-current" />
+            Load & Simulate
           </Link>
         </Button>
       </article>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         {CARDS.map((card) => (
           <Link
             key={card.href}
             href={card.href}
-            className="flex items-start gap-3 rounded-2xl border border-steel-800 bg-steel-900 p-5 hover:border-accent/40"
+            className="group flex items-start gap-4 rounded-2xl border border-steel-800/90 bg-steel-900/90 p-5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:bg-steel-900 hover:shadow-md"
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 text-accent">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent transition-all duration-200 group-hover:scale-105 group-hover:border-accent/40 group-hover:bg-accent/15 group-hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]">
               <card.icon className="h-5 w-5" />
             </span>
-            <div>
-              <h2 className="text-sm font-semibold tracking-tight">{card.title}</h2>
-              <p className="mt-1 text-[13px] leading-6 text-muted-foreground">{card.body}</p>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold tracking-tight text-foreground transition-colors group-hover:text-accent">
+                {card.title}
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{card.body}</p>
             </div>
           </Link>
         ))}

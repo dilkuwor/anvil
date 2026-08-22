@@ -98,18 +98,23 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
                 </span>
               ))}
             </div>
-            <div className="grid auto-cols-max grid-flow-col grid-rows-7 gap-[3px]">
+            <div className="grid auto-cols-max grid-flow-col grid-rows-7 gap-[3.5px]">
               {grid.cells.map((cell) => (
                 <div
                   key={cell.key}
                   title={cell.title}
-                  className={cn("h-[11px] w-[11px] rounded-[3px]", LEVELS[cell.level], !cell.inYear && "opacity-0")}
+                  className={cn(
+                    "h-[11px] w-[11px] rounded-[3px] transition-all duration-150",
+                    LEVELS[cell.level],
+                    !cell.inYear && "opacity-0",
+                    cell.inYear && "hover:scale-135 hover:z-10 hover:shadow-md cursor-pointer",
+                  )}
                   aria-label={cell.title}
                 />
               ))}
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+          <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] font-medium text-muted-foreground">
             <span>Less</span>
             {LEVELS.map((tone) => (
               <span key={tone} className={cn("h-2.5 w-2.5 rounded-[2px]", tone)} />
@@ -119,7 +124,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
         </div>
       </div>
 
-      <dl className="mt-4 grid grid-cols-3 gap-3 text-sm">
+      <dl className="mt-5 grid grid-cols-3 gap-3.5 text-sm">
         <Stat label="Active days" value={String(activeDays)} />
         <Stat label="Current streak" value={`${currentStreak} days`} />
         <Stat label="Best streak" value={`${longestStreak} days`} />
@@ -130,9 +135,9 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 font-medium tabular-nums text-foreground">{value}</dd>
+    <div className="rounded-xl border border-steel-800/90 bg-steel-950/40 px-4 py-3 shadow-2xs">
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-lg font-bold tabular-nums tracking-tight text-foreground">{value}</dd>
     </div>
   );
 }

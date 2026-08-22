@@ -110,7 +110,7 @@ export function ProblemListDetailView({ id }: { id: string }) {
                 Add Problems
               </Button>
               <Button asChild size="sm" variant="outline">
-                <Link href={listRoadmapHref(id)}>View Road Map</Link>
+                <Link href={listRoadmapHref(id)}>View Roadmap</Link>
               </Button>
               <ListOverflowMenu
                 onRename={() => setEditing("rename")}
@@ -135,7 +135,7 @@ export function ProblemListDetailView({ id }: { id: string }) {
       </div>
 
       <SectionCard className="p-0">
-        <div className="grid gap-2 border-b border-steel-800 p-3 sm:grid-cols-2">
+        <div className="grid gap-2 border-b border-steel-800/80 bg-steel-950/30 p-3.5 sm:grid-cols-2">
           <select className="select-field" aria-label="Status" value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="">All</option>
             <option value="UNSOLVED">Unsolved</option>
@@ -155,36 +155,36 @@ export function ProblemListDetailView({ id }: { id: string }) {
           <>
             <div className="hidden md:block">
               <table className="w-full table-fixed text-left text-[13px]">
-                <thead className="bg-steel-950/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <thead className="bg-steel-950/60 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground border-b border-steel-800/80">
                   <tr>
-                    <th className="w-[38%] px-4 py-2.5 font-medium">Problem</th>
-                    <th className="w-[8.5rem] px-4 py-2.5 font-medium">Difficulty</th>
-                    <th className="px-4 py-2.5 font-medium">Topics</th>
-                    <th className="w-[9.5rem] px-4 py-2.5 font-medium">Status</th>
-                    <th className="w-[7rem] px-4 py-2.5 font-medium">Action</th>
+                    <th className="w-[38%] px-4 py-3 font-semibold">Problem</th>
+                    <th className="w-[8.5rem] px-4 py-3 font-semibold">Difficulty</th>
+                    <th className="px-4 py-3 font-semibold">Topics</th>
+                    <th className="w-[9.5rem] px-4 py-3 font-semibold">Status</th>
+                    <th className="w-[7rem] px-4 py-3 font-semibold">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.id} className="border-t border-steel-800 hover:bg-steel-950/50">
-                      <td className="px-4 py-2.5">
-                        <Link href={`/problems/${item.slug}`} className="font-medium hover:text-accent">
+                    <tr key={item.id} className="group border-t border-steel-800/70 transition-colors hover:bg-steel-800/45">
+                      <td className="px-4 py-3.5">
+                        <Link href={`/problems/${item.slug}`} className="font-medium text-foreground transition-colors group-hover:text-accent">
                           {item.title}
                         </Link>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3.5">
                         <DifficultyBadge difficulty={item.difficulty} />
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3.5">
                         <TopicTags tags={item.tags} />
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3.5">
                         <StatusPip status={item.status} />
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3.5">
                         <button
                           type="button"
-                          className="text-[12px] text-muted-foreground hover:text-coral"
+                          className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                           onClick={() => remove.mutate(item.id)}
                         >
                           Remove
@@ -195,15 +195,15 @@ export function ProblemListDetailView({ id }: { id: string }) {
                 </tbody>
               </table>
             </div>
-            <div className="space-y-2 p-3 md:hidden">
+            <div className="space-y-2.5 p-3.5 md:hidden">
               {items.map((item) => (
-                <div key={item.id} className="rounded-xl border border-steel-800 p-3">
-                  <Link href={`/problems/${item.slug}`} className="text-sm font-medium hover:text-accent">
+                <div key={item.id} className="rounded-xl border border-steel-800/90 bg-steel-950/40 p-4 transition-all hover:border-steel-700/80">
+                  <Link href={`/problems/${item.slug}`} className="text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-accent">
                     {item.title}
                   </Link>
-                  <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="mt-3 flex items-center justify-between border-t border-steel-800/60 pt-2.5">
                     <StatusPip status={item.status} />
-                    <button type="button" className="text-[12px] text-muted-foreground" onClick={() => remove.mutate(item.id)}>
+                    <button type="button" className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-500" onClick={() => remove.mutate(item.id)}>
                       Remove
                     </button>
                   </div>

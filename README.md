@@ -1,4 +1,4 @@
-# Anvil (InterviewAnvil)
+# Anvil
 
 Interview prep for software engineers: Java coding practice, Learn catalog, cheat sheets, notes, mock coding and system-design interviews.
 

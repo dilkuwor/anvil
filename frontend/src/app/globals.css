@@ -3,57 +3,57 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f7f7f8;
-  --foreground: #18181b;
+  --background: #f8f9fa;
+  --foreground: #111827;
   --card: #ffffff;
-  --card-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
+  --card-foreground: #111827;
+  --muted: #f1f3f5;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
   --primary: #f97316;
-  --primary-foreground: #18181b;
-  --steel-950: #f7f7f8;
+  --primary-foreground: #ffffff;
+  --steel-950: #f8f9fa;
   --steel-900: #ffffff;
-  --steel-800: #e4e4e7;
-  --steel-700: #d4d4d8;
-  --steel-600: #a1a1aa;
+  --steel-800: #e2e8f0;
+  --steel-700: #cbd5e1;
+  --steel-600: #94a3b8;
   --accent: #f97316;
-  --accent-light: #c2410c;
-  --teal: #0f766e;
+  --accent-light: #ea580c;
+  --teal: #0d9488;
   --teal-dim: #ccfbf1;
   --coral: #e11d48;
   --coral-dim: #ffe4e6;
   --success: #059669;
-  --chart-track: #e4e4e7;
+  --chart-track: #e2e8f0;
   --editor-surface: #ffffff;
-  --heat-0: #e4e4e7;
+  --heat-0: #e2e8f0;
   --heat-1: #fed7aa;
   --heat-2: #fdba74;
   --heat-3: #fb923c;
   --heat-4: #f97316;
-  --input-border: #c8cdd4;
-  --input-foreground: #3f4650;
-  --input-placeholder: #7a838f;
+  --input-border: #cbd5e1;
+  --input-foreground: #1e293b;
+  --input-placeholder: #94a3b8;
   --input-focus-border: #f97316;
-  --input-focus-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
-  --input-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%233F4650' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --input-focus-shadow: 0 0 0 3px rgba(249, 115, 22, 0.16);
+  --input-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%2364748B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 .dark {
-  --background: #18181b;
-  --foreground: #f0f0f2;
-  --card: #202024;
-  --card-foreground: #f0f0f2;
-  --muted: #2a2a30;
-  --muted-foreground: #b0b0b8;
-  --border: #3a3a42;
+  --background: #0e0e11;
+  --foreground: #f4f4f6;
+  --card: #151519;
+  --card-foreground: #f4f4f6;
+  --muted: #1e1e24;
+  --muted-foreground: #9898a4;
+  --border: #26262f;
   --primary: #f97316;
-  --primary-foreground: #18181b;
-  --steel-950: #18181b;
-  --steel-900: #202024;
-  --steel-800: #2a2a30;
-  --steel-700: #3a3a42;
-  --steel-600: #4a4a54;
+  --primary-foreground: #ffffff;
+  --steel-950: #0e0e11;
+  --steel-900: #151519;
+  --steel-800: #202028;
+  --steel-700: #2d2d38;
+  --steel-600: #424250;
   --accent: #f97316;
   --accent-light: #fb923c;
   --teal: #2dd4bf;
@@ -61,19 +61,19 @@
   --coral: #fb7185;
   --coral-dim: #4c0519;
   --success: #34d399;
-  --chart-track: #3a3a42;
-  --editor-surface: #1c1c20;
-  --heat-0: #2a2a30;
-  --heat-1: #3d2818;
-  --heat-2: #7a4314;
-  --heat-3: #c25d12;
+  --chart-track: #202028;
+  --editor-surface: #121216;
+  --heat-0: #202028;
+  --heat-1: #3d2414;
+  --heat-2: #7a3e10;
+  --heat-3: #c2580e;
   --heat-4: #f97316;
-  --input-border: var(--steel-600);
+  --input-border: var(--steel-700);
   --input-foreground: var(--foreground);
   --input-placeholder: var(--muted-foreground);
   --input-focus-border: #f97316;
   --input-focus-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
-  --input-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%23f0f0f2' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --input-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%239898a4' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 @theme inline {
@@ -122,6 +122,30 @@ body {
   overflow-x: clip;
 }
 
+/* Custom modern scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--steel-700) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--steel-700);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--steel-600);
+}
+
 .ia-content {
   width: min(1400px, calc(100vw - 2rem));
   margin-inline: auto;
@@ -135,6 +159,8 @@ body {
 
 body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 code,
@@ -143,7 +169,7 @@ pre {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 :focus-visible {

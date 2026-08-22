@@ -95,13 +95,13 @@ export function ProblemListsIndex() {
           <EmptyState title="No lists yet" body="Create a list to group problems for focused practice." />
         </SectionCard>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3.5 md:grid-cols-2">
           {lists.data?.map((list) => (
-            <SectionCard key={list.id} className="flex flex-col overflow-visible p-4">
-              <div className="flex items-start gap-2">
-                <Link href={`/problems/lists/${list.id}`} className="min-w-0 flex-1 hover:text-accent">
-                  <h2 className="text-sm font-semibold tracking-tight">{list.name}</h2>
-                  <p className="mt-0.5 text-[12px] tabular-nums text-muted-foreground">
+            <SectionCard key={list.id} className="flex flex-col overflow-visible p-5 transition-all hover:border-steel-700/80">
+              <div className="flex items-start gap-3">
+                <Link href={`/problems/lists/${list.id}`} className="group min-w-0 flex-1">
+                  <h2 className="text-base font-bold tracking-tight text-foreground transition-colors group-hover:text-accent">{list.name}</h2>
+                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground font-medium">
                     {list.problem_count} {list.problem_count === 1 ? "problem" : "problems"}
                   </p>
                 </Link>
@@ -118,20 +118,20 @@ export function ProblemListsIndex() {
                 />
               </div>
               {list.description ? (
-                <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted-foreground">{list.description}</p>
+                <p className="mt-2.5 line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">{list.description}</p>
               ) : null}
-              <div className="mt-auto pt-4">
+              <div className="mt-auto pt-5">
                 <Meter value={list.percent} label={`${list.name} solved`} />
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[12px] text-muted-foreground">
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs text-muted-foreground font-medium">
                     <span className="tabular-nums">
-                      {list.solved_count} solved · {list.remaining_count} remaining
+                      <span className="text-foreground font-semibold">{list.solved_count}</span> solved · <span className="text-foreground font-semibold">{list.remaining_count}</span> remaining
                     </span>
                     <span className="mx-1.5 text-steel-700">·</span>
-                    <span>{formatListUpdated(list.updated_at)}</span>
+                    <span className="text-muted-foreground/80">{formatListUpdated(list.updated_at)}</span>
                   </div>
-                  <Button asChild size="sm" variant="secondary">
-                    <Link href={listRoadmapHref(list.id)}>View Road Map</Link>
+                  <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs text-accent hover:text-accent-light">
+                    <Link href={listRoadmapHref(list.id)}>Roadmap →</Link>
                   </Button>
                 </div>
               </div>

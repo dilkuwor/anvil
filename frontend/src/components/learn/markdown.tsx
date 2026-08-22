@@ -129,11 +129,21 @@ function headingKey(title: string): string {
   return "default";
 }
 
+export function headingSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/^\d+\.\s*/, "")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
 function LessonHeading({ title }: { title: string }) {
+  const id = headingSlug(title);
   const numbered = title.match(/^(\d+)\.\s+(.*)$/);
   if (numbered) {
     return (
-      <h2 className="flex items-center gap-2.5 pt-2 text-[15px] font-semibold tracking-tight">
+      <h2 id={id} className="flex items-center gap-2.5 pt-2 text-[15px] font-semibold tracking-tight scroll-mt-20">
         <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg bg-accent px-1.5 text-[12px] font-bold tabular-nums text-primary-foreground">
           {numbered[1]}
         </span>
@@ -142,7 +152,7 @@ function LessonHeading({ title }: { title: string }) {
     );
   }
   return (
-    <h2 className="flex items-center gap-2 pt-2 text-[15px] font-semibold tracking-tight">
+    <h2 id={id} className="flex items-center gap-2 pt-2 text-[15px] font-semibold tracking-tight scroll-mt-20">
       <HeadingIcon title={title} />
       {title}
     </h2>

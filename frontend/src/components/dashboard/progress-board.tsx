@@ -15,7 +15,7 @@ import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api, fetchCurrentUser, type ProgressSummary } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
-import { DEFAULT_DAILY_GOAL } from "@/lib/utils";
+import { cn, DEFAULT_DAILY_GOAL } from "@/lib/utils";
 
 export function ProgressBoard() {
   const me = useQuery({
@@ -58,28 +58,35 @@ export function ProgressBoard() {
       <div className="min-w-0 space-y-5">
       <PracticeOverview data={data} />
 
-      <SectionCard>
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <SectionCard className={cn(remaining === 0 && "border-accent/30 bg-accent/5")}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <SectionTitle>Today’s Goal</SectionTitle>
-            <p className="mt-2 text-sm">
+            <div className="flex items-center gap-2">
+              <SectionTitle>Today’s Goal</SectionTitle>
+              {remaining === 0 ? (
+                <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                  Completed 🔥
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1.5 text-sm text-foreground">
               Solve {goalTarget} problems
               <span className="text-muted-foreground">
-                {remaining === 0 ? " · complete" : ` · ${remaining} remaining`}
+                {remaining === 0 ? " · all done for today!" : ` · ${remaining} remaining`}
               </span>
             </p>
             <div className="mt-3 max-w-md">
-              <Meter value={goalPct} label="Today's goal" />
+              <Meter value={goalPct} label="Today's goal" tone={remaining === 0 ? "bg-accent" : "bg-accent"} />
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <div className="text-xl font-semibold tabular-nums tracking-tight">
+              <div className="text-xl font-bold tabular-nums tracking-tight text-foreground">
                 {goalDone}/{goalTarget}
               </div>
-              <div className="text-[11px] text-muted-foreground">{goalPct}%</div>
+              <div className="text-xs font-medium text-muted-foreground">{goalPct}%</div>
             </div>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="gap-1.5 shadow-xs">
               <Link href={practiceHref}>{cta}</Link>
             </Button>
           </div>

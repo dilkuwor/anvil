@@ -1,29 +1,42 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
-import { Meter } from "@/components/dashboard/meter";
+import { CategoryIcon } from "@/components/learn/category-icon";
+import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LearnStatus } from "@/components/learn/learn-status";
-import { Breadcrumbs, PageHeader } from "@/components/layout/page-header";
+import { TopicSidebar, useTopicSidebarCollapsed } from "@/components/learn/topic-sidebar";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
+import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
-import { actionLabel, type LearningLessonSummary, type LearningTopicDetail } from "@/lib/learn";
+import { actionLabel, type LearningCategoryDetail, type LearningLessonSummary, type LearningTopicDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 import {
   DESIGN_LEARN_TOPIC,
   useStartDesignInterview,
   useSystemDesignCatalog,
 } from "@/lib/system-design-catalog";
+import { Meter } from "@/components/dashboard/meter";
 
 export function TopicView({ slug }: { slug: string }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useTopicSidebarCollapsed();
+
   const topic = useQuery({
     queryKey: queryKeys.learnTopic(slug),
     queryFn: () => api.get<LearningTopicDetail>(`/api/v1/learn/topics/${slug}`),
+  });
+
+  const category = useQuery({
+    queryKey: queryKeys.learnCategory(topic.data?.category_slug ?? ""),
+    queryFn: () => api.get<LearningCategoryDetail>(`/api/v1/learn/categories/${topic.data!.category_slug}`),
+    enabled: Boolean(topic.data?.category_slug),
   });
 
   if (topic.isLoading) return <CardSkeleton rows={6} />;
@@ -34,87 +47,168 @@ export function TopicView({ slug }: { slug: string }) {
   const data = topic.data;
   const isDesignCatalog = data.slug === DESIGN_LEARN_TOPIC;
   const showRelated = data.related_problems.length > 0;
+  const siblingTopics = category.data?.topics ?? [];
+
+  // Find next lesson to study
+  const nextLesson = data.lessons.find((l) => l.status !== "COMPLETED") ?? data.lessons[0];
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <Breadcrumbs
-          items={[
-            { href: "/learn", label: "Learn" },
-            { href: `/learn/${data.category_slug}`, label: data.category_title },
-            { label: data.title },
-          ]}
-        />
-        <PageHeader
-          title={data.title}
-          description={data.description}
-          meta={
-            <span className="inline-flex items-center gap-2">
-              <DifficultyBadge difficulty={data.difficulty} />
-              <span>
-                {data.completed_lessons}/{data.lesson_count} lessons
-              </span>
-            </span>
-          }
-        />
-        <Meter
-          value={data.percent}
-          tone={data.status === "COMPLETED" ? "bg-success" : "bg-accent"}
-          label={`${data.title} complete`}
-          className="h-1.5"
-        />
-      </div>
+    <div className="space-y-4">
+      {/* Compact Hierarchy Bar */}
+      <LearnHierarchyBar
+        categorySlug={data.category_slug}
+        categoryTitle={data.category_title}
+        topicSlug={data.slug}
+        topicTitle={data.title}
+        totalLessons={data.lesson_count}
+      />
 
-      <div className={showRelated ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]" : undefined}>
-        {isDesignCatalog ? (
-          <DesignProblemsCatalog lessons={data.lessons} />
-        ) : (
-          <SectionCard className="p-0">
-            <ol>
-              {data.lessons.map((lesson, index) => (
-                <li key={lesson.id} className="border-t border-steel-800 first:border-t-0">
-                  <Link href={lesson.href} className="flex items-start gap-3 px-4 py-3.5 hover:bg-steel-950/50">
-                    <span className="mt-0.5 w-5 shrink-0 text-[12px] tabular-nums text-muted-foreground">{index + 1}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h2 className="text-sm font-medium">{lesson.title}</h2>
-                        <span className="text-[12px] text-accent">{actionLabel(lesson.status)}</span>
-                      </div>
-                      <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{lesson.short_description}</p>
-                      <div className="mt-1.5 flex items-center gap-3 text-[12px] text-muted-foreground">
-                        <LearnStatus status={lesson.status} />
-                        <span>{lesson.estimated_minutes} min</span>
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ol>
-          </SectionCard>
-        )}
+      {/* Main Connected Topic Workspace */}
+      <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-steel-800/90 bg-steel-900/90 shadow-2xs overflow-hidden">
+        {/* Attached Left Rail / Sidebar */}
+        <TopicSidebar
+          categorySlug={data.category_slug}
+          activeTopicSlug={data.slug}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
-        {showRelated ? (
-          <aside className="space-y-4">
-            <SectionCard className="p-0">
-              <div className="px-5 pt-5">
-                <SectionTitle>Related problems</SectionTitle>
+        {/* Right Column: Topic Details & Curriculum */}
+        <div className="flex-1 min-w-0 p-5 sm:p-7 space-y-6">
+          {/* Topic Header */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  {category.data?.icon ? (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-accent/25 bg-accent/10 text-accent">
+                      <CategoryIcon name={category.data.icon} className="h-3 w-3" />
+                    </span>
+                  ) : null}
+                  <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{data.title}</h1>
+                  <DifficultyBadge difficulty={data.difficulty} />
+                </div>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{data.description}</p>
               </div>
-              <ul className="mt-2 divide-y divide-steel-800">
+
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <span className="text-xs font-semibold tabular-nums text-foreground">
+                  {data.completed_lessons} / {data.lesson_count} lessons ({data.percent}%)
+                </span>
+                {nextLesson ? (
+                  <Button asChild size="sm" className="h-8 gap-1.5 text-xs font-bold shadow-xs">
+                    <Link href={nextLesson.href}>
+                      {data.completed_lessons > 0 ? "Continue Topic →" : "Start Topic →"}
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <Meter
+                value={data.percent}
+                tone={data.status === "COMPLETED" ? "bg-success" : "bg-accent"}
+                label={`${data.title} complete`}
+                className="h-1.5"
+              />
+            </div>
+
+            {/* Mobile / Tablet Sibling Topic Selector */}
+            {siblingTopics.length > 1 ? (
+              <div className="mt-4 border-t border-steel-800/70 pt-3 lg:hidden">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Switch Topic in {data.category_title}
+                </label>
+                <select
+                  className="select-field mt-1.5 w-full text-xs font-medium"
+                  value={slug}
+                  onChange={(e) => {
+                    const target = siblingTopics.find((t) => t.slug === e.target.value);
+                    if (target) window.location.href = target.href;
+                  }}
+                >
+                  {siblingTopics.map((t) => (
+                    <option key={t.id} value={t.slug}>
+                      {t.title} ({t.completed_lessons}/{t.lesson_count} lessons)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Lessons List */}
+          {isDesignCatalog ? (
+            <DesignProblemsCatalog lessons={data.lessons} />
+          ) : (
+            <div className="rounded-xl border border-steel-800/80 bg-steel-950/40 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-steel-800/80 bg-steel-900/60 px-4 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span>Curriculum Lessons ({data.lessons.length})</span>
+                <span className="text-[11px] font-medium lowercase first-letter:uppercase text-muted-foreground">
+                  ~{data.lessons.reduce((acc, curr) => acc + curr.estimated_minutes, 0)} min total
+                </span>
+              </div>
+              <ol className="divide-y divide-steel-800/80">
+                {data.lessons.map((lesson, index) => {
+                  const isCompleted = lesson.status === "COMPLETED";
+                  return (
+                    <li key={lesson.id} className="transition-colors hover:bg-steel-950/70">
+                      <Link href={lesson.href} className="flex items-start gap-4 p-4 sm:p-5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-steel-700/60 bg-steel-800 text-xs font-bold tabular-nums text-muted-foreground">
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h2 className="text-base font-bold tracking-tight text-foreground transition-colors hover:text-accent">
+                              {lesson.title}
+                            </h2>
+                            <span className="font-bold text-xs text-accent">{actionLabel(lesson.status)} →</span>
+                          </div>
+                          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{lesson.short_description}</p>
+                          <div className="mt-2.5 flex items-center gap-3 text-xs text-muted-foreground">
+                            <LearnStatus status={lesson.status} />
+                            <span className="inline-flex items-center gap-1 font-medium">
+                              <Clock className="h-3 w-3 text-accent" />
+                              {lesson.estimated_minutes} min read
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
+
+          {/* Related Problems */}
+          {showRelated ? (
+            <div className="rounded-xl border border-steel-800/80 bg-steel-950/40 overflow-hidden">
+              <div className="p-4 sm:p-5 pb-3">
+                <SectionTitle>Related Practice Problems</SectionTitle>
+                <p className="mt-0.5 text-xs text-muted-foreground">Put these concepts to work in interactive coding problems.</p>
+              </div>
+              <ul className="divide-y divide-steel-800/80 border-t border-steel-800/80">
                 {data.related_problems.map((problem) => (
                   <li key={problem.id}>
                     <Link
                       href={`/problems/${problem.slug}`}
-                      className="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-steel-950/50"
+                      className="flex items-center justify-between gap-3 p-4 text-sm transition-colors hover:bg-steel-950/70"
                     >
-                      <span className="min-w-0 truncate font-medium">{problem.title}</span>
+                      <span className="min-w-0 truncate font-semibold text-foreground hover:text-accent">{problem.title}</span>
                       <DifficultyBadge difficulty={problem.difficulty} />
                     </Link>
                   </li>
                 ))}
               </ul>
-            </SectionCard>
-          </aside>
-        ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -122,7 +216,7 @@ export function TopicView({ slug }: { slug: string }) {
 
 function DesignProblemsCatalog({ lessons }: { lessons: LearningLessonSummary[] }) {
   const catalog = useSystemDesignCatalog();
-  const interview = useStartDesignInterview();
+  const { startInterview, startingSlug, authOpen, closeAuth } = useStartDesignInterview();
 
   if (catalog.isLoading) return <PageLoader variant="inline" />;
   if (catalog.isError || !catalog.data?.length) {
@@ -161,24 +255,38 @@ function DesignProblemsCatalog({ lessons }: { lessons: LearningLessonSummary[] }
               primary="learn"
               lesson={
                 lesson
-                  ? { href: lesson.href, status: lesson.status, estimated_minutes: lesson.estimated_minutes }
+                  ? {
+                      href: lesson.href,
+                      status: lesson.status,
+                      estimated_minutes: lesson.estimated_minutes,
+                    }
                   : undefined
               }
-              onInterview={interview.startInterview}
-              interviewing={interview.startingSlug === item.slug}
+              onInterview={startInterview}
+              interviewing={startingSlug === item.slug}
             />
           );
         })}
       </div>
-      {extra.map((lesson) => (
-        <SectionCard key={lesson.id} className="p-4">
-          <Link href={lesson.href} className="text-sm font-medium hover:text-accent">
-            {lesson.title}
-          </Link>
-          <p className="mt-1 text-[13px] text-muted-foreground">{lesson.short_description}</p>
+
+      {extra.length ? (
+        <SectionCard className="p-0">
+          <div className="p-4 pb-2">
+            <SectionTitle>Additional reading</SectionTitle>
+          </div>
+          <ol className="divide-y divide-steel-800 border-t border-steel-800">
+            {extra.map((lesson) => (
+              <li key={lesson.id}>
+                <Link href={lesson.href} className="flex items-center justify-between p-3.5 text-xs hover:bg-steel-950/50">
+                  <span className="font-medium text-foreground">{lesson.title}</span>
+                  <span className="text-muted-foreground font-mono">{lesson.estimated_minutes}m</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
         </SectionCard>
-      ))}
-      {interview.authOpen ? <AuthPrompt kind="mock" onClose={interview.closeAuth} /> : null}
+      ) : null}
+      {authOpen ? <AuthPrompt kind="mock" onClose={closeAuth} /> : null}
     </div>
   );
 }

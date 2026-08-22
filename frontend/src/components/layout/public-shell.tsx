@@ -20,12 +20,12 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-steel-800 bg-background/90 backdrop-blur-md">
-        <div className="ia-content flex h-12 items-center justify-between">
-          <Link href={signedIn ? "/dashboard" : "/"} className="inline-flex h-8 shrink-0 items-center">
-            <BrandMark compact wordmarkClassName="text-[15px]" />
+      <header className="sticky top-0 z-20 border-b border-steel-800/80 bg-background/85 backdrop-blur-xl">
+        <div className="ia-content flex h-13 items-center justify-between">
+          <Link href={signedIn ? "/dashboard" : "/"} className="inline-flex h-8 shrink-0 items-center transition-opacity hover:opacity-90">
+            <BrandMark compact wordmarkClassName="text-[15px] font-bold" />
           </Link>
-          <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
             <ThemeToggle />
             {signedIn ? null : (
               <>

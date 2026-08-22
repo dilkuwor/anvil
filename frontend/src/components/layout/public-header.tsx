@@ -13,18 +13,18 @@ export function PublicHeader() {
   const menu = useMobileMenu(pathname);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-steel-800 bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-steel-800/80 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl transition-colors">
       <div className="ia-content min-w-0">
-        <div className="flex h-12 min-w-0 items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-5">
-            <Link href="/" className="inline-flex h-8 shrink-0 items-center">
-              <BrandMark compact wordmarkClassName="text-[15px] max-md:sr-only" />
+        <div className="flex h-13 min-w-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-6">
+            <Link href="/" className="inline-flex h-8 shrink-0 items-center transition-opacity hover:opacity-90">
+              <BrandMark compact wordmarkClassName="text-[15px] font-bold max-md:sr-only" />
             </Link>
             <DesktopNav pathname={pathname} />
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+          <div className="flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground">
             <ThemeToggle />
-            <div className="hidden items-center gap-1.5 md:flex">
+            <div className="hidden items-center gap-2 md:flex">
               <Button asChild size="sm" variant="ghost" className="whitespace-nowrap">
                 <Link href={`/login?next=${encodeURIComponent(pathname)}`}>Log in</Link>
               </Button>
