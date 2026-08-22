@@ -34,7 +34,7 @@ FastAPI never executes user Java in-process. Each run/submit writes a temporary 
 
 | Package | Responsibility |
 |---|---|
-| `app/auth` | Register, login, logout, current user, HTTP-only JWT cookie |
+| `app/auth` | Register, login, logout, current user, HTTP-only JWT cookie, email verification |
 | `app/users` | User persistence |
 | `app/problems` | Catalog queries, filters, detail (hidden tests stripped) |
 | `app/execution` | Harness generation + sandbox invocation |
@@ -45,6 +45,7 @@ FastAPI never executes user Java in-process. Each run/submit writes a temporary 
 | `app/interviews` | Mock interview state machine + Ollama interviewer |
 | `app/cheatsheets` | Static review sheets |
 | `app/common` | Config, DB, security, errors, logging |
+| `app/email` | Outbound email (Resend client + templates); the only module that talks to the provider |
 
 API models are Pydantic schemas. ORM models stay inside their domain package.
 

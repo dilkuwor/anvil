@@ -1,5 +1,6 @@
 """Import every ORM model so SQLAlchemy relationship strings resolve."""
 
+from app.auth.models import EmailVerificationToken
 from app.cheatsheets.models import CheatSheet, CheatSheetSection, CheatSheetSectionContent
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession
 from app.lists.models import ProblemList, ProblemListItem
@@ -23,6 +24,7 @@ __all__ = [
     "CheatSheetSection",
     "CheatSheetSectionContent",
     "Activity",
+    "EmailVerificationToken",
     "InterviewEvent",
     "InterviewMessage",
     "InterviewSession",

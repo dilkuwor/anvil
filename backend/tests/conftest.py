@@ -16,6 +16,11 @@ if str(ROOT) not in sys.path:
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+# Never let a developer's real RESEND_API_KEY leak into test runs.
+os.environ["RESEND_API_KEY"] = ""
+os.environ["EMAIL_FROM"] = "no-reply@anvilprep.dev"
+# Same for Google: tests opt in via the google_enabled fixture.
+os.environ["GOOGLE_CLIENT_ID"] = ""
 
 from app.common.database import Base, get_db  # noqa: E402
 from app.common.config import get_settings  # noqa: E402
@@ -80,3 +85,14 @@ def auth_client(client: TestClient) -> TestClient:
     )
     assert response.status_code == 201
     return client
+
+
+@pytest.fixture
+def email_enabled(monkeypatch):
+    """Pretend Resend is configured; sends must be monkeypatched in the test."""
+    monkeypatch.setenv("RESEND_API_KEY", "test-resend-api-key")
+    from app.common.config import get_settings
+
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()

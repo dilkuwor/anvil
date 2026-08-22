@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     cookie_samesite: str = "lax"
 
+    # Google Sign-In (GIS id_token flow). Empty disables the endpoint.
+    google_client_id: str = ""
+
+    # Email (Resend). Empty RESEND_API_KEY disables outgoing email; registration
+    # still works and users can request a verification email later.
+    resend_api_key: str = ""
+    email_from: str = "no-reply@anvilprep.dev"
+    frontend_base_url: str = ""
+    email_verification_token_hours: int = 24
+    email_verification_max_per_hour: int = 5
+
     cors_origins: str = "http://localhost:3000"
 
     code_runner_image: str = "interview-anvil-java-runner:local"

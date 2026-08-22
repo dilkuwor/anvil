@@ -46,6 +46,23 @@ python -m app.seed
 
 The seed loads 15 original problems (5 Easy, 7 Medium, 3 Hard) plus tags and hidden tests.
 
+### Google sign-in (optional)
+
+1. Create an OAuth client at [console.cloud.google.com](https://console.cloud.google.com/apis/credentials) (type **Web application**, Authorized JavaScript origin `http://localhost:3000`).
+2. Set `GOOGLE_CLIENT_ID` in `backend/.env` and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `frontend/.env.local`.
+3. Run the latest migration (`alembic upgrade head`) — it makes `password_hash` nullable and adds `oauth_provider` / `oauth_subject` to `users`.
+
+Existing accounts whose email matches the verified Google email are linked automatically only after they verified their email address; otherwise sign-in returns a conflict asking them to verify first. New users get a generated username and can set a password later. Both login methods coexist.
+
+### Email verification (Resend)
+
+Password registrations start unverified and receive a verification email via [Resend](https://resend.com). Set `RESEND_API_KEY` (server-side only) and `EMAIL_FROM=no-reply@anvilprep.dev` in `backend/.env`; without a key, registration still works and users can request a link later.
+
+- `POST /api/v1/auth/verify-email` `{ "token": "…" }` — consumes the one-time token (24 h expiry).
+- `POST /api/v1/auth/resend-verification` — authenticated; issues a fresh link and invalidates previous ones (rate-limited).
+
+Tokens are stored hashed, expire in 24 hours, are single-use, and never appear in logs or API responses.
+
 ### 3. Java sandbox image
 
 ```bash
@@ -100,6 +117,7 @@ CI on `main` runs tests, then builds and pushes SHA-tagged images. Production ro
 Versioned under `/api/v1`. FastAPI Swagger: [http://localhost:8000/docs](http://localhost:8000/docs) (`/openapi.json`).
 
 - `POST /auth/register` `POST /auth/login` `POST /auth/logout` `GET /auth/me`
+- `POST /auth/verify-email` `POST /auth/resend-verification`
 - `GET /problems` `GET /problems/{slug}`
 - `POST /problems/{id}/run` `POST /problems/{id}/submit`
 - `GET /submissions` `GET /submissions/{id}`

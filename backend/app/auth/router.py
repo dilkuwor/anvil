@@ -1,25 +1,34 @@
+import re
+
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.schemas import (
+    GoogleAuthRequest,
     LlmProbeOut,
     LoginRequest,
     RegisterRequest,
     UpdateLlmSettingsRequest,
     UpdateProfileRequest,
     UserOut,
+    VerifyEmailRequest,
 )
+from app.auth.google import verify_google_id_token
+from app.auth import verification
 from app.common.config import get_settings
 from app.common.database import get_db
 from app.common.deps import get_current_user, get_optional_user
 from app.common.enums import UserRole
 from app.common.errors import AppError, ConflictError, NotFoundError, UnauthorizedError
+from app.common.logging import get_logger
 from app.common.secrets import encrypt_secret, secret_hint
 from app.common.security import create_access_token, hash_password, verify_password
 from app.interviews.providers import normalize_provider_name
 from app.interviews.providers.probe import probe_llm_for_user
 from app.users.models import User, UserLlmKey
+
+logger = get_logger(__name__)
 
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_AVATAR_BYTES = 1_000_000
@@ -68,6 +77,15 @@ def register(payload: RegisterRequest, response: Response, db: Session = Depends
     db.add(user)
     db.commit()
     db.refresh(user)
+    # Best-effort verification email: registration must succeed even when the
+    # provider is down or unconfigured; users can request a new email later.
+    try:
+        if verification.is_email_configured():
+            raw_token = verification.issue_token(db, user)
+            verification.send_verification_email(user, raw_token)
+            logger.info("verification_email_sent", user_id=str(user.id))
+    except Exception as exc:  # noqa: BLE001 — never block sign-up on delivery
+        logger.warning("verification_email_send_failed", user_id=str(user.id), error=type(exc).__name__)
     _set_auth_cookie(response, create_access_token(user.id))
     return user
 
@@ -76,8 +94,117 @@ def register(payload: RegisterRequest, response: Response, db: Session = Depends
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)) -> User:
     username = payload.username.strip()
     user = db.scalar(select(User).where(func.lower(User.username) == username.lower()))
-    if user is None or not user.is_active or not verify_password(payload.password, user.password_hash):
+    if (
+        user is None
+        or not user.is_active
+        or not user.password_hash
+        or not verify_password(payload.password, user.password_hash)
+    ):
         raise UnauthorizedError("Invalid username or password.")
+    _set_auth_cookie(response, create_access_token(user.id))
+    return user
+
+
+def _username_base_from_email(email: str) -> str:
+    local = email.split("@", 1)[0].lower()
+    cleaned = re.sub(r"_+", "_", re.sub(r"[^a-z0-9_]", "_", local)).strip("_")
+    if len(cleaned) < 3:
+        cleaned = f"user_{cleaned}" if cleaned else "user"
+    return cleaned[:50]
+
+
+def _available_username(db: Session, base: str) -> str:
+    if not db.scalar(select(User).where(func.lower(User.username) == base.lower())):
+        return base
+    for index in range(2, 10_000):
+        candidate = f"{base[:46]}_{index}"
+        if not db.scalar(select(User).where(func.lower(User.username) == candidate.lower())):
+            return candidate
+    raise AppError("Could not pick a free username. Try registering with a password instead.")
+
+
+@router.post("/google", response_model=UserOut)
+def google_sign_in(
+    payload: GoogleAuthRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> User:
+    settings = get_settings()
+    if not settings.google_client_id:
+        raise AppError("Google sign-in is not configured.", status_code=503, code="google_not_configured")
+
+    claims = verify_google_id_token(payload.credential, settings.google_client_id)
+    email = claims["email"].lower().strip()
+    subject = claims["sub"]
+
+    # 1) Existing Google-linked account: match on provider + subject first.
+    user = db.scalar(select(User).where(User.oauth_provider == "google", User.oauth_subject == subject))
+    if user is not None:
+        if not user.is_active:
+            raise UnauthorizedError("This account has been deactivated.")
+        if not user.email_verified:
+            # The id_token already proved Google controls this email address.
+            user.email_verified = True
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        _set_auth_cookie(response, create_access_token(user.id))
+        return user
+
+    # 2) No subject match: consider linking to an existing password account.
+    #    Only verified password accounts may be auto-linked, so an attacker
+    #    with an unverified email cannot hijack the address.
+    existing = db.scalar(select(User).where(func.lower(User.email) == email))
+    if existing is not None:
+        if not existing.is_active:
+            raise UnauthorizedError("This account has been deactivated.")
+        if existing.oauth_provider == "google":
+            # The subject lookup above missed, so this is a different Google
+            # account — never overwrite the stored oauth_subject.
+            raise ConflictError(
+                "This email is already linked to a different Google account. "
+                "Sign in with that Google account instead."
+            )
+        if existing.oauth_provider:
+            raise ConflictError(
+                "This email already uses a different sign-in method. Log in that way instead."
+            )
+        if not existing.email_verified:
+            raise AppError(
+                "This email belongs to an account that has not verified its email "
+                "address yet. Verify your email by password sign-in first, then "
+                "link Google sign-in.",
+                status_code=409,
+                code="email_not_verified",
+            )
+        existing.oauth_provider = "google"
+        existing.oauth_subject = subject
+        existing.email_verified = True
+        db.add(existing)
+        db.commit()
+        db.refresh(existing)
+        _set_auth_cookie(response, create_access_token(existing.id))
+        return existing
+
+    # 3) Brand-new Google-only account; Google already verified the email.
+    display_name = (claims.get("name") or "").strip()[:80] or None
+    user = User(
+        email=email,
+        username=_available_username(db, _username_base_from_email(email)),
+        password_hash=None,
+        oauth_provider="google",
+        oauth_subject=subject,
+        display_name=display_name,
+        role=UserRole.USER.value,
+        is_active=True,
+        email_verified=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    # Google already verified this address, so the welcome email goes out on
+    # the very first sign-in only (the helper is a durable once-only no-op).
+    verification.send_welcome_email_once(db, user)
     _set_auth_cookie(response, create_access_token(user.id))
     return user
 
@@ -86,6 +213,21 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 def logout(response: Response) -> dict:
     _clear_auth_cookie(response)
     return {"ok": True}
+
+
+@router.post("/verify-email")
+def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)) -> dict:
+    verification.verify_token(db, payload.token.strip())
+    return {"ok": True, "message": "Your email address has been verified."}
+
+
+@router.post("/resend-verification")
+def resend_verification_email(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    verification.request_new_verification_email(db, current_user)
+    return {"ok": True, "message": "If your email address is not verified yet, a new link is on its way."}
 
 
 @router.get("/me", response_model=UserOut | None)

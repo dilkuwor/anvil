@@ -130,6 +130,7 @@ export type User = {
   username: string;
   role: string;
   is_active: boolean;
+  email_verified?: boolean;
   created_at: string;
   linkedin_url?: string | null;
   github_url?: string | null;

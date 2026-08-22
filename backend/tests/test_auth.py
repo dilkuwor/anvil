@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_register_login_me_logout(client):
     register = client.post(
         "/api/v1/auth/register",
@@ -308,3 +311,231 @@ def test_llm_probe_missing_key_is_not_ok(auth_client):
     assert body["provider"] == "openai"
     assert body["error"]
     assert "key" in body["error"].lower()
+
+
+# --- Google sign-in -----------------------------------------------------------
+
+
+def _fake_google_claims(sub: str, email: str, name: str | None = None):
+    claims = {"sub": sub, "email": email, "email_verified": True}
+    if name:
+        claims["name"] = name
+    return claims
+
+
+@pytest.fixture
+def google_enabled(monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com")
+    from app.common.config import get_settings
+
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+def _patch_verify(monkeypatch, claims):
+    monkeypatch.setattr(
+        "app.auth.router.verify_google_id_token", lambda credential, client_id: claims
+    )
+
+
+def test_google_sign_in_requires_configuration(client):
+    response = client.post("/api/v1/auth/google", json={"credential": "x" * 40})
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "google_not_configured"
+
+
+def test_google_sign_in_creates_and_reuses_account(client, db, monkeypatch, google_enabled):
+    from uuid import UUID
+    _patch_verify(monkeypatch, _fake_google_claims("google-sub-1", "New.User+dev@gmail.com", "New User"))
+    first = client.post("/api/v1/auth/google", json={"credential": "fake-credential-value"})
+    assert first.status_code == 200
+    body = first.json()
+    assert body["email"] == "new.user+dev@gmail.com"
+    assert body["username"].startswith("new_user_dev")
+    assert body["display_name"] == "New User"
+
+    me = client.get("/api/v1/auth/me")
+    assert me.status_code == 200
+    assert me.json()["id"] == body["id"]
+
+    client.post("/api/v1/auth/logout")
+    again = client.post("/api/v1/auth/google", json={"credential": "fake-credential-value"})
+    assert again.status_code == 200
+    assert again.json()["id"] == body["id"]
+
+    from sqlalchemy import select
+
+    from app.users.models import User
+
+    user = db.scalar(select(User).where(User.id == UUID(body["id"])))
+    assert user is not None
+    assert user.password_hash is None
+    assert user.oauth_provider == "google"
+    assert user.oauth_subject == "google-sub-1"
+
+
+def test_oauth_only_account_cannot_password_login(client, monkeypatch, google_enabled):
+    _patch_verify(monkeypatch, _fake_google_claims("google-sub-2", "only.google@gmail.com"))
+    created = client.post("/api/v1/auth/google", json={"credential": "fake-credential-value"})
+    assert created.status_code == 200
+    username = created.json()["username"]
+
+    client.post("/api/v1/auth/logout")
+    attempt = client.post(
+        "/api/v1/auth/login",
+        json={"username": username, "password": "whatever-password"},
+    )
+    assert attempt.status_code == 401
+
+
+def test_google_sign_in_links_existing_email_account(client, db, monkeypatch, google_enabled):
+    registered = client.post(
+        "/api/v1/auth/register",
+        json={"email": "sam@example.com", "username": "sam", "password": "supersecret"},
+    )
+    assert registered.status_code == 201
+    existing_id = registered.json()["id"]
+
+    from uuid import UUID
+
+    from sqlalchemy import select
+
+    from app.users.models import User
+
+    user = db.scalar(select(User).where(User.id == UUID(existing_id)))
+    assert user is not None
+    user.email_verified = True
+    db.add(user)
+    db.commit()
+    client.post("/api/v1/auth/logout")
+
+    _patch_verify(monkeypatch, _fake_google_claims("google-sub-3", "Sam@Example.com"))
+    linked = client.post("/api/v1/auth/google", json={"credential": "fake-credential-value"})
+    assert linked.status_code == 200
+    assert linked.json()["id"] == existing_id
+    assert linked.json()["username"] == "sam"
+
+    me = client.get("/api/v1/auth/me")
+    assert me.json()["email"] == "sam@example.com"
+
+    # Password login keeps working for the linked account.
+    client.post("/api/v1/auth/logout")
+    password_login = client.post(
+        "/api/v1/auth/login",
+        json={"username": "sam", "password": "supersecret"},
+    )
+    assert password_login.status_code == 200
+
+
+def test_google_sign_in_rejects_invalid_token(client, google_enabled, monkeypatch):
+    def boom(credential: str, client_id: str):
+        from app.common.errors import UnauthorizedError
+
+        raise UnauthorizedError("Google sign-in failed. Please try again.")
+
+    monkeypatch.setattr("app.auth.router.verify_google_id_token", boom)
+    response = client.post("/api/v1/auth/google", json={"credential": "x" * 40})
+    assert response.status_code == 401
+
+
+def _rsa_keypair():
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return private_key, private_key.public_key()
+
+
+def _signed_google_token(private_key, claims: dict, iss: str = "https://accounts.google.com") -> str:
+    import time
+
+    import jwt as pyjwt
+
+    now = int(time.time())
+    payload = {**claims, "aud": "test-client-id.apps.googleusercontent.com", "iss": iss, "iat": now, "exp": now + 300}
+    return pyjwt.encode(payload, private_key, algorithm="RS256")
+
+
+@pytest.fixture
+def google_jwks_stub(monkeypatch):
+    """Replace Google's JWKS endpoint so signed test tokens hit the real verification code."""
+    private_key, public_key = _rsa_keypair()
+
+    class _StubSigningKey:
+        key = public_key
+
+    class _StubClient:
+        def get_signing_key_from_jwt(self, token: str):
+            return _StubSigningKey()
+
+    monkeypatch.setattr("app.auth.google._get_jwk_client", lambda: _StubClient())
+    return private_key
+
+
+def test_google_sign_in_rejects_account_rebinding(client, db, monkeypatch, google_enabled):
+    from uuid import UUID
+
+    from app.users.models import User
+
+    registered = client.post(
+        "/api/v1/auth/register",
+        json={"email": "sam@example.com", "username": "sam", "password": "supersecret"},
+    )
+    assert registered.status_code == 201
+    existing_id = UUID(registered.json()["id"])
+
+    user = db.get(User, existing_id)
+    assert user is not None
+    user.email_verified = True
+    db.add(user)
+    db.commit()
+
+    _patch_verify(monkeypatch, _fake_google_claims("google-sub-original", "sam@example.com"))
+    linked = client.post("/api/v1/auth/google", json={"credential": "x" * 40})
+    assert linked.status_code == 200
+    client.post("/api/v1/auth/logout")
+
+    # Attacker controls a different Google account that reuses the victim's verified email.
+    _patch_verify(monkeypatch, _fake_google_claims("google-sub-attacker", "sam@example.com"))
+    rebound = client.post("/api/v1/auth/google", json={"credential": "y" * 40})
+    assert rebound.status_code == 409
+
+    # Not silently logged into the victim's account.
+    assert client.get("/api/v1/auth/me").json() is None
+
+    user = db.get(User, existing_id)
+    assert user is not None
+    assert user.oauth_provider == "google"
+    assert user.oauth_subject == "google-sub-original"
+
+
+def test_google_sign_in_rejects_unverified_email(client, db, google_enabled, google_jwks_stub):
+    from sqlalchemy import func, select
+
+    from app.users.models import User
+
+    token = _signed_google_token(
+        google_jwks_stub,
+        {"sub": "google-sub-unverified", "email": "unverified@gmail.com", "email_verified": False},
+    )
+    response = client.post("/api/v1/auth/google", json={"credential": token})
+    assert response.status_code == 401
+
+    assert db.scalar(select(User).where(func.lower(User.email) == "unverified@gmail.com")) is None
+    assert db.scalar(select(User).where(User.oauth_subject == "google-sub-unverified")) is None
+
+
+def test_google_token_from_wrong_issuer_is_rejected(client, db, google_enabled, google_jwks_stub):
+    from sqlalchemy import func, select
+
+    from app.users.models import User
+
+    token = _signed_google_token(
+        google_jwks_stub,
+        {"sub": "google-sub-forged", "email": "forged@gmail.com", "email_verified": True},
+        iss="https://evil.example",
+    )
+    response = client.post("/api/v1/auth/google", json={"credential": token})
+    assert response.status_code == 401
+
+    assert db.scalar(select(User).where(func.lower(User.email) == "forged@gmail.com")) is None

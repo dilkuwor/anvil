@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { LegalLinks } from "@/components/layout/legal-links";
 import { PublicHeader } from "@/components/layout/public-header";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const finishAuth = (user: User, method: string) => {
+    trackEvent(mode === "register" ? AnalyticsEvent.SignUp : AnalyticsEvent.Login, { method });
+    queryClient.setQueryData(queryKeys.me, user);
+    router.push(safeNext(params.get("next")));
+  };
+
   const mutation = useMutation({
     mutationFn: async () => {
       if (mode === "register") {
@@ -40,12 +47,21 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return api.post<User>("/api/v1/auth/login", { username, password });
     },
     onSuccess: (user) => {
-      trackEvent(mode === "register" ? AnalyticsEvent.SignUp : AnalyticsEvent.Login, { method: "password" });
-      queryClient.setQueryData(queryKeys.me, user);
-      router.push(safeNext(params.get("next")));
+      finishAuth(user, "password");
     },
     onError: (err) => {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");
+    },
+  });
+
+  const googleMutation = useMutation({
+    mutationFn: async (credential: string) =>
+      api.post<User>("/api/v1/auth/google", { credential }),
+    onSuccess: (user) => {
+      finishAuth(user, "google");
+    },
+    onError: (err) => {
+      setError(err instanceof ApiError ? err.message : "Google sign-in failed.");
     },
   });
 
@@ -124,6 +140,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
               </p>
             ) : null}
           </form>
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center gap-3" aria-hidden>
+              <div className="h-px flex-1 bg-steel-800" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-steel-800" />
+            </div>
+            <GoogleSignInButton mode={mode} onCredential={(credential) => googleMutation.mutate(credential)} />
+          </div>
           <p className="mt-5 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
               <>

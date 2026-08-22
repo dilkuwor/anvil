@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { EmailVerificationStatus } from "@/components/settings/email-verification-status";
 import { UserAvatar } from "@/components/settings/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,9 @@ export function SettingsForm() {
   const me = useQuery({
     queryKey: queryKeys.me,
     queryFn: fetchCurrentUser,
+    // Email verification can flip while the user is away (clicking the link
+    // in their inbox), so always revalidate when this page mounts.
+    refetchOnMount: "always",
   });
   if (me.isLoading) return <CardSkeleton rows={4} />;
   if (me.isError || !me.data) {
@@ -162,6 +166,7 @@ function ProfileEditor({ user }: { user: User }) {
                 </Field>
                 <Field label="Email">
                   <Input value={user.email} disabled />
+                  <EmailVerificationStatus user={current} />
                 </Field>
                 <Field label="Country" className="sm:col-span-2">
                   <select

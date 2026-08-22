@@ -15,6 +15,14 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 
+class GoogleAuthRequest(BaseModel):
+    credential: str = Field(min_length=20, max_length=4096)
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=255)
+
+
 class LlmKeyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,6 +39,7 @@ class UserOut(BaseModel):
     username: str
     role: str
     is_active: bool
+    email_verified: bool = False
     created_at: datetime
     linkedin_url: str | None = None
     github_url: str | None = None
