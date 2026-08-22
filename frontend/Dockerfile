@@ -9,8 +9,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ARG API_PROXY_TARGET=http://api:8000
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID=G-7Q1GX64YSR
-# NEXT_PUBLIC_* is inlined at build time; pass --build-arg when building.
-ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+# NEXT_PUBLIC_* is inlined at build time. Client IDs are public identifiers
+# (same as the GA measurement ID), so the default is baked in; override with
+# --build-arg when needed.
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=594813267906-2po6e3rop0mvl55babubq798tbmmecpk.apps.googleusercontent.com
 ENV API_PROXY_TARGET=${API_PROXY_TARGET}
 ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID}
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
