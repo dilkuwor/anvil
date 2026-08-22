@@ -2,13 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
   CircleCheck,
   CircleHelp,
-  Clock,
-  CornerDownLeft,
   ListOrdered,
   Maximize2,
   Sparkles,

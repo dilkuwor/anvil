@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, ChevronDown, Clock, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 

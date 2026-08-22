@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Sparkles } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
 import Link from "next/link";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";

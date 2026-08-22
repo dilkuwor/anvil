@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,25 @@ export function ArchitectureCanvas({
     setLabelDraft(label);
   }
 
+  const emit = useCallback(
+    (next: ArchitectureGraph) => {
+      onChange(next);
+    },
+    [onChange],
+  );
+
+  const removeNode = useCallback(
+    (id: string) => {
+      const current = graphRef.current;
+      emit({
+        nodes: current.nodes.filter((node) => node.id !== id),
+        edges: current.edges.filter((edge) => edge.from !== id && edge.to !== id),
+      });
+      if (selected === id) selectNode(null);
+    },
+    [emit, selected],
+  );
+
   useEffect(() => {
     if (readOnly) return;
     function onKey(event: KeyboardEvent) {
@@ -71,13 +90,9 @@ export function ArchitectureCanvas({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [readOnly, selected, graph]);
+  }, [readOnly, selected, removeNode]);
 
   const nodeMap = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph.nodes]);
-
-  function emit(next: ArchitectureGraph) {
-    onChange(next);
-  }
 
   function addComponent(type: DesignNodeType) {
     if (readOnly) return;
@@ -93,14 +108,6 @@ export function ArchitectureCanvas({
     };
     emit({ ...graph, nodes: [...graph.nodes, node] });
     selectNode(node.id, node.label);
-  }
-
-  function removeNode(id: string) {
-    emit({
-      nodes: graph.nodes.filter((node) => node.id !== id),
-      edges: graph.edges.filter((edge) => edge.from !== id && edge.to !== id),
-    });
-    if (selected === id) selectNode(null);
   }
 
   function renameSelected(label: string) {
@@ -176,7 +183,7 @@ export function ArchitectureCanvas({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [drag]);
+  }, [drag, emit]);
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-steel-800 bg-steel-900">

@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  ArrowRight,
   BookOpen,
   Check,
   Clock,
