@@ -4,7 +4,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -91,12 +91,12 @@ function SimulatorWorkspace() {
 
   const selected = design.nodes.find((node) => node.id === selectedId) ?? null;
 
-  function commit(next: SystemDesign) {
+  const commit = useCallback((next: SystemDesign) => {
     undo.current = [...undo.current, design].slice(-30);
     redo.current = [];
     setDesign(next);
     setResult(null);
-  }
+  }, [design]);
 
   function updateGraph(nodes: DesignNode[], edges: DesignEdge[]) {
     commit({ ...design, nodes, edges });
@@ -141,7 +141,7 @@ function SimulatorWorkspace() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [design, selected]);
+  }, [design, selected, commit]);
 
   const history = listResults(design.id).slice(0, 2);
 
