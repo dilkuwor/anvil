@@ -21,14 +21,14 @@ export function NotesButton({ onClick, count }: { onClick: () => void; count?: n
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-steel-800 hover:text-foreground"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-steel-800 hover:text-foreground transition-colors"
       aria-label="Open notes"
       title="Notes"
     >
       <span className="relative">
         <NotebookPen className="h-4 w-4" />
         {count ? (
-          <span className="absolute -right-1.5 -top-1.5 min-w-3.5 rounded-full bg-accent px-1 text-[9px] font-semibold leading-3.5 text-primary-foreground">
+          <span className="absolute -right-1.5 -top-1.5 min-w-3.5 rounded-full bg-accent px-1 text-[9px] font-bold leading-3.5 text-primary-foreground shadow-2xs">
             {count > 9 ? "9+" : count}
           </span>
         ) : null}
@@ -90,23 +90,23 @@ export function NotesDrawer({
 
   return (
     <div className="fixed inset-0 z-[55]">
-      <button type="button" className="absolute inset-0 bg-background/40" aria-label="Close notes" onClick={onClose} />
+      <button type="button" className="absolute inset-0 bg-background/60 backdrop-blur-xs transition-opacity" aria-label="Close notes" onClick={onClose} />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="notes-drawer-title"
-        className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-steel-800 bg-steel-900 shadow-2xl md:w-[26rem]"
+        className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-steel-800/80 bg-steel-900 shadow-2xl md:w-[26rem]"
       >
-        <header className="flex items-start justify-between gap-3 border-b border-steel-800 px-4 py-3">
+        <header className="flex items-start justify-between gap-3 border-b border-steel-800/80 bg-steel-950/40 px-5 py-3.5">
           <div className="min-w-0">
-            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Notes</div>
-            <h2 id="notes-drawer-title" className="mt-0.5 truncate text-sm font-semibold tracking-tight">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Notes</div>
+            <h2 id="notes-drawer-title" className="mt-0.5 truncate text-sm font-bold tracking-tight text-foreground">
               {context.sourceTitle}
             </h2>
           </div>
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-steel-800 hover:text-foreground transition-colors"
             aria-label="Close notes"
             onClick={onClose}
           >
@@ -114,17 +114,17 @@ export function NotesDrawer({
           </button>
         </header>
 
-        <div className="flex items-center justify-end gap-2 border-b border-steel-800 px-4 py-2.5">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2 border-b border-steel-800/80 bg-steel-950/20 px-5 py-2.5">
+          <div className="flex items-center gap-3">
             {showAllLink ? (
-              <Link href="/notes" className="text-[12px] text-muted-foreground hover:text-accent">
+              <Link href="/notes" className="text-[12px] font-medium text-muted-foreground hover:text-accent transition-colors">
                 All notes
               </Link>
             ) : null}
             <Button
               type="button"
               size="sm"
-              className="h-7 px-2.5 text-[11px]"
+              className="h-7 px-2.5 text-[11px] gap-1"
               onClick={() => {
                 if (!signedIn) {
                   setAuth(true);

@@ -160,46 +160,46 @@ export function HeroPreview() {
   const locked = session ? candidateTurns(session) >= PREVIEW_TURNS : false;
 
   return (
-    <aside className="w-full min-w-0 overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] dark:shadow-[0_22px_56px_-24px_rgba(0,0,0,0.72)]">
-      <div className="flex min-w-0 items-center gap-3 border-b border-steel-800 px-4 py-2 sm:px-5">
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-steel-700" />
-          <span className="h-2 w-2 rounded-full bg-steel-700" />
-          <span className="h-2 w-2 rounded-full bg-steel-700" />
+    <aside className="w-full min-w-0 overflow-hidden rounded-2xl border border-steel-800/90 bg-steel-900 shadow-xl shadow-black/20 dark:shadow-[0_22px_56px_-24px_rgba(0,0,0,0.8)]">
+      <div className="flex min-w-0 items-center gap-3 border-b border-steel-800/80 bg-steel-950/40 px-4 py-2.5 sm:px-5">
+        <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
+          <span className="h-2.5 w-2.5 rounded-full bg-rose-500/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
         </div>
-        <p className="shrink-0 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Workspace</p>
-        <p className="ml-auto hidden min-w-0 items-center gap-x-1.5 text-[11px] text-muted-foreground sm:flex">
+        <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Interactive Workspace</p>
+        <p className="ml-auto hidden min-w-0 items-center gap-x-2 text-[11px] font-medium text-muted-foreground sm:flex">
           {WORKFLOW.map((step, index) => (
-            <span key={step} className="inline-flex items-center gap-x-1.5">
-              {index > 0 ? <span aria-hidden>→</span> : null}
-              <span>{step}</span>
+            <span key={step} className="inline-flex items-center gap-x-2">
+              {index > 0 ? <span className="opacity-40" aria-hidden>→</span> : null}
+              <span className={index === 0 ? "text-accent font-semibold" : undefined}>{step}</span>
             </span>
           ))}
         </p>
       </div>
 
-      <p className="flex flex-wrap items-center gap-x-1.5 border-b border-steel-800 px-4 py-1.5 text-[11px] text-muted-foreground sm:hidden">
+      <p className="flex flex-wrap items-center gap-x-2 border-b border-steel-800/80 bg-steel-950/30 px-4 py-1.5 text-[11px] text-muted-foreground sm:hidden">
         {WORKFLOW.map((step, index) => (
-          <span key={step} className="inline-flex items-center gap-x-1.5">
-            {index > 0 ? <span aria-hidden>→</span> : null}
+          <span key={step} className="inline-flex items-center gap-x-2">
+            {index > 0 ? <span className="opacity-40" aria-hidden>→</span> : null}
             <span>{step}</span>
           </span>
         ))}
       </p>
 
       <div className="grid min-h-0 md:grid-cols-2">
-        <section className="flex min-h-0 flex-col border-b border-steel-800 md:border-b-0 md:border-r">
+        <section className="flex min-h-0 flex-col border-b border-steel-800/80 md:border-b-0 md:border-r">
           {session && showInterviewer ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex items-center justify-between gap-2 border-b border-steel-800 px-4 py-2">
+              <div className="flex items-center justify-between gap-2 border-b border-steel-800/80 px-4 py-2">
                 <button
                   type="button"
-                  className="text-[12px] text-muted-foreground hover:text-accent"
+                  className="text-[12px] font-medium text-muted-foreground hover:text-accent transition-colors"
                   onClick={() => setShowInterviewer(false)}
                 >
                   ← Problem
                 </button>
-                <span className="text-[12px] text-muted-foreground">
+                <span className="text-[12px] tabular-nums font-medium text-muted-foreground">
                   {Math.min(candidateTurns(session), PREVIEW_TURNS)} / {PREVIEW_TURNS}
                 </span>
               </div>

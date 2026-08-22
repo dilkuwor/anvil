@@ -74,35 +74,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn("flex min-h-0 flex-col", lockViewport ? "h-dvh overflow-hidden" : "min-h-dvh")}>
-      <header className="sticky top-0 z-50 border-b border-steel-800 bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-steel-800/80 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl transition-colors">
         <div className={cn(wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content")}>
-          <div className="flex h-12 items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-5">
-              <Link href={signedIn ? "/dashboard" : "/"} className="inline-flex h-8 shrink-0 items-center">
-                <BrandMark compact wordmarkClassName="text-[15px] max-md:sr-only" />
+          <div className="flex h-13 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-6">
+              <Link href={signedIn ? "/dashboard" : "/"} className="inline-flex h-8 shrink-0 items-center transition-opacity hover:opacity-90">
+                <BrandMark compact wordmarkClassName="text-[15px] font-bold max-md:sr-only" />
               </Link>
               <DesktopNav pathname={pathname} />
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+            <div className="flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground">
               <ThemeToggle />
               {signedIn && me.data ? (
-                <div className="hidden items-center gap-1.5 md:flex">
+                <div className="hidden items-center gap-2 md:flex">
                   <Link
                     href="/settings"
                     className={cn(
-                      "inline-flex max-w-[10rem] items-center gap-2 truncate hover:text-foreground",
-                      pathname.startsWith("/settings") && "font-medium text-foreground",
+                      "inline-flex max-w-[13rem] items-center gap-2 rounded-full border border-steel-700/60 bg-steel-800/50 px-2.5 py-1 text-xs transition-all hover:border-steel-600 hover:bg-steel-800/80 hover:text-foreground",
+                      pathname.startsWith("/settings") ? "border-accent/40 bg-accent/10 font-medium text-foreground" : "text-muted-foreground",
                     )}
                   >
                     <UserAvatar user={me.data} size="sm" />
-                    <span className="truncate">{me.data.display_name || me.data.username}</span>
+                    <span className="truncate font-medium">{me.data.display_name || me.data.username}</span>
                   </Link>
-                  <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
+                  <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => logout.mutate()}>
                     Log out
                   </Button>
                 </div>
               ) : (
-                <div className="hidden items-center gap-1.5 md:flex">
+                <div className="hidden items-center gap-2 md:flex">
                   <Button asChild size="sm" variant="ghost">
                     <Link href={`/login?next=${encodeURIComponent(pathname)}`}>Log in</Link>
                   </Button>

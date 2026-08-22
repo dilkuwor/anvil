@@ -24,6 +24,8 @@ function safeNext(raw: string | null): string {
   return raw;
 }
 
+import { Loader2 } from "lucide-react";
+
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -68,14 +70,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <PublicHeader />
-      <main className="flex flex-1 items-center justify-center px-4 py-10">
-        <div className="w-full max-w-[400px] rounded-2xl border border-steel-800 bg-steel-900 p-6 sm:p-7">
-          <h1 className="text-xl font-semibold tracking-tight">
+      <main className="flex flex-1 items-center justify-center px-4 py-12">
+        <div className="w-full max-w-[420px] rounded-2xl border border-steel-800 bg-steel-900 p-7 shadow-lg dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
             {mode === "login" ? "Log in" : "Create an account"}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {mode === "login"
-              ? "Continue your Java practice."
+              ? "Continue your interview preparation."
               : "Track problems, submissions, and streaks."}
           </p>
           <form
@@ -95,6 +97,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
                   required
                 />
               </div>
@@ -106,6 +109,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                placeholder="username"
                 minLength={mode === "register" ? 3 : 1}
                 required
               />
@@ -118,13 +122,27 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
                 minLength={mode === "register" ? 8 : 1}
                 required
               />
             </div>
-            {error ? <p className="text-sm text-coral">{error}</p> : null}
-            <Button className="w-full" type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Working…" : mode === "login" ? "Log in" : "Create account"}
+            {error ? (
+              <div className="rounded-lg border border-coral/30 bg-coral/5 px-3 py-2 text-xs text-coral">
+                {error}
+              </div>
+            ) : null}
+            <Button className="w-full gap-2 shadow-xs" type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Please wait…
+                </>
+              ) : mode === "login" ? (
+                "Log in"
+              ) : (
+                "Create account"
+              )}
             </Button>
             {mode === "register" ? (
               <p className="text-center text-[12px] leading-5 text-muted-foreground">

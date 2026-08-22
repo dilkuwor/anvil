@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Play, Send } from "lucide-react";
 import { NotesPanel } from "@/components/notes/notes-drawer";
 import { ResultPanel } from "@/components/editor/result-panel";
 import { SplitPane } from "@/components/editor/split-pane";
@@ -260,13 +261,13 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   ];
 
   const prompt = (
-    <section className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 xl:min-h-0">
-      <div className="border-b border-steel-800 px-4 py-3">
-        <Link href="/problems" className="text-[12px] text-muted-foreground hover:text-accent">
+    <section className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-steel-800/90 bg-steel-900 shadow-xs xl:min-h-0">
+      <div className="border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
+        <Link href="/problems" className="text-[12px] font-medium text-muted-foreground hover:text-accent transition-colors">
           ← Problems
         </Link>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-          <h1 className="text-lg font-semibold tracking-tight">{problem.title}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-2.5">
+          <h1 className="text-lg font-bold tracking-tight text-foreground">{problem.title}</h1>
           <DifficultyBadge difficulty={problem.difficulty} />
           <StatusPip status={problem.status} />
           <span className="ml-auto">
@@ -290,16 +291,16 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
             </Button>
           )}
         </div>
-        <div className="mt-1 text-[12px] text-muted-foreground">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
+        <div className="mt-1.5 text-[12px] text-muted-foreground">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
       </div>
-      <div className="flex gap-0.5 overflow-x-auto border-b border-steel-800 px-2" role="tablist">
+      <div className="flex gap-1 overflow-x-auto border-b border-steel-800/80 bg-steel-950/20 px-3" role="tablist">
         {tabs.map((item) => (
           <button
             key={item.id}
             type="button"
             role="tab"
             aria-selected={tab === item.id}
-            className={`shrink-0 px-3 py-2 text-[13px] ${tab === item.id ? "border-b-2 border-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            className={`shrink-0 px-3 py-2 text-[13px] font-medium transition-colors ${tab === item.id ? "border-b-2 border-accent text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setTab(item.id)}
           >
             {item.label}
@@ -322,7 +323,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
             />
           ) : (
             <p className="text-sm text-muted-foreground">
-              <button type="button" className="text-accent hover:text-accent-light" onClick={() => setAuthPrompt("progress")}>
+              <button type="button" className="text-accent hover:text-accent-light font-medium" onClick={() => setAuthPrompt("progress")}>
                 Log in
               </button>{" "}
               to see your submissions.
@@ -334,11 +335,11 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   );
 
   const editor = (
-    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-2xl border border-steel-800 bg-editor-surface xl:min-h-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-800 px-3 py-2">
+    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-2xl border border-steel-800/90 bg-editor-surface shadow-xs xl:min-h-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-steel-800/80 bg-steel-950/40 px-4 py-2.5">
         <div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Java · Solution</div>
-          <div className="text-[11px] text-muted-foreground">JDK types are imported automatically.</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Java · Solution</div>
+          <div className="text-[11px] text-muted-foreground/80">JDK types are imported automatically.</div>
         </div>
         <div className="flex items-center gap-2">
           {interviewLive || interviewDone ? (
@@ -363,12 +364,20 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
           <Button
             variant="secondary"
             size="sm"
+            className="gap-1.5 shadow-2xs"
             disabled={signedIn && busy}
             onClick={() => (signedIn ? run.mutate() : setAuthPrompt("run"))}
           >
+            <Play className="h-3.5 w-3.5 fill-current opacity-80" />
             {run.isPending ? "Running…" : "Run"}
           </Button>
-          <Button size="sm" disabled={signedIn && busy} onClick={() => (signedIn ? submit.mutate() : setAuthPrompt("submit"))}>
+          <Button
+            size="sm"
+            className="gap-1.5 shadow-xs"
+            disabled={signedIn && busy}
+            onClick={() => (signedIn ? submit.mutate() : setAuthPrompt("submit"))}
+          >
+            <Send className="h-3.5 w-3.5" />
             {submit.isPending ? "Submitting…" : "Submit"}
           </Button>
         </div>

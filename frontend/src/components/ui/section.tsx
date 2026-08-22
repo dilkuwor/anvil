@@ -10,7 +10,13 @@ export function SectionCard({
   id?: string;
 }) {
   return (
-    <section id={id} className={cn("overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 p-5", className)}>
+    <section
+      id={id}
+      className={cn(
+        "overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 p-5 shadow-xs transition-colors dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]",
+        className,
+      )}
+    >
       {children}
     </section>
   );

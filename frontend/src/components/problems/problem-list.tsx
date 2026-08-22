@@ -114,7 +114,7 @@ export function ProblemList() {
       />
 
       <SectionCard className="p-0">
-        <div className="flex flex-col gap-2 border-b border-steel-800 p-3 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-2.5 border-b border-steel-800/80 bg-steel-950/30 p-3.5 lg:flex-row lg:items-center">
           <form
             className="relative min-w-[12rem] flex-1"
             onSubmit={(event) => {
@@ -123,14 +123,14 @@ export function ProblemList() {
               update({ q: String(value ?? "").trim() });
             }}
           >
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               name="q"
               key={q}
               defaultValue={q}
               placeholder="Search problems…"
               aria-label="Search problems"
-              className="pl-8"
+              className="pl-9"
             />
           </form>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:contents">
@@ -184,7 +184,7 @@ export function ProblemList() {
           {filtered ? (
             <button
               type="button"
-              className="self-start text-[12px] text-muted-foreground hover:text-foreground lg:px-1"
+              className="self-start text-[12px] font-medium text-muted-foreground hover:text-accent transition-colors lg:px-1"
               onClick={() => router.push("/problems")}
             >
               Clear
@@ -203,48 +203,55 @@ export function ProblemList() {
           </div>
         ) : null}
         {problems.data && items.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">No problems match those filters.</p>
+          <p className="px-4 py-12 text-center text-sm text-muted-foreground">No problems match those filters.</p>
         ) : null}
 
         {items.length ? (
           <>
             <div className="hidden md:block">
               <table className="w-full table-fixed text-left text-[13px]">
-                <thead className="bg-steel-950/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <thead className="bg-steel-950/60 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground border-b border-steel-800/80">
                   <tr>
-                    <th className="w-[36%] px-4 py-2.5 font-medium">Problem</th>
-                    <th className="w-[7.5rem] px-4 py-2.5 font-medium">Difficulty</th>
-                    <th className="px-4 py-2.5 font-medium">Topics</th>
-                    <th className="w-[9rem] px-4 py-2.5 font-medium">Status</th>
-                    <th className="w-11 px-2 py-2.5 font-medium"><span className="sr-only">Lists</span></th>
+                    <th className="w-[36%] px-4 py-3 font-semibold">Problem</th>
+                    <th className="w-[7.5rem] px-4 py-3 font-semibold">Difficulty</th>
+                    <th className="px-4 py-3 font-semibold">Topics</th>
+                    <th className="w-[9rem] px-4 py-3 font-semibold">Status</th>
+                    <th className="w-11 px-2 py-3 font-semibold"><span className="sr-only">Lists</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.id} className="group border-t border-steel-800 hover:bg-steel-950/50">
-                      <td className="px-4 py-2.5">
-                        <Link href={`/problems/${item.slug}`} title={item.title} className="line-clamp-1 font-medium hover:text-accent">
+                    <tr
+                      key={item.id}
+                      className="group border-t border-steel-800/70 transition-colors duration-150 hover:bg-steel-800/45"
+                    >
+                      <td className="px-4 py-3.5">
+                        <Link
+                          href={`/problems/${item.slug}`}
+                          title={item.title}
+                          className="line-clamp-1 font-medium text-foreground transition-colors group-hover:text-accent"
+                        >
                           {item.title}
                         </Link>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3.5">
                         <DifficultyBadge difficulty={item.difficulty} />
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3.5">
                         <TopicTags tags={item.tags} onSelect={(slug) => update({ tag: slug })} />
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5">
+                      <td className="whitespace-nowrap px-4 py-3.5">
                         <StatusPip status={item.status} />
                       </td>
-                      <td className="px-2 py-2.5 text-right">
-                        <div className="flex justify-end opacity-40 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <td className="px-2 py-3.5 text-right">
+                        <div className="flex justify-end opacity-30 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                           {signedIn ? (
                             <AddToListPopover problemId={item.id} onCreate={requestCreate} />
                           ) : (
                             <button
                               type="button"
                               aria-label="Add to list"
-                              className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+                              className="rounded-md p-1 text-muted-foreground hover:bg-steel-800 hover:text-foreground transition-colors"
                               onClick={() => setAuth(true)}
                             >
                               +
@@ -257,7 +264,7 @@ export function ProblemList() {
                 </tbody>
               </table>
             </div>
-            <div className="space-y-2 p-3 md:hidden">
+            <div className="space-y-2.5 p-3.5 md:hidden">
               {items.map((item) => (
                 <ProblemCard
                   key={item.id}
@@ -269,15 +276,15 @@ export function ProblemList() {
                 />
               ))}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-steel-800 px-4 py-2.5">
-              <p className="text-[12px] tabular-nums text-muted-foreground">
-                Showing {from}–{to} of {filteredTotal}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-steel-800/80 bg-steel-950/30 px-4 py-3">
+              <p className="text-[12px] font-medium tabular-nums text-muted-foreground">
+                Showing <span className="text-foreground">{from}–{to}</span> of <span className="text-foreground">{filteredTotal}</span>
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => update({ page: String(page - 1) })}>
                   Previous
                 </Button>
-                <span className="min-w-[3.5rem] text-center text-[13px] tabular-nums text-muted-foreground">
+                <span className="min-w-[3.5rem] text-center text-[13px] font-medium tabular-nums text-muted-foreground">
                   {page} / {totalPages}
                 </span>
                 <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => update({ page: String(page + 1) })}>
@@ -315,22 +322,22 @@ function ProblemCard({
   onCreate: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-steel-800 p-3">
+    <div className="rounded-xl border border-steel-800/90 bg-steel-950/40 p-4 transition-all duration-150 hover:border-steel-700/80">
       <div className="flex items-start justify-between gap-3">
-        <Link href={`/problems/${item.slug}`} className="min-w-0 text-sm font-medium hover:text-accent">
+        <Link href={`/problems/${item.slug}`} className="min-w-0 text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-accent">
           {item.title}
         </Link>
         <DifficultyBadge difficulty={item.difficulty} />
       </div>
-      <div className="mt-2">
+      <div className="mt-2.5">
         <TopicTags tags={item.tags} onSelect={onTag} />
       </div>
-      <div className="mt-2 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between border-t border-steel-800/60 pt-2.5">
         <StatusPip status={item.status} />
         {signedIn ? (
           <AddToListPopover problemId={item.id} onCreate={onCreate} />
         ) : (
-          <button type="button" className="text-[12px] text-muted-foreground" onClick={onAdd}>
+          <button type="button" className="text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors" onClick={onAdd}>
             Add to list
           </button>
         )}

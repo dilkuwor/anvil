@@ -74,15 +74,15 @@ export function NotesIndex() {
           </p>
           {signedIn ? (
             <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-              <div className="flex h-8 items-center rounded-lg border border-steel-800 p-0.5">
+              <div className="flex h-8 items-center rounded-lg border border-steel-700/80 bg-steel-900 p-0.5">
                 {FILTERS.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     className={cn(
-                      "inline-flex h-7 items-center rounded-md px-2.5 text-[13px]",
+                      "inline-flex h-7 items-center rounded-md px-2.5 text-[13px] transition-colors",
                       filter === item.id
-                        ? "bg-steel-800 font-medium text-foreground"
+                        ? "bg-steel-800 font-semibold text-foreground shadow-2xs"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                     onClick={() => {
@@ -116,25 +116,30 @@ export function NotesIndex() {
         </div>
       </div>
       {!signedIn ? (
-        <div className="rounded-2xl border border-dashed border-steel-700 px-5 py-10 text-center">
-          <p className="text-sm text-muted-foreground">Sign in to create and review notes.</p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-steel-700/80 bg-steel-900/40 px-6 py-12 text-center">
+          <Notebook className="h-8 w-8 text-muted-foreground/60 mb-2" />
+          <p className="text-sm font-medium text-foreground">Sign in to create and review notes</p>
+          <p className="mt-1 text-xs text-muted-foreground">Save insights from lessons, problem solutions, and system design.</p>
           <Button className="mt-4" size="sm" onClick={() => setAuth(true)}>
-            Sign in
+            Sign In
           </Button>
         </div>
       ) : items.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-steel-700 px-5 py-10 text-center text-sm text-muted-foreground">
-          {query.trim()
-            ? "No notes match that search."
-            : filter === "ALL"
-              ? "No notes yet."
-              : `No ${sourceLabel(filter).toLowerCase()} notes yet.`}
-        </p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-steel-700/80 bg-steel-900/40 px-6 py-12 text-center">
+          <Notebook className="h-8 w-8 text-muted-foreground/60 mb-2" />
+          <p className="text-sm font-medium text-foreground">
+            {query.trim()
+              ? "No notes match that search."
+              : filter === "ALL"
+                ? "No notes saved yet."
+                : `No ${sourceLabel(filter).toLowerCase()} notes yet.`}
+          </p>
+        </div>
       ) : (
-        <SectionCard className="p-0">
+        <SectionCard className="p-0 shadow-xs">
           <div className="hidden md:block">
             <table className="w-full text-left text-[13px]">
-              <thead className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+              <thead className="bg-steel-950/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Title</th>
                   <th className="px-4 py-2.5 font-medium">Source</th>
@@ -147,10 +152,10 @@ export function NotesIndex() {
                 {paged.map((note) => (
                   <tr
                     key={note.id}
-                    className="cursor-pointer border-t border-steel-800 hover:bg-steel-950/50"
+                    className="cursor-pointer border-t border-steel-800 transition-colors duration-150 hover:bg-steel-800/40"
                     onClick={() => setSelected(note)}
                   >
-                    <td className="px-4 py-3 font-medium">
+                    <td className="px-4 py-3 font-medium text-foreground">
                       <span className="line-clamp-1">{displayNoteTitle(note)}</span>
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -166,7 +171,7 @@ export function NotesIndex() {
                       <button
                         type="button"
                         aria-label="View note"
-                        className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        className="inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                         onClick={(event) => {
                           event.stopPropagation();
                           setSelected(note);

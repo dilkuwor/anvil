@@ -21,26 +21,28 @@ export function RecommendedPractice({ items, isNew }: { items: RecommendedProble
           </Button>
         </div>
       ) : (
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-3.5 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
-            <article
+            <Link
               key={item.id}
-              className="flex flex-col rounded-xl border border-steel-800 bg-steel-950/30 p-4"
+              href={`/problems/${item.slug}`}
+              className="group flex flex-col justify-between rounded-xl border border-steel-800/90 bg-steel-950/40 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:bg-steel-950/80 hover:shadow-md"
             >
-              <h3 className="text-[15px] font-medium leading-snug">{item.title}</h3>
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <DifficultyBadge difficulty={item.difficulty} />
-                <span className="text-[12px] text-muted-foreground">
-                  {item.tags.map((tag) => tag.name).join(" · ") || "—"}
-                </span>
+              <div>
+                <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-accent">
+                  {item.title}
+                </h3>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <DifficultyBadge difficulty={item.difficulty} />
+                  <span className="text-[12px] text-muted-foreground">
+                    {item.tags.map((tag) => tag.name).join(" · ") || "—"}
+                  </span>
+                </div>
               </div>
-              <Link
-                href={`/problems/${item.slug}`}
-                className="mt-4 text-[13px] font-medium text-accent hover:text-accent-light"
-              >
+              <span className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-accent transition-transform group-hover:translate-x-1">
                 Solve problem →
-              </Link>
-            </article>
+              </span>
+            </Link>
           ))}
         </div>
       )}

@@ -100,16 +100,16 @@ function DiagramEdge() {
 export function HeroDesignFloat() {
   return (
     <Link href="/system-design" className="group relative mx-auto block w-full min-w-0 max-w-[38rem] lg:ml-auto lg:mr-0" aria-label="Open System Design">
-      <article className="relative overflow-hidden rounded-2xl border border-black/[0.06] bg-[rgba(255,255,255,0.48)] px-3 py-4 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.35)] transition duration-300 group-hover:border-black/12 group-hover:bg-[rgba(255,255,255,0.82)] dark:border-white/[0.07] dark:bg-[rgba(30,30,34,0.42)] dark:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)] dark:group-hover:border-white/12 dark:group-hover:bg-[rgba(30,30,34,0.78)] sm:px-3.5">
+      <article className="relative overflow-hidden rounded-2xl border border-steel-800/90 bg-steel-900/80 p-4 shadow-xl backdrop-blur-md transition-all duration-300 group-hover:border-accent/40 group-hover:bg-steel-900 group-hover:shadow-2xl dark:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.6)] sm:p-5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-accent">System Design</p>
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-steel-700 px-2 py-0.5 text-[10px] text-muted-foreground">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-accent">System Architecture</p>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-steel-700/80 bg-steel-800/80 px-2.5 py-0.5 text-[10px] font-medium text-foreground">
             <span className="hero-live-dot h-1.5 w-1.5 rounded-full bg-success motion-reduce:animate-none" />
             Live Simulation
           </span>
         </div>
 
-        <div className="mt-3.5 flex min-w-0 items-start justify-center px-2">
+        <div className="mt-4 flex min-w-0 items-start justify-center px-1">
           {NODES.map((node, index) => (
             <Fragment key={node.id}>
               {index > 0 ? <DiagramEdge /> : null}
@@ -123,11 +123,11 @@ export function HeroDesignFloat() {
           ))}
         </div>
 
-        <dl className="mt-5 grid grid-cols-3 gap-1.5 border-t border-steel-800 pt-5 sm:gap-2">
+        <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-steel-800/80 pt-4">
           {METRICS.map((metric) => (
             <div key={metric.label} className="min-w-0">
-              <dt className="text-[8px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{metric.label}</dt>
-              <dd className={`mt-0.5 flex flex-col items-start gap-1 text-[11px] font-semibold tracking-tight tabular-nums sm:flex-row sm:items-center sm:gap-[21px] ${metric.tone}`}>
+              <dt className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{metric.label}</dt>
+              <dd className={`mt-1 flex flex-col items-start gap-1 text-[11px] font-bold tracking-tight tabular-nums sm:flex-row sm:items-center sm:justify-between ${metric.tone}`}>
                 <span className="truncate">{metric.value}</span>
                 <Sparkline points={metric.points} className={metric.stroke} />
               </dd>
