@@ -1,7 +1,18 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, CheckCircle2, CircleCheck, CircleHelp, Clock, CornerDownLeft, ListOrdered, Maximize2, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  CircleCheck,
+  CircleHelp,
+  Clock,
+  CornerDownLeft,
+  ListOrdered,
+  Maximize2,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +22,7 @@ import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LessonCurriculum } from "@/components/learn/lesson-curriculum";
 import { LessonOverlay } from "@/components/learn/lesson-overlay";
 import { headingSlug, LessonMarkdown } from "@/components/learn/markdown";
-import { TopicSidebar } from "@/components/learn/topic-sidebar";
+import { TopicSidebar, useTopicSidebarCollapsed } from "@/components/learn/topic-sidebar";
 import { NotesPanel } from "@/components/notes/notes-drawer";
 import { ListenButton } from "@/components/tts/listen-button";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
@@ -27,6 +38,7 @@ import { useSession, type AuthPromptKind } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export function LessonView({ slug }: { slug: string }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useTopicSidebarCollapsed();
   const queryClient = useQueryClient();
   const { signedIn } = useSession();
   const [authPrompt, setAuthPrompt] = useState<AuthPromptKind | null>(null);
@@ -132,6 +144,7 @@ export function LessonView({ slug }: { slug: string }) {
   }
 
   const data = lesson.data;
+  const isCompleted = data.status === "COMPLETED";
   const firstProblem = data.related_problems[0];
   const topicLessons = topic.data?.lessons ?? [];
   const lessonIdx = topicLessons.findIndex((item) => item.slug === data.slug);
@@ -160,7 +173,7 @@ export function LessonView({ slug }: { slug: string }) {
         <SectionCard>
           <SectionTitle>Next step</SectionTitle>
           <div className="mt-3 flex flex-col gap-2">
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="font-semibold">
               <Link
                 href={
                   topic.data?.practice_tag
@@ -171,7 +184,7 @@ export function LessonView({ slug }: { slug: string }) {
                 Practice Problems
               </Link>
             </Button>
-            <Button asChild size="sm" variant="secondary">
+            <Button asChild size="sm" variant="secondary" className="font-semibold">
               <Link href={`/problems/${firstProblem.slug}`}>Mock Interview</Link>
             </Button>
           </div>
@@ -185,9 +198,9 @@ export function LessonView({ slug }: { slug: string }) {
             {data.takeaways.map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <span className="flex h-5 w-3.5 shrink-0 items-center justify-center">
-                  <CircleCheck className="block h-3.5 w-3.5 text-success" strokeWidth={2.25} aria-hidden />
+                  <CircleCheck className="block h-3.5 w-3.5 text-emerald-400" strokeWidth={2.25} aria-hidden />
                 </span>
-                <span>{item}</span>
+                <span className="text-foreground/90 font-medium">{item}</span>
               </li>
             ))}
           </ul>
@@ -203,7 +216,7 @@ export function LessonView({ slug }: { slug: string }) {
                 <span className="flex h-5 w-3.5 shrink-0 items-center justify-center">
                   <CircleHelp className="block h-3.5 w-3.5 text-accent" aria-hidden />
                 </span>
-                <span>{item}</span>
+                <span className="text-foreground/90 font-medium">{item}</span>
               </li>
             ))}
           </ul>
@@ -256,16 +269,18 @@ export function LessonView({ slug }: { slug: string }) {
         onOpenCurriculum={() => setCurriculumOpen(true)}
       />
 
-      <div className="grid items-start gap-5 lg:grid-cols-[auto_minmax(0,1fr)] xl:grid-cols-[auto_minmax(0,1fr)_18rem]">
+      <div className="flex flex-col lg:flex-row items-start gap-5">
         {/* Left Column: Desktop Topic Sidebar */}
         <TopicSidebar
           categorySlug={data.category_slug}
           activeTopicSlug={data.topic_slug}
           activeLessonSlug={data.slug}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
         {/* Center Column: Lesson Content */}
-        <div className="min-w-0 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4">
           <SectionCard className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-steel-800/80 pb-4">
               <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{data.title}</h1>
@@ -323,6 +338,7 @@ export function LessonView({ slug }: { slug: string }) {
               ) : (
                 <span className="px-2 text-xs text-muted-foreground">First lesson</span>
               )}
+
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -335,19 +351,40 @@ export function LessonView({ slug }: { slug: string }) {
                   <span>Outline</span>
                   <kbd className="hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">O</kbd>
                 </Button>
+
                 {signedIn ? (
-                  <Button size="sm" className="h-8 text-xs font-semibold" disabled={complete.isPending || data.status === "COMPLETED"} onClick={() => complete.mutate()}>
-                    {data.status === "COMPLETED" ? "✓ Completed" : complete.isPending ? "Saving…" : "Mark Complete"}
-                    <kbd className="ml-1.5 hidden rounded bg-accent-light/30 px-1 py-0.5 text-[10px] text-primary-foreground sm:inline-block font-mono">C</kbd>
+                  <Button
+                    size="sm"
+                    variant={isCompleted ? "secondary" : "default"}
+                    className={cn(
+                      "h-8 text-xs font-bold transition-all",
+                      isCompleted ? "bg-steel-800 text-emerald-400 border border-emerald-500/30" : "bg-accent text-white hover:bg-accent-light",
+                    )}
+                    disabled={complete.isPending || isCompleted}
+                    onClick={() => complete.mutate()}
+                  >
+                    {isCompleted ? "✓ Completed" : complete.isPending ? "Saving…" : "Mark Complete"}
+                    {!isCompleted ? (
+                      <kbd className="ml-1.5 hidden rounded bg-accent-light/40 px-1 py-0.5 text-[10px] text-primary-foreground sm:inline-block font-mono">C</kbd>
+                    ) : null}
                   </Button>
                 ) : (
-                  <Button size="sm" className="h-8 text-xs font-semibold" onClick={() => setAuthPrompt("progress")}>
+                  <Button size="sm" className="h-8 text-xs font-bold" onClick={() => setAuthPrompt("progress")}>
                     Mark Complete
                   </Button>
                 )}
               </div>
+
               {data.next ? (
-                <Button asChild variant="ghost" size="sm" className="max-w-[34%] justify-end truncate text-xs">
+                <Button
+                  asChild
+                  variant={isCompleted ? "default" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "max-w-[34%] justify-end truncate text-xs font-semibold",
+                    isCompleted && "bg-accent text-white hover:bg-accent-light shadow-2xs font-bold",
+                  )}
+                >
                   <Link href={data.next.href} className="truncate">
                     <kbd className="mr-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">]</kbd> {data.next.title} →
                   </Link>
@@ -360,7 +397,7 @@ export function LessonView({ slug }: { slug: string }) {
         </div>
 
         {/* Right Column: Desktop XL Study Rail */}
-        <aside className="hidden space-y-4 xl:block xl:sticky xl:top-16">
+        <aside className="hidden w-72 shrink-0 space-y-4 xl:block xl:sticky xl:top-16">
           {studyRail}
         </aside>
       </div>

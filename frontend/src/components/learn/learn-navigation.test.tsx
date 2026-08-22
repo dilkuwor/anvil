@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
@@ -79,5 +79,15 @@ describe("TopicSidebar", () => {
     render(<TopicSidebar categorySlug="dsa" activeTopicSlug="arrays" activeLessonSlug="array-basics" />, { wrapper });
     expect(document.body).toBeDefined();
   });
-});
 
+  it("renders collapsed and expanded states cleanly", () => {
+    const { rerender } = render(
+      <TopicSidebar categorySlug="dsa" activeTopicSlug="arrays" collapsed={true} />,
+      { wrapper },
+    );
+    expect(document.body).toBeDefined();
+
+    rerender(<TopicSidebar categorySlug="dsa" activeTopicSlug="arrays" collapsed={false} />);
+    expect(document.body).toBeDefined();
+  });
+});

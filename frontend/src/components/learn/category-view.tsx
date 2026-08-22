@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, ChevronDown, ChevronRight, Clock, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -42,6 +42,9 @@ export function CategoryView({ slug }: { slug: string }) {
 
   const data = category.data;
 
+  // Find first uncompleted topic or first topic to continue
+  const nextTopic = data.topics.find((t) => t.status !== "COMPLETED") ?? data.topics[0];
+
   return (
     <div className="space-y-4">
       {/* Compact Hierarchy Bar */}
@@ -53,10 +56,10 @@ export function CategoryView({ slug }: { slug: string }) {
 
       {/* Category Header Card */}
       <div className="rounded-2xl border border-steel-800/90 bg-steel-900/90 p-5 sm:p-6 shadow-2xs">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent">
-              <CategoryIcon name={data.icon} />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent shadow-[0_0_12px_rgba(249,115,22,0.15)]">
+              <CategoryIcon name={data.icon} className="h-5 w-5" />
             </span>
             <div className="min-w-0">
               <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{data.title}</h1>
@@ -64,15 +67,27 @@ export function CategoryView({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <div className="shrink-0 text-right">
+          <div className="flex flex-col items-end gap-2 shrink-0">
             <span className="text-xs font-semibold tabular-nums text-foreground">
-              {data.completed_lessons} / {data.lesson_count} lessons
+              {data.completed_lessons} / {data.lesson_count} lessons ({data.percent}%)
             </span>
+            {nextTopic ? (
+              <Button asChild size="sm" className="h-8 gap-1.5 text-xs font-bold shadow-xs">
+                <Link href={nextTopic.href}>
+                  {data.completed_lessons > 0 ? "Continue Category →" : "Start Category →"}
+                </Link>
+              </Button>
+            ) : null}
           </div>
         </div>
 
         <div className="mt-4">
-          <Meter value={data.percent} label={`${data.title} lessons complete`} className="h-1.5" />
+          <Meter
+            value={data.percent}
+            tone={data.percent === 100 ? "bg-success" : "bg-accent"}
+            label={`${data.title} lessons complete`}
+            className="h-1.5"
+          />
         </div>
       </div>
 
@@ -80,7 +95,7 @@ export function CategoryView({ slug }: { slug: string }) {
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Topics in {data.title} ({filteredTopics.length}{filteredTopics.length !== data.topics.length ? ` / ${data.topics.length}` : ""})
           </p>
 
@@ -105,7 +120,7 @@ export function CategoryView({ slug }: { slug: string }) {
 
         <div className="space-y-3">
           {filteredTopics.map((topic) => (
-            <TopicAccordionCard key={topic.id} topic={topic} categorySlug={slug} />
+            <TopicAccordionCard key={topic.id} topic={topic} />
           ))}
           {filteredTopics.length === 0 ? (
             <div className="rounded-2xl border border-steel-800/80 bg-steel-900/40 p-8 text-center text-xs text-muted-foreground">
@@ -120,10 +135,8 @@ export function CategoryView({ slug }: { slug: string }) {
 
 function TopicAccordionCard({
   topic,
-  categorySlug,
 }: {
   topic: LearningTopicSummary;
-  categorySlug: string;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -152,7 +165,7 @@ function TopicAccordionCard({
 
         <div className="flex flex-wrap items-center gap-3 border-t border-steel-800/60 pt-3 lg:border-t-0 lg:pt-0 shrink-0">
           <div className="w-28 sm:w-32">
-            <div className="mb-1 flex justify-between text-xs tabular-nums text-muted-foreground font-medium">
+            <div className="mb-1 flex justify-between text-xs tabular-nums text-muted-foreground font-semibold">
               <span>{topic.completed_lessons} / {topic.lesson_count}</span>
               <span>{topic.percent}%</span>
             </div>
@@ -168,14 +181,14 @@ function TopicAccordionCard({
               type="button"
               variant="outline"
               size="sm"
-              className="gap-1.5 text-xs"
+              className="gap-1.5 text-xs font-semibold"
               onClick={() => setExpanded((prev) => !prev)}
               aria-expanded={expanded}
             >
               <span>{expanded ? "Hide Lessons" : `Lessons (${topic.lesson_count})`}</span>
               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expanded && "rotate-180")} />
             </Button>
-            <Button asChild size="sm" className="gap-1 text-xs">
+            <Button asChild size="sm" className="gap-1 text-xs font-bold">
               <Link href={topic.href}>
                 {actionLabel(topic.status)} Topic →
               </Link>
@@ -192,38 +205,41 @@ function TopicAccordionCard({
             <p className="text-xs text-rose-400">Unable to load topic lessons.</p>
           ) : (
             <div className="space-y-2">
-              <div className="flex items-center justify-between pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center justify-between pb-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 <span>Curriculum Outline</span>
-                <Link href={topic.href} className="text-accent hover:text-accent-light font-medium lowercase first-letter:uppercase">
+                <Link href={topic.href} className="text-accent hover:text-accent-light font-semibold lowercase first-letter:uppercase">
                   Open full topic hub →
                 </Link>
               </div>
               <ol className="divide-y divide-steel-800/60 rounded-xl border border-steel-800/80 bg-steel-900/60">
-                {topicDetail.data.lessons.map((lesson, index) => (
-                  <li key={lesson.id} className="transition-colors hover:bg-steel-800/40">
-                    <Link href={lesson.href} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-steel-800 text-[11px] font-bold tabular-nums text-muted-foreground">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground hover:text-accent">
-                            {lesson.title}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">{lesson.short_description}</p>
+                {topicDetail.data.lessons.map((lesson, index) => {
+                  const isCompleted = lesson.status === "COMPLETED";
+                  return (
+                    <li key={lesson.id} className="transition-colors hover:bg-steel-800/40">
+                      <Link href={lesson.href} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-steel-800 text-[11px] font-bold tabular-nums text-muted-foreground">
+                            {isCompleted ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-foreground hover:text-accent">
+                              {lesson.title}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">{lesson.short_description}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3 text-xs">
-                        <span className="hidden items-center gap-1 text-muted-foreground sm:inline-flex">
-                          <Clock className="h-3 w-3" />
-                          {lesson.estimated_minutes} min
-                        </span>
-                        <LearnStatus status={lesson.status} />
-                        <span className="font-semibold text-accent">Start →</span>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
+                        <div className="flex shrink-0 items-center gap-3 text-xs">
+                          <span className="hidden items-center gap-1 text-muted-foreground sm:inline-flex">
+                            <Clock className="h-3 w-3 text-accent" />
+                            {lesson.estimated_minutes} min
+                          </span>
+                          <LearnStatus status={lesson.status} />
+                          <span className="font-bold text-accent">{actionLabel(lesson.status)} →</span>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ol>
             </div>
           )}

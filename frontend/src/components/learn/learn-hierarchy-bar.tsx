@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, ChevronRight, Clock, ListOrdered } from "lucide-react";
+import { ChevronRight, Clock, ListOrdered } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -32,16 +32,16 @@ export function LearnHierarchyBar({
   return (
     <div className={cn("flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs", className)}>
       <nav aria-label="Course hierarchy" className="flex min-w-0 flex-wrap items-center gap-1.5 text-muted-foreground font-medium">
-        <Link href="/learn" className="transition-colors hover:text-foreground">
+        <Link href="/learn" className="transition-colors hover:text-accent">
           Learn
         </Link>
-        <ChevronRight className="h-3 w-3 opacity-40 shrink-0" aria-hidden />
+        <ChevronRight className="h-3 w-3 opacity-40 shrink-0 text-steel-500" aria-hidden />
 
         <Link
           href={`/learn/${categorySlug}`}
           className={cn(
-            "transition-colors hover:text-foreground truncate max-w-[12rem] sm:max-w-none",
-            !topicSlug && "text-foreground font-semibold",
+            "transition-colors hover:text-accent truncate max-w-[12rem] sm:max-w-none",
+            !topicSlug ? "text-foreground font-bold" : "text-muted-foreground",
           )}
         >
           {categoryTitle}
@@ -49,12 +49,12 @@ export function LearnHierarchyBar({
 
         {topicSlug && topicTitle ? (
           <>
-            <ChevronRight className="h-3 w-3 opacity-40 shrink-0" aria-hidden />
+            <ChevronRight className="h-3 w-3 opacity-40 shrink-0 text-steel-500" aria-hidden />
             <Link
               href={`/learn/${categorySlug}/${topicSlug}`}
               className={cn(
-                "transition-colors hover:text-foreground truncate max-w-[12rem] sm:max-w-none",
-                !lessonTitle && "text-foreground font-semibold",
+                "transition-colors hover:text-accent truncate max-w-[12rem] sm:max-w-none",
+                !lessonTitle ? "text-foreground font-bold" : "text-muted-foreground",
               )}
             >
               {topicTitle}
@@ -64,8 +64,8 @@ export function LearnHierarchyBar({
 
         {lessonTitle ? (
           <>
-            <ChevronRight className="h-3 w-3 opacity-40 shrink-0" aria-hidden />
-            <span className="text-foreground font-semibold truncate max-w-[14rem] sm:max-w-[20rem]">
+            <ChevronRight className="h-3 w-3 opacity-40 shrink-0 text-steel-500" aria-hidden />
+            <span className="text-foreground font-bold truncate max-w-[14rem] sm:max-w-[20rem]">
               {lessonTitle}
             </span>
           </>

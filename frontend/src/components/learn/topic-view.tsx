@@ -1,17 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
-
-import { Clock } from "lucide-react";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { Meter } from "@/components/dashboard/meter";
+import { CategoryIcon } from "@/components/learn/category-icon";
 import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LearnStatus } from "@/components/learn/learn-status";
-import { TopicSidebar } from "@/components/learn/topic-sidebar";
+import { TopicSidebar, useTopicSidebarCollapsed } from "@/components/learn/topic-sidebar";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
+import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
@@ -25,6 +26,8 @@ import {
 } from "@/lib/system-design-catalog";
 
 export function TopicView({ slug }: { slug: string }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useTopicSidebarCollapsed();
+
   const topic = useQuery({
     queryKey: queryKeys.learnTopic(slug),
     queryFn: () => api.get<LearningTopicDetail>(`/api/v1/learn/topics/${slug}`),
@@ -46,6 +49,9 @@ export function TopicView({ slug }: { slug: string }) {
   const showRelated = data.related_problems.length > 0;
   const siblingTopics = category.data?.topics ?? [];
 
+  // Find next lesson to study
+  const nextLesson = data.lessons.find((l) => l.status !== "COMPLETED") ?? data.lessons[0];
+
   return (
     <div className="space-y-4">
       {/* Compact Hierarchy Bar */}
@@ -57,27 +63,44 @@ export function TopicView({ slug }: { slug: string }) {
         totalLessons={data.lesson_count}
       />
 
-      <div className="grid items-start gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="flex flex-col lg:flex-row items-start gap-5">
         {/* Left Column: Desktop Topic Sidebar */}
-        <TopicSidebar categorySlug={data.category_slug} activeTopicSlug={data.slug} />
+        <TopicSidebar
+          categorySlug={data.category_slug}
+          activeTopicSlug={data.slug}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
         {/* Right Column: Topic Details & Curriculum */}
-        <div className="min-w-0 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4">
           {/* Topic Header Card */}
           <div className="rounded-2xl border border-steel-800/90 bg-steel-900/90 p-5 sm:p-6 shadow-2xs">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
+                  {category.data?.icon ? (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-accent/25 bg-accent/10 text-accent">
+                      <CategoryIcon name={category.data.icon} className="h-3 w-3" />
+                    </span>
+                  ) : null}
                   <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{data.title}</h1>
                   <DifficultyBadge difficulty={data.difficulty} />
                 </div>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{data.description}</p>
               </div>
 
-              <div className="shrink-0 text-right">
+              <div className="flex flex-col items-end gap-2 shrink-0">
                 <span className="text-xs font-semibold tabular-nums text-foreground">
-                  {data.completed_lessons} / {data.lesson_count} lessons
+                  {data.completed_lessons} / {data.lesson_count} lessons ({data.percent}%)
                 </span>
+                {nextLesson ? (
+                  <Button asChild size="sm" className="h-8 gap-1.5 text-xs font-bold shadow-xs">
+                    <Link href={nextLesson.href}>
+                      {data.completed_lessons > 0 ? "Continue Topic →" : "Start Topic →"}
+                    </Link>
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -97,7 +120,7 @@ export function TopicView({ slug }: { slug: string }) {
                   Switch Topic in {data.category_title}
                 </label>
                 <select
-                  className="select-field mt-1.5 w-full text-xs"
+                  className="select-field mt-1.5 w-full text-xs font-medium"
                   value={slug}
                   onChange={(e) => {
                     const target = siblingTopics.find((t) => t.slug === e.target.value);
@@ -119,35 +142,45 @@ export function TopicView({ slug }: { slug: string }) {
             <DesignProblemsCatalog lessons={data.lessons} />
           ) : (
             <SectionCard className="p-0 overflow-hidden">
-              <div className="border-b border-steel-800/80 bg-steel-950/40 px-5 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Lessons ({data.lessons.length})
+              <div className="flex items-center justify-between border-b border-steel-800/80 bg-steel-950/40 px-5 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span>Curriculum Lessons ({data.lessons.length})</span>
+                <span className="text-[11px] font-medium lowercase first-letter:uppercase text-muted-foreground">
+                  ~{data.lessons.reduce((acc, curr) => acc + curr.estimated_minutes, 0)} min total
+                </span>
               </div>
               <ol className="divide-y divide-steel-800/80">
-                {data.lessons.map((lesson, index) => (
-                  <li key={lesson.id} className="transition-colors hover:bg-steel-950/50">
-                    <Link href={lesson.href} className="flex items-start gap-4 p-4 sm:p-5">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-steel-700/60 bg-steel-800 text-xs font-bold tabular-nums text-muted-foreground">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h2 className="text-base font-bold tracking-tight text-foreground transition-colors hover:text-accent">
-                            {lesson.title}
-                          </h2>
-                          <span className="font-semibold text-xs text-accent">{actionLabel(lesson.status)} →</span>
+                {data.lessons.map((lesson, index) => {
+                  const isCompleted = lesson.status === "COMPLETED";
+                  return (
+                    <li key={lesson.id} className="transition-colors hover:bg-steel-950/50">
+                      <Link href={lesson.href} className="flex items-start gap-4 p-4 sm:p-5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-steel-700/60 bg-steel-800 text-xs font-bold tabular-nums text-muted-foreground">
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h2 className="text-base font-bold tracking-tight text-foreground transition-colors hover:text-accent">
+                              {lesson.title}
+                            </h2>
+                            <span className="font-bold text-xs text-accent">{actionLabel(lesson.status)} →</span>
+                          </div>
+                          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{lesson.short_description}</p>
+                          <div className="mt-2.5 flex items-center gap-3 text-xs text-muted-foreground">
+                            <LearnStatus status={lesson.status} />
+                            <span className="inline-flex items-center gap-1 font-medium">
+                              <Clock className="h-3 w-3 text-accent" />
+                              {lesson.estimated_minutes} min read
+                            </span>
+                          </div>
                         </div>
-                        <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{lesson.short_description}</p>
-                        <div className="mt-2.5 flex items-center gap-3 text-xs text-muted-foreground">
-                          <LearnStatus status={lesson.status} />
-                          <span className="inline-flex items-center gap-1 font-medium">
-                            <Clock className="h-3 w-3" />
-                            {lesson.estimated_minutes} min read
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ol>
             </SectionCard>
           )}
@@ -156,8 +189,8 @@ export function TopicView({ slug }: { slug: string }) {
           {showRelated ? (
             <SectionCard className="p-0">
               <div className="p-4 sm:p-5 pb-3">
-                <SectionTitle>Related Problems</SectionTitle>
-                <p className="mt-0.5 text-xs text-muted-foreground">Put these concepts to work.</p>
+                <SectionTitle>Related Practice Problems</SectionTitle>
+                <p className="mt-0.5 text-xs text-muted-foreground">Put these concepts to work in interactive coding problems.</p>
               </div>
               <ul className="divide-y divide-steel-800/80 border-t border-steel-800/80">
                 {data.related_problems.map((problem) => (
