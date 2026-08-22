@@ -5,7 +5,6 @@ import { CheckCircle2, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
-import { Meter } from "@/components/dashboard/meter";
 import { CategoryIcon } from "@/components/learn/category-icon";
 import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LearnStatus } from "@/components/learn/learn-status";
@@ -24,6 +23,7 @@ import {
   useStartDesignInterview,
   useSystemDesignCatalog,
 } from "@/lib/system-design-catalog";
+import { Meter } from "@/components/dashboard/meter";
 
 export function TopicView({ slug }: { slug: string }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useTopicSidebarCollapsed();
@@ -63,8 +63,9 @@ export function TopicView({ slug }: { slug: string }) {
         totalLessons={data.lesson_count}
       />
 
-      <div className="flex flex-col lg:flex-row items-start gap-5">
-        {/* Left Column: Desktop Topic Sidebar */}
+      {/* Main Connected Topic Workspace */}
+      <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-steel-800/90 bg-steel-900/90 shadow-2xs overflow-hidden">
+        {/* Attached Left Rail / Sidebar */}
         <TopicSidebar
           categorySlug={data.category_slug}
           activeTopicSlug={data.slug}
@@ -73,9 +74,9 @@ export function TopicView({ slug }: { slug: string }) {
         />
 
         {/* Right Column: Topic Details & Curriculum */}
-        <div className="flex-1 min-w-0 space-y-4">
-          {/* Topic Header Card */}
-          <div className="rounded-2xl border border-steel-800/90 bg-steel-900/90 p-5 sm:p-6 shadow-2xs">
+        <div className="flex-1 min-w-0 p-5 sm:p-7 space-y-6">
+          {/* Topic Header */}
+          <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -141,8 +142,8 @@ export function TopicView({ slug }: { slug: string }) {
           {isDesignCatalog ? (
             <DesignProblemsCatalog lessons={data.lessons} />
           ) : (
-            <SectionCard className="p-0 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-steel-800/80 bg-steel-950/40 px-5 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="rounded-xl border border-steel-800/80 bg-steel-950/40 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-steel-800/80 bg-steel-900/60 px-4 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 <span>Curriculum Lessons ({data.lessons.length})</span>
                 <span className="text-[11px] font-medium lowercase first-letter:uppercase text-muted-foreground">
                   ~{data.lessons.reduce((acc, curr) => acc + curr.estimated_minutes, 0)} min total
@@ -152,7 +153,7 @@ export function TopicView({ slug }: { slug: string }) {
                 {data.lessons.map((lesson, index) => {
                   const isCompleted = lesson.status === "COMPLETED";
                   return (
-                    <li key={lesson.id} className="transition-colors hover:bg-steel-950/50">
+                    <li key={lesson.id} className="transition-colors hover:bg-steel-950/70">
                       <Link href={lesson.href} className="flex items-start gap-4 p-4 sm:p-5">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-steel-700/60 bg-steel-800 text-xs font-bold tabular-nums text-muted-foreground">
                           {isCompleted ? (
@@ -182,12 +183,12 @@ export function TopicView({ slug }: { slug: string }) {
                   );
                 })}
               </ol>
-            </SectionCard>
+            </div>
           )}
 
           {/* Related Problems */}
           {showRelated ? (
-            <SectionCard className="p-0">
+            <div className="rounded-xl border border-steel-800/80 bg-steel-950/40 overflow-hidden">
               <div className="p-4 sm:p-5 pb-3">
                 <SectionTitle>Related Practice Problems</SectionTitle>
                 <p className="mt-0.5 text-xs text-muted-foreground">Put these concepts to work in interactive coding problems.</p>
@@ -197,7 +198,7 @@ export function TopicView({ slug }: { slug: string }) {
                   <li key={problem.id}>
                     <Link
                       href={`/problems/${problem.slug}`}
-                      className="flex items-center justify-between gap-3 p-4 text-sm transition-colors hover:bg-steel-950/50"
+                      className="flex items-center justify-between gap-3 p-4 text-sm transition-colors hover:bg-steel-950/70"
                     >
                       <span className="min-w-0 truncate font-semibold text-foreground hover:text-accent">{problem.title}</span>
                       <DifficultyBadge difficulty={problem.difficulty} />
@@ -205,7 +206,7 @@ export function TopicView({ slug }: { slug: string }) {
                   </li>
                 ))}
               </ul>
-            </SectionCard>
+            </div>
           ) : null}
         </div>
       </div>
@@ -215,7 +216,7 @@ export function TopicView({ slug }: { slug: string }) {
 
 function DesignProblemsCatalog({ lessons }: { lessons: LearningLessonSummary[] }) {
   const catalog = useSystemDesignCatalog();
-  const interview = useStartDesignInterview();
+  const { startInterview, startingSlug, authOpen, closeAuth } = useStartDesignInterview();
 
   if (catalog.isLoading) return <PageLoader variant="inline" />;
   if (catalog.isError || !catalog.data?.length) {
@@ -254,24 +255,38 @@ function DesignProblemsCatalog({ lessons }: { lessons: LearningLessonSummary[] }
               primary="learn"
               lesson={
                 lesson
-                  ? { href: lesson.href, status: lesson.status, estimated_minutes: lesson.estimated_minutes }
+                  ? {
+                      href: lesson.href,
+                      status: lesson.status,
+                      estimated_minutes: lesson.estimated_minutes,
+                    }
                   : undefined
               }
-              onInterview={interview.startInterview}
-              interviewing={interview.startingSlug === item.slug}
+              onInterview={startInterview}
+              interviewing={startingSlug === item.slug}
             />
           );
         })}
       </div>
-      {extra.map((lesson) => (
-        <SectionCard key={lesson.id} className="p-4">
-          <Link href={lesson.href} className="text-sm font-medium hover:text-accent">
-            {lesson.title}
-          </Link>
-          <p className="mt-1 text-[13px] text-muted-foreground">{lesson.short_description}</p>
+
+      {extra.length ? (
+        <SectionCard className="p-0">
+          <div className="p-4 pb-2">
+            <SectionTitle>Additional reading</SectionTitle>
+          </div>
+          <ol className="divide-y divide-steel-800 border-t border-steel-800">
+            {extra.map((lesson) => (
+              <li key={lesson.id}>
+                <Link href={lesson.href} className="flex items-center justify-between p-3.5 text-xs hover:bg-steel-950/50">
+                  <span className="font-medium text-foreground">{lesson.title}</span>
+                  <span className="text-muted-foreground font-mono">{lesson.estimated_minutes}m</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
         </SectionCard>
-      ))}
-      {interview.authOpen ? <AuthPrompt kind="mock" onClose={interview.closeAuth} /> : null}
+      ) : null}
+      {authOpen ? <AuthPrompt kind="mock" onClose={closeAuth} /> : null}
     </div>
   );
 }

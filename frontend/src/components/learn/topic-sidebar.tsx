@@ -75,13 +75,14 @@ export function TopicSidebar({
   return (
     <aside
       className={cn(
-        "sticky top-16 hidden max-h-[calc(100vh-5rem)] shrink-0 overflow-hidden rounded-2xl border border-steel-800/90 bg-steel-900/95 shadow-sm backdrop-blur-xl transition-[width,padding] duration-300 ease-in-out lg:flex flex-col scrollbar-none",
-        isCollapsed ? "w-14 p-2 items-center" : "w-72 p-4",
+        "hidden shrink-0 border-r border-steel-800/80 bg-steel-950/40 transition-[width,padding] duration-300 ease-in-out lg:flex flex-col scrollbar-none self-stretch",
+        isCollapsed ? "w-13 p-2.5 items-center" : "w-72 p-4 sm:p-5",
       )}
+      aria-label="Curriculum navigation"
     >
       {isCollapsed ? (
-        <div className="flex w-full flex-col items-center animate-in fade-in duration-200">
-          {/* Equal size (h-9 w-9) Category Icon Box */}
+        <div className="flex w-full flex-col items-center">
+          {/* Category Icon Box (h-9 w-9) */}
           <Link
             href={`/learn/${data.slug}`}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent hover:border-accent/40 hover:scale-105 transition-all shadow-2xs"
@@ -91,13 +92,13 @@ export function TopicSidebar({
             <CategoryIcon name={data.icon} className="h-4 w-4" />
           </Link>
 
-          <div className="my-2 h-px w-6 bg-steel-800/80" />
+          <div className="my-2 h-px w-5 bg-steel-800/80" />
 
-          {/* Equal size (h-9 w-9) Expand Icon Box */}
+          {/* Expand Chevron Box (h-9 w-9) */}
           <button
             type="button"
             onClick={() => toggle()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-steel-800/80 bg-steel-950/50 text-muted-foreground hover:border-steel-700 hover:bg-steel-800 hover:text-foreground hover:scale-105 transition-all shadow-2xs"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-steel-800/80 bg-steel-900/60 text-muted-foreground hover:border-steel-700 hover:bg-steel-800 hover:text-foreground hover:scale-105 transition-all shadow-2xs"
             title="Expand Curriculum"
             aria-label="Expand Curriculum"
           >
@@ -105,7 +106,7 @@ export function TopicSidebar({
           </button>
         </div>
       ) : (
-        <div className="flex w-full min-w-[16rem] flex-col overflow-y-auto scrollbar-none animate-in fade-in duration-200">
+        <div className="flex w-full min-w-[16rem] flex-col overflow-y-auto scrollbar-none">
           {/* Category Header */}
           <div className="border-b border-steel-800/80 pb-3.5">
             <div className="flex items-center justify-between gap-2">

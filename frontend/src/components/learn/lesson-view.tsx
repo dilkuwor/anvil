@@ -270,56 +270,60 @@ export function LessonView({ slug }: { slug: string }) {
       />
 
       <div className="flex flex-col lg:flex-row items-start gap-5">
-        {/* Left Column: Desktop Topic Sidebar */}
-        <TopicSidebar
-          categorySlug={data.category_slug}
-          activeTopicSlug={data.topic_slug}
-          activeLessonSlug={data.slug}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-
-        {/* Center Column: Lesson Content */}
+        {/* Center Column: Main Learning Workspace & Bottom Controls */}
         <div className="flex-1 min-w-0 space-y-4">
-          <SectionCard className="min-w-0">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-steel-800/80 pb-4">
-              <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{data.title}</h1>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-accent"
-                  aria-label="Maximize lesson (M)"
-                  title="Maximize (M)"
-                  onClick={() => setOverlayOpen(true)}
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
-                <ListenButton
-                  text={lessonSpeech({
-                    title: data.title,
-                    short_description: data.short_description,
-                    content: data.content,
-                    takeaways: data.takeaways,
-                  })}
-                />
-                <NotesPanel
-                  context={{ sourceType: "LESSON", sourceId: data.id, sourceTitle: data.title }}
-                />
-                {signedIn ? (
-                  <AskAiButton />
-                ) : (
-                  <Button size="sm" onClick={() => setAuthPrompt("ask-ai")}>
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                    Ask AI
+          {/* Main Connected Reading Workspace Card */}
+          <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-steel-800/90 bg-steel-900/90 shadow-2xs overflow-hidden">
+            {/* Attached Left Rail / Sidebar */}
+            <TopicSidebar
+              categorySlug={data.category_slug}
+              activeTopicSlug={data.topic_slug}
+              activeLessonSlug={data.slug}
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            />
+
+            {/* Center Content Panel */}
+            <div className="flex-1 min-w-0 p-5 sm:p-7">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-steel-800/80 pb-4">
+                <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{data.title}</h1>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-accent"
+                    aria-label="Maximize lesson (M)"
+                    title="Maximize (M)"
+                    onClick={() => setOverlayOpen(true)}
+                  >
+                    <Maximize2 className="h-4 w-4" />
                   </Button>
-                )}
+                  <ListenButton
+                    text={lessonSpeech({
+                      title: data.title,
+                      short_description: data.short_description,
+                      content: data.content,
+                      takeaways: data.takeaways,
+                    })}
+                  />
+                  <NotesPanel
+                    context={{ sourceType: "LESSON", sourceId: data.id, sourceTitle: data.title }}
+                  />
+                  {signedIn ? (
+                    <AskAiButton />
+                  ) : (
+                    <Button size="sm" onClick={() => setAuthPrompt("ask-ai")}>
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                      Ask AI
+                    </Button>
+                  )}
+                </div>
               </div>
+              {signedIn && !overlayOpen ? <AskAiPanel /> : null}
+              <LessonMarkdown content={data.content} />
             </div>
-            {signedIn && !overlayOpen ? <AskAiPanel /> : null}
-            <LessonMarkdown content={data.content} />
-          </SectionCard>
+          </div>
 
           {/* On this page and takeaways on smaller screens */}
           <div className="space-y-4 xl:hidden">
@@ -397,7 +401,7 @@ export function LessonView({ slug }: { slug: string }) {
         </div>
 
         {/* Right Column: Desktop XL Study Rail */}
-        <aside className="hidden w-72 shrink-0 space-y-4 xl:block xl:sticky xl:top-16">
+        <aside className={cn("hidden w-72 shrink-0 space-y-4 xl:block xl:sticky xl:top-16", sidebarCollapsed && "xl:ml-5")}>
           {studyRail}
         </aside>
       </div>
