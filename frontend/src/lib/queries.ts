@@ -30,6 +30,7 @@ export const queryKeys = {
   notes: (sourceType?: string, sourceId?: string) => ["notes", sourceType ?? "all", sourceId ?? "all"] as const,
   mcpTokens: ["mcp-tokens"] as const,
   mcpAccess: ["mcp-access"] as const,
+  oauthClients: ["oauth-clients"] as const,
 };
 
 export const fetchers = {

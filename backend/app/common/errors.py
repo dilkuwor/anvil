@@ -10,11 +10,18 @@ logger = get_logger(__name__)
 
 
 class AppError(Exception):
-    def __init__(self, message: str, status_code: int = 400, code: str = "bad_request"):
+    def __init__(
+        self,
+        message: str,
+        status_code: int = 400,
+        code: str = "bad_request",
+        headers: dict[str, str] | None = None,
+    ):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
         self.code = code
+        self.headers = headers or {}
 
 
 class NotFoundError(AppError):
@@ -23,8 +30,8 @@ class NotFoundError(AppError):
 
 
 class UnauthorizedError(AppError):
-    def __init__(self, message: str = "Authentication required."):
-        super().__init__(message, status_code=401, code="unauthorized")
+    def __init__(self, message: str = "Authentication required.", headers: dict[str, str] | None = None):
+        super().__init__(message, status_code=401, code="unauthorized", headers=headers)
 
 
 class ForbiddenError(AppError):
@@ -57,6 +64,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=_error_body(exc.message, exc.code, exc.status_code),
+            headers=exc.headers or None,
         )
 
     @app.exception_handler(StarletteHTTPException)

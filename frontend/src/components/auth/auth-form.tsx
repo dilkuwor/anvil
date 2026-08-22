@@ -16,6 +16,13 @@ import { queryKeys } from "@/lib/queries";
 
 type Mode = "login" | "register";
 
+function safeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("://")) {
+    return "/dashboard";
+  }
+  return raw;
+}
+
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -35,7 +42,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     onSuccess: (user) => {
       trackEvent(mode === "register" ? AnalyticsEvent.SignUp : AnalyticsEvent.Login, { method: "password" });
       queryClient.setQueryData(queryKeys.me, user);
-      router.push(params.get("next") || "/dashboard");
+      router.push(safeNext(params.get("next")));
     },
     onError: (err) => {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");

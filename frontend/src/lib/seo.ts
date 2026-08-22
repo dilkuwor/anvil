@@ -13,6 +13,7 @@ const PRIVATE_PATHS = [
   "/notes",
   "/login",
   "/register",
+  "/oauth",
   "/system-design/interview",
   "/system-design/history",
   "/problems/lists",

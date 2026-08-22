@@ -19,7 +19,7 @@ Docker Compose is not required to start the app.
 
 The frontend rewrite sends `/api/*` and `/mcp` to `API_PROXY_TARGET` (default `http://localhost:8000`).
 
-MCP is a PAT-authenticated Streamable HTTP endpoint at `/mcp`. Create a token in Settings. See [mcp.md](./mcp.md).
+MCP is at `/mcp`. Grok Custom Connector uses OAuth 2.1 + PKCE (`/oauth/authorize`, `/oauth/token`). The Grok CLI can still send `Authorization: Bearer ia_mcp_…`. See [mcp.md](./mcp.md). After pulling, run `alembic upgrade head`.
 
 ## Why the runner is a separate image
 

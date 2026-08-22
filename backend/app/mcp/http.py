@@ -15,6 +15,7 @@ from app.mcp import protocol, rate_limit
 from app.mcp.models import McpToken
 from app.mcp.protocol import SERVER_NAME, SERVER_VERSION
 from app.mcp.tokens import resolve_token
+from app.oauth.service import decode_mcp_access_token, www_authenticate
 from app.users.models import User
 
 logger = get_logger(__name__)
@@ -29,18 +30,29 @@ def _bearer(request: Request) -> str | None:
     return None
 
 
-def get_mcp_principal(request: Request, db: Session = Depends(get_db)) -> tuple[User, McpToken]:
+def _mcp_unauthorized(request: Request, message: str) -> UnauthorizedError:
+    return UnauthorizedError(message, headers={"WWW-Authenticate": www_authenticate(request)})
+
+
+def get_mcp_principal(request: Request, db: Session = Depends(get_db)) -> tuple[User, McpToken | None]:
     raw = _bearer(request)
     if not raw:
-        raise UnauthorizedError("MCP personal access token required.")
+        raise _mcp_unauthorized(request, "MCP authentication required.")
     token = resolve_token(db, raw)
-    if token is None:
-        raise UnauthorizedError("Invalid or revoked MCP token.")
-    user = db.get(User, token.user_id)
+    if token is not None:
+        user = db.get(User, token.user_id)
+        if user is None or not user.is_active:
+            raise _mcp_unauthorized(request, "Invalid or revoked MCP token.")
+        rate_limit.check(token.id)
+        return user, token
+    user_id = decode_mcp_access_token(raw)
+    if user_id is None:
+        raise _mcp_unauthorized(request, "Invalid or expired MCP credentials.")
+    user = db.get(User, user_id)
     if user is None or not user.is_active:
-        raise UnauthorizedError("Invalid or revoked MCP token.")
-    rate_limit.check(token.id)
-    return user, token
+        raise _mcp_unauthorized(request, "Invalid or expired MCP credentials.")
+    rate_limit.check(user.id)
+    return user, None
 
 
 @router.get("/mcp")
@@ -60,7 +72,7 @@ def mcp_probe() -> dict:
 async def mcp_post(
     request: Request,
     db: Session = Depends(get_db),
-    principal: tuple[User, McpToken] = Depends(get_mcp_principal),
+    principal: tuple[User, McpToken | None] = Depends(get_mcp_principal),
 ) -> Response:
     user, token = principal
     try:
@@ -95,7 +107,7 @@ async def mcp_post(
     return _respond(request, reply)
 
 
-def _safe_dispatch(db: Session, user: User, token: McpToken, message: dict) -> dict | None:
+def _safe_dispatch(db: Session, user: User, token: McpToken | None, message: dict) -> dict | None:
     try:
         return protocol.dispatch(db, user, token, message)
     except Exception:

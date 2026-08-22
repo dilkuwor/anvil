@@ -32,4 +32,6 @@ def create_access_token(user_id: UUID) -> str:
 def decode_access_token(token: str) -> UUID:
     settings = get_settings()
     payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    if payload.get("typ") == "mcp_at":
+        raise jwt.InvalidTokenError("MCP access token cannot be used as a session.")
     return UUID(payload["sub"])

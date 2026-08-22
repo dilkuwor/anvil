@@ -245,18 +245,31 @@ type McpAccess = {
   created_at: string;
 };
 
-function mcpEndpoint() {
-  if (typeof window === "undefined") return "http://localhost:8000/mcp";
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") return "http://localhost:8000/mcp";
-  return `${window.location.origin}/mcp`;
+function siteOrigin() {
+  if (typeof window === "undefined") return "https://anvilprep.dev";
+  return window.location.origin;
 }
+
+function mcpEndpoint() {
+  return `${siteOrigin()}/mcp`;
+}
+
+type OAuthClient = {
+  id: string;
+  client_id: string;
+  name: string;
+  token_endpoint_auth_method: string;
+  allow_any_https_redirect: boolean;
+  redirect_uris: string[];
+  scopes: string;
+  created_at: string;
+};
 
 function McpSettings() {
   const queryClient = useQueryClient();
   const [name, setName] = useState("ChatGPT");
   const [created, setCreated] = useState<McpTokenCreated | null>(null);
-  const [copied, setCopied] = useState<"token" | "url" | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
   const tokens = useQuery({
     queryKey: queryKeys.mcpTokens,
     queryFn: () => api.get<McpToken[]>("/api/v1/mcp/tokens"),
@@ -284,7 +297,29 @@ function McpSettings() {
     onError: () => toast.error("Unable to revoke token."),
   });
 
-  async function copy(label: "token" | "url", value: string) {
+  const oauthClients = useQuery({
+    queryKey: queryKeys.oauthClients,
+    queryFn: () => api.get<OAuthClient[]>("/api/v1/oauth/clients"),
+  });
+  const createOauth = useMutation({
+    mutationFn: () =>
+      api.post<OAuthClient>("/api/v1/oauth/clients", { name: "Grok", allow_any_https_redirect: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.oauthClients });
+      toast.success("OAuth client created. Copy the Client ID into Grok.");
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Unable to create OAuth client."),
+  });
+  const revokeOauth = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/v1/oauth/clients/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.oauthClients });
+      toast.success("OAuth client revoked.");
+    },
+    onError: () => toast.error("Unable to revoke OAuth client."),
+  });
+
+  async function copy(label: string, value: string) {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(label);
@@ -300,10 +335,68 @@ function McpSettings() {
     <SectionCard className="p-0">
       <PanelHeader
         title="MCP (ChatGPT / Grok)"
-        body="A personal access token lets ChatGPT or Grok read your AnvilPrep lessons, problems, notes, submissions, and completed interviews. They will not be able to run code, start interviews, or see hidden tests."
+        body="Grok's Custom Connector needs OAuth (PKCE). Create a client below and paste the values into Grok. Personal access tokens still work for the Grok CLI."
       />
       <div className="space-y-5 px-5 py-5">
-        <Field label="Endpoint" hint="Point the MCP client at this URL. Use a Bearer token, not your login cookie.">
+        <p className="text-[12px] leading-5 text-muted-foreground">
+          Grok and ChatGPT are third-party processors of your study data. They can read lessons, progress, notes,
+          submissions, and completed interviews. They cannot run code or start interviews.
+        </p>
+
+        <div className="rounded-xl border border-steel-800 bg-background/40 px-4 py-3">
+          <p className="text-[13px] font-medium">Grok Custom Connector</p>
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            Token auth method: none (PKCE only). Leave Client Secret empty.
+          </p>
+          <dl className="mt-3 space-y-2">
+            <CopyRow label="Server URL" value={endpoint} copied={copied} onCopy={copy} />
+            <CopyRow label="Authorization Endpoint" value={`${siteOrigin()}/oauth/authorize`} copied={copied} onCopy={copy} />
+            <CopyRow label="Token Endpoint" value={`${siteOrigin()}/oauth/token`} copied={copied} onCopy={copy} />
+            <CopyRow label="Scopes" value="mcp:read" copied={copied} onCopy={copy} />
+          </dl>
+          <div className="mt-3">
+            <IconAction
+              text="Create OAuth client"
+              label="Create OAuth client"
+              pending={createOauth.isPending}
+              variant="secondary"
+              onClick={() => createOauth.mutate()}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </IconAction>
+          </div>
+          {oauthClients.data && oauthClients.data.length > 0 ? (
+            <ul className="mt-3 divide-y divide-steel-800 rounded-xl border border-steel-800">
+              {oauthClients.data.map((row) => (
+                <li key={row.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium">{row.name}</p>
+                    <p className="truncate font-mono text-[12px] text-muted-foreground">{row.client_id}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button type="button" size="sm" variant="secondary" onClick={() => copy(`client:${row.id}`, row.client_id)}>
+                      {copied === `client:${row.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      Copy
+                    </Button>
+                    <IconAction
+                      text="Revoke"
+                      label={`Revoke ${row.name}`}
+                      pending={revokeOauth.isPending}
+                      variant="ghost"
+                      onClick={() => revokeOauth.mutate(row.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </IconAction>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-[12px] text-muted-foreground">No OAuth clients yet. Create one, then paste Client ID into Grok.</p>
+          )}
+        </div>
+
+        <Field label="CLI endpoint" hint="For grok mcp add --header Authorization: Bearer ia_mcp_…">
           <div className="flex gap-2">
             <Input readOnly value={endpoint} />
             <Button type="button" size="sm" variant="secondary" onClick={() => copy("url", endpoint)}>
@@ -400,6 +493,29 @@ function formatWhen(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
+}
+
+function CopyRow({
+  label,
+  value,
+  copied,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  copied: string | null;
+  onCopy: (label: string, value: string) => void;
+}) {
+  return (
+    <div className="grid gap-1 sm:grid-cols-[9.5rem_minmax(0,1fr)_auto] sm:items-center sm:gap-2">
+      <dt className="text-[12px] text-muted-foreground">{label}</dt>
+      <dd className="truncate font-mono text-[12px] text-foreground">{value}</dd>
+      <Button type="button" size="sm" variant="secondary" onClick={() => onCopy(label, value)}>
+        {copied === label ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        Copy
+      </Button>
+    </div>
+  );
 }
 
 function LlmSettings({ user }: { user: User }) {

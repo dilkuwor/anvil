@@ -87,11 +87,18 @@ def resolve_token(db: Session, raw: str) -> McpToken | None:
     return row
 
 
-def record_access(db: Session, token: McpToken, method: str, name: str, status: str) -> None:
+def record_access(
+    db: Session,
+    user_id: UUID,
+    token: McpToken | None,
+    method: str,
+    name: str,
+    status: str,
+) -> None:
     db.add(
         McpAccessLog(
-            user_id=token.user_id,
-            token_id=token.id,
+            user_id=user_id,
+            token_id=token.id if token is not None else None,
             method=method[:80],
             name=name[:200],
             status=status[:40],

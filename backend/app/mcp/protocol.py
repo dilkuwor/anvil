@@ -290,7 +290,7 @@ PROMPTS: list[dict[str, Any]] = [
 _PROMPT_BY_NAME = {item["name"]: item for item in PROMPTS}
 
 
-def dispatch(db: Session, user: User, token: McpToken, message: dict) -> dict | None:
+def dispatch(db: Session, user: User, token: McpToken | None, message: dict) -> dict | None:
     if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
         return _rpc_error(None, -32600, "Invalid Request")
     method = message.get("method")
@@ -303,26 +303,26 @@ def dispatch(db: Session, user: User, token: McpToken, message: dict) -> dict | 
     try:
         result = _call(db, user, token, method, params)
     except (NotFoundError, ForbiddenError) as exc:
-        record_access(db, token, method, _audit_name(method, params), "not_found")
+        record_access(db, user.id, token, method, _audit_name(method, params), "not_found")
         if method == "tools/call":
             return _rpc_result(rpc_id, _tool_error(exc.message))
         return _rpc_error(rpc_id, -32002, exc.message)
     except AppError as exc:
-        record_access(db, token, method, _audit_name(method, params), exc.code)
+        record_access(db, user.id, token, method, _audit_name(method, params), exc.code)
         if method == "tools/call":
             return _rpc_result(rpc_id, _tool_error(exc.message))
         if exc.code == "method_not_found":
             return _rpc_error(rpc_id, -32601, exc.message)
         return _rpc_error(rpc_id, -32602, exc.message)
     except Exception:
-        record_access(db, token, method, _audit_name(method, params), "error")
+        record_access(db, user.id, token, method, _audit_name(method, params), "error")
         raise
     if method in {"tools/call", "resources/read", "prompts/get"}:
-        record_access(db, token, method, _audit_name(method, params), "ok")
+        record_access(db, user.id, token, method, _audit_name(method, params), "ok")
     return _rpc_result(rpc_id, result)
 
 
-def _call(db: Session, user: User, _token: McpToken, method: str, params: dict) -> Any:
+def _call(db: Session, user: User, _token: McpToken | None, method: str, params: dict) -> Any:
     if method == "initialize":
         requested = str(params.get("protocolVersion") or DEFAULT_PROTOCOL)
         version = requested if requested in PROTOCOL_VERSIONS else DEFAULT_PROTOCOL

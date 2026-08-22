@@ -62,6 +62,11 @@ class Settings(BaseSettings):
 
     mcp_rate_limit_per_minute: int = 60
     mcp_max_tokens_per_user: int = 10
+    public_base_url: str = ""
+    oauth_access_ttl_seconds: int = 60 * 60
+    oauth_code_ttl_seconds: int = 10 * 60
+    oauth_refresh_ttl_seconds: int = 60 * 60 * 24 * 30
+    oauth_max_clients_per_user: int = 8
 
     @field_validator("cookie_samesite")
     @classmethod

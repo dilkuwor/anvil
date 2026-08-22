@@ -17,6 +17,8 @@ from app.submissions.router import router as submissions_router
 from app.tts.router import router as tts_router
 from app.mcp.http import router as mcp_http_router
 from app.mcp.router import router as mcp_router
+from app.oauth.http import router as oauth_http_router
+from app.oauth.router import router as oauth_router
 from app.users.router import router as users_router
 
 settings = get_settings()
@@ -46,6 +48,8 @@ app.include_router(users_router)
 app.include_router(tts_router)
 app.include_router(mcp_router)
 app.include_router(mcp_http_router)
+app.include_router(oauth_router)
+app.include_router(oauth_http_router)
 
 
 @app.get("/health")

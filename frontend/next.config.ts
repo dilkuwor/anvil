@@ -22,6 +22,34 @@ const nextConfig: NextConfig = {
         source: "/mcp/:path*",
         destination: `${target}/mcp/:path*`,
       },
+      {
+        source: "/oauth/token",
+        destination: `${target}/oauth/token`,
+      },
+      {
+        source: "/oauth/register",
+        destination: `${target}/oauth/register`,
+      },
+      {
+        source: "/oauth/revoke",
+        destination: `${target}/oauth/revoke`,
+      },
+      {
+        source: "/.well-known/oauth-authorization-server",
+        destination: `${target}/.well-known/oauth-authorization-server`,
+      },
+      {
+        source: "/.well-known/oauth-authorization-server/:path*",
+        destination: `${target}/.well-known/oauth-authorization-server/:path*`,
+      },
+      {
+        source: "/.well-known/oauth-protected-resource",
+        destination: `${target}/.well-known/oauth-protected-resource`,
+      },
+      {
+        source: "/.well-known/oauth-protected-resource/:path*",
+        destination: `${target}/.well-known/oauth-protected-resource/:path*`,
+      },
     ];
   },
 };

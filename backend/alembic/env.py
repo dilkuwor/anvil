@@ -18,6 +18,7 @@ from app.progress.models import Activity, UserProblemProgress  # noqa: F401
 from app.problems.models import Problem, ProblemTag, Tag, TestCase  # noqa: F401
 from app.submissions.models import Submission, SubmissionTestResult  # noqa: F401
 from app.mcp.models import McpAccessLog, McpToken  # noqa: F401
+from app.oauth.models import OAuthAuthorizationCode, OAuthClient, OAuthRefreshToken  # noqa: F401
 from app.users.models import User  # noqa: F401
 
 config = context.config

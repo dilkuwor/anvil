@@ -15,6 +15,7 @@ from app.problems.models import Problem, ProblemTag, Tag, TestCase
 from app.progress.models import Activity, UserProblemProgress
 from app.submissions.models import Submission, SubmissionTestResult
 from app.mcp.models import McpAccessLog, McpToken
+from app.oauth.models import OAuthAuthorizationCode, OAuthClient, OAuthRefreshToken
 from app.users.models import User, UserLlmKey
 
 __all__ = [
@@ -42,6 +43,9 @@ __all__ = [
     "User",
     "McpAccessLog",
     "McpToken",
+    "OAuthAuthorizationCode",
+    "OAuthClient",
+    "OAuthRefreshToken",
     "UserLlmKey",
     "UserProblemProgress",
 ]

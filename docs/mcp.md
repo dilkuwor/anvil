@@ -66,7 +66,23 @@ Created in Settings, shown once, revoked from Settings.
 
 ### v2 — OAuth 2.1 + PKCE
 
-Required to list as a ChatGPT connector / app. PAT remains for Grok TUI and local clients.
+Used by Grok Custom Connector (and later ChatGPT). PAT remains for the Grok CLI.
+
+| Grok field | Value |
+|---|---|
+| Server URL | `https://anvilprep.dev/mcp` |
+| Client ID | Create in Settings → MCP → **Create OAuth client** (`apc_…`) |
+| Client Secret | leave empty |
+| Authorization Endpoint | `https://anvilprep.dev/oauth/authorize` |
+| Token Endpoint | `https://anvilprep.dev/oauth/token` |
+| Scopes | `mcp:read` |
+| Token Auth Method | **none (PKCE only)** |
+
+Flow: Grok opens `/oauth/authorize` → you sign in and Allow → PKCE code → `/oauth/token` issues a JWT (`typ=mcp_at`) → `Authorization: Bearer <JWT>` on `/mcp`.
+
+Discovery: `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`. Unauthenticated `POST /mcp` returns `WWW-Authenticate` with `resource_metadata`. Dynamic client registration is at `POST /oauth/register`.
+
+Set `PUBLIC_BASE_URL=https://anvilprep.dev` in production so metadata URLs are not internal rewrite hosts.
 
 Unauthenticated catalog-only MCP is out of scope. The value is *your* content. Catalog resources may be public, but progress-enriched fields (problem status, completed lessons) require the token.
 
@@ -203,12 +219,14 @@ A public ChatGPT listing also needs a privacy policy and a disconnect path that 
 
 v1 is live on the API process.
 
-1. Sign in, open **Settings**, create an MCP token. The raw `ia_mcp_…` value is shown once.
-2. Point the client at Streamable HTTP:
-   - local API: `http://localhost:8000/mcp`
-   - through the Next.js proxy: `http://localhost:3000/mcp`
-3. Auth header: `Authorization: Bearer ia_mcp_…` (not the website cookie).
-4. Use a prompt such as `analyze_gaps` or ask the model to call `get_my_overview`.
+**Grok Custom Connector (OAuth):** Settings → MCP → Create OAuth client. Paste Server URL, Client ID, authorize/token endpoints, scope `mcp:read`, token auth **none (PKCE only)**. Leave the secret empty.
+
+**Grok CLI (PAT):** Settings → MCP → create token. Then:
+
+```bash
+grok mcp add --transport http anvilprep https://anvilprep.dev/mcp \
+  --header "Authorization: Bearer ia_mcp_YOUR_TOKEN"
+```
 
 Revoke the token in Settings to disconnect. Recent tool names are listed there; bodies and source are not.
 
