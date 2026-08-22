@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { cn } from "@/lib/utils";
 
 export function SectionCard({
@@ -47,9 +49,9 @@ export function BrandMark({
           compact ? "h-6 w-6" : "h-7 w-7",
         )}
       >
-        <img
+        <Image
           src="/logo-app-v6.png"
-          alt=""
+          alt="Anvil logo"
           width={28}
           height={28}
           className="h-full w-full object-cover"
