@@ -31,6 +31,7 @@ export const queryKeys = {
   mcpTokens: ["mcp-tokens"] as const,
   mcpAccess: ["mcp-access"] as const,
   oauthClients: ["oauth-clients"] as const,
+  googleConfig: ["google-config"] as const,
 };
 
 export const fetchers = {

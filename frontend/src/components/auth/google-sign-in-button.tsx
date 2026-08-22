@@ -1,9 +1,13 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
+import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/queries";
+
+const BAKED_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
 const GIS_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 
 type GoogleCredentialResponse = {
@@ -36,18 +40,26 @@ export function GoogleSignInButton({
   const [scriptReady, setScriptReady] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const credentialRef = useRef(onCredential);
+  const config = useQuery({
+    queryKey: queryKeys.googleConfig,
+    queryFn: () => api.get<{ client_id: string | null }>("/api/v1/auth/google/config"),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const clientId = (config.data?.client_id ?? BAKED_CLIENT_ID).trim();
 
   useEffect(() => {
     credentialRef.current = onCredential;
   }, [onCredential]);
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !scriptReady) return;
+    if (!clientId || !scriptReady) return;
     const container = containerRef.current;
     const google = window.google;
     if (!container || !google) return;
+    container.replaceChildren();
     google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
+      client_id: clientId,
       callback: (response) => {
         if (response.credential) {
           credentialRef.current(response.credential);
@@ -60,11 +72,11 @@ export function GoogleSignInButton({
       shape: "pill",
       text: mode === "login" ? "signin_with" : "signup_with",
       logo_alignment: "center",
-      width: container.offsetWidth,
+      width: container.offsetWidth || 320,
     });
-  }, [mode, scriptReady]);
+  }, [mode, scriptReady, clientId]);
 
-  if (!GOOGLE_CLIENT_ID) {
+  if (!clientId) {
     return null;
   }
 

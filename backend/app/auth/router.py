@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.schemas import (
     GoogleAuthRequest,
+    GoogleClientConfigOut,
     LlmProbeOut,
     LoginRequest,
     RegisterRequest,
@@ -121,6 +122,13 @@ def _available_username(db: Session, base: str) -> str:
         if not db.scalar(select(User).where(func.lower(User.username) == candidate.lower())):
             return candidate
     raise AppError("Could not pick a free username. Try registering with a password instead.")
+
+
+@router.get("/google/config", response_model=GoogleClientConfigOut)
+def google_client_config() -> GoogleClientConfigOut:
+    """Public GIS client ID. Empty when Google sign-in is disabled."""
+    client_id = get_settings().google_client_id.strip() or None
+    return GoogleClientConfigOut(client_id=client_id)
 
 
 @router.post("/google", response_model=UserOut)

@@ -21,10 +21,8 @@
 #   OLLAMA_BASE_URL
 #   OLLAMA_MODEL
 #   COOKIE_SECURE       (true if the site is served over HTTPS)
-# Google sign-in (both must share the same OAuth client's ID):
+# Google sign-in (set GOOGLE_CLIENT_ID on the API; the login page fetches it):
 #   GOOGLE_CLIENT_ID
-#   NEXT_PUBLIC_GOOGLE_CLIENT_ID      (baked at build time — requires a
-#                                     frontend image built with this value)
 # Transactional email via Resend (empty RESEND_API_KEY disables email;
 # registration still works and verification emails can be sent later):
 #   RESEND_API_KEY
@@ -93,9 +91,6 @@ services:
       API_PROXY_TARGET: http://api:8000
       SITE_URL: ${SITE_URL:-https://anvilprep.dev}
       GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
-      # Baked into the standalone build — set as a build arg when building the
-      # frontend image (NEXT_PUBLIC_* is not read at runtime).
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     ports:
       - "3333:3000"
     depends_on:

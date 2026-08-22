@@ -182,11 +182,17 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           NS: ${{ secrets.DOCKERHUB_USERNAME }}
-          # Baked into the standalone Next build; a client ID is public.
+          # Optional bake-in. An empty GitHub variable must NOT be passed as
+          # --build-arg or it overrides the Dockerfile default with "".
+          # Production also reads GOOGLE_CLIENT_ID from the API at runtime.
           GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
         run: |
+          extra=()
+          if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
+            extra+=(--build-arg "NEXT_PUBLIC_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID")
+          fi
           docker build \
-            --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
+            "${extra[@]}" \
             -t "$NS/interview-anvil-frontend:$SHA" \
             -t "$NS/interview-anvil-frontend:latest" \
             ./frontend

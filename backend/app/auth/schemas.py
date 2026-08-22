@@ -19,6 +19,10 @@ class GoogleAuthRequest(BaseModel):
     credential: str = Field(min_length=20, max_length=4096)
 
 
+class GoogleClientConfigOut(BaseModel):
+    client_id: str | None = None
+
+
 class VerifyEmailRequest(BaseModel):
     token: str = Field(min_length=1, max_length=255)
 

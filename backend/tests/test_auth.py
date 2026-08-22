@@ -345,6 +345,18 @@ def test_google_sign_in_requires_configuration(client):
     assert response.json()["error"]["code"] == "google_not_configured"
 
 
+def test_google_config_hides_client_id_when_unconfigured(client):
+    response = client.get("/api/v1/auth/google/config")
+    assert response.status_code == 200
+    assert response.json() == {"client_id": None}
+
+
+def test_google_config_returns_public_client_id(client, google_enabled):
+    response = client.get("/api/v1/auth/google/config")
+    assert response.status_code == 200
+    assert response.json() == {"client_id": "test-client-id.apps.googleusercontent.com"}
+
+
 def test_google_sign_in_creates_and_reuses_account(client, db, monkeypatch, google_enabled):
     from uuid import UUID
     _patch_verify(monkeypatch, _fake_google_claims("google-sub-1", "New.User+dev@gmail.com", "New User"))
