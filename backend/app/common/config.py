@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     tts_voice: str = "af_heart"
     tts_language: str = "English"
 
+    mcp_rate_limit_per_minute: int = 60
+    mcp_max_tokens_per_user: int = 10
+
     @field_validator("cookie_samesite")
     @classmethod
     def validate_samesite(cls, value: str) -> str:

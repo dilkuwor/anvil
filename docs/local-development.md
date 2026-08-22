@@ -17,7 +17,9 @@ Docker Compose is not required to start the app.
 4. `docker build -t interview-anvil-java-runner:local ./code-runner/java`.
 5. Start API on `:8000` and frontend on `:3000`.
 
-The frontend rewrite sends `/api/*` to `API_PROXY_TARGET` (default `http://localhost:8000`).
+The frontend rewrite sends `/api/*` and `/mcp` to `API_PROXY_TARGET` (default `http://localhost:8000`).
+
+MCP is a PAT-authenticated Streamable HTTP endpoint at `/mcp`. Create a token in Settings. See [mcp.md](./mcp.md).
 
 ## Why the runner is a separate image
 

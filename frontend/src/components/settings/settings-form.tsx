@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Loader2, PlugZap, Save, Trash2, Upload } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, PlugZap, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -220,8 +220,186 @@ function ProfileEditor({ user }: { user: User }) {
       </form>
 
       <LlmSettings user={current} />
+      <McpSettings />
     </div>
   );
+}
+
+type McpToken = {
+  id: string;
+  name: string;
+  token_prefix: string;
+  scopes: string;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+type McpTokenCreated = McpToken & { token: string };
+
+type McpAccess = {
+  id: string;
+  method: string;
+  name: string;
+  status: string;
+  token_prefix: string | null;
+  created_at: string;
+};
+
+function mcpEndpoint() {
+  if (typeof window === "undefined") return "http://localhost:8000/mcp";
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return "http://localhost:8000/mcp";
+  return `${window.location.origin}/mcp`;
+}
+
+function McpSettings() {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("ChatGPT");
+  const [created, setCreated] = useState<McpTokenCreated | null>(null);
+  const [copied, setCopied] = useState<"token" | "url" | null>(null);
+  const tokens = useQuery({
+    queryKey: queryKeys.mcpTokens,
+    queryFn: () => api.get<McpToken[]>("/api/v1/mcp/tokens"),
+  });
+  const access = useQuery({
+    queryKey: queryKeys.mcpAccess,
+    queryFn: () => api.get<McpAccess[]>("/api/v1/mcp/access"),
+  });
+  const create = useMutation({
+    mutationFn: () => api.post<McpTokenCreated>("/api/v1/mcp/tokens", { name: name.trim() || "MCP token" }),
+    onSuccess: (row) => {
+      setCreated(row);
+      queryClient.invalidateQueries({ queryKey: queryKeys.mcpTokens });
+      toast.success("MCP token created. Copy it now — it will not be shown again.");
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Unable to create token."),
+  });
+  const revoke = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/v1/mcp/tokens/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.mcpTokens });
+      queryClient.invalidateQueries({ queryKey: queryKeys.mcpAccess });
+      toast.success("MCP token revoked.");
+    },
+    onError: () => toast.error("Unable to revoke token."),
+  });
+
+  async function copy(label: "token" | "url", value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      window.setTimeout(() => setCopied(null), 1500);
+    } catch {
+      toast.error("Unable to copy.");
+    }
+  }
+
+  const endpoint = mcpEndpoint();
+
+  return (
+    <SectionCard className="p-0">
+      <PanelHeader
+        title="MCP (ChatGPT / Grok)"
+        body="A personal access token lets ChatGPT or Grok read your AnvilPrep lessons, problems, notes, submissions, and completed interviews. They will not be able to run code, start interviews, or see hidden tests."
+      />
+      <div className="space-y-5 px-5 py-5">
+        <Field label="Endpoint" hint="Point the MCP client at this URL. Use a Bearer token, not your login cookie.">
+          <div className="flex gap-2">
+            <Input readOnly value={endpoint} />
+            <Button type="button" size="sm" variant="secondary" onClick={() => copy("url", endpoint)}>
+              {copied === "url" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              Copy
+            </Button>
+          </div>
+        </Field>
+
+        <p className="text-[12px] leading-5 text-muted-foreground">
+          ChatGPT and Grok are third-party processors of your study data. Revoke a token from this page to disconnect
+          it. Recent tool calls are logged below (names only, not lesson bodies or source code).
+        </p>
+
+        {created ? (
+          <div className="rounded-xl border border-copper/40 bg-background/40 px-4 py-3">
+            <p className="text-[13px] font-medium">New token · {created.name}</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Copy this now. AnvilPrep will not show the full token again.</p>
+            <div className="mt-2 flex gap-2">
+              <Input readOnly value={created.token} className="font-mono text-[12px]" />
+              <Button type="button" size="sm" variant="secondary" onClick={() => copy("token", created.token)}>
+                {copied === "token" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                Copy
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <form
+          className="flex flex-col gap-2 sm:flex-row sm:items-end"
+          onSubmit={(event) => {
+            event.preventDefault();
+            create.mutate();
+          }}
+        >
+          <Field label="Token name" className="min-w-0 flex-1">
+            <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={80} placeholder="ChatGPT" />
+          </Field>
+          <IconAction text="Create" label="Create MCP token" pending={create.isPending} type="submit">
+            <Plus className="h-3.5 w-3.5" />
+          </IconAction>
+        </form>
+
+        {tokens.isLoading ? <p className="text-[13px] text-muted-foreground">Loading tokens…</p> : null}
+        {tokens.data && tokens.data.length === 0 && !created ? (
+          <p className="text-[13px] text-muted-foreground">No MCP tokens yet.</p>
+        ) : null}
+        {tokens.data && tokens.data.length > 0 ? (
+          <ul className="divide-y divide-steel-800 rounded-xl border border-steel-800">
+            {tokens.data.map((row) => (
+              <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium">{row.name}</p>
+                  <p className="font-mono text-[12px] text-muted-foreground">
+                    {row.token_prefix}… · {row.last_used_at ? `Last used ${formatWhen(row.last_used_at)}` : "Never used"}
+                  </p>
+                </div>
+                <IconAction
+                  text="Revoke"
+                  label={`Revoke ${row.name}`}
+                  pending={revoke.isPending}
+                  variant="ghost"
+                  onClick={() => revoke.mutate(row.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </IconAction>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {access.data && access.data.length > 0 ? (
+          <div>
+            <p className="text-[13px] font-medium">Recent MCP access</p>
+            <ul className="mt-2 space-y-1.5">
+              {access.data.slice(0, 8).map((row) => (
+                <li key={row.id} className="flex justify-between gap-3 text-[12px] text-muted-foreground">
+                  <span className="min-w-0 truncate">
+                    {row.method}
+                    {row.name ? ` · ${row.name}` : ""} · {row.status}
+                  </span>
+                  <span className="shrink-0">{formatWhen(row.created_at)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </SectionCard>
+  );
+}
+
+function formatWhen(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
 }
 
 function LlmSettings({ user }: { user: User }) {

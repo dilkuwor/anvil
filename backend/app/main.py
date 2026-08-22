@@ -15,6 +15,8 @@ from app.problems.router import router as problems_router
 from app.progress.router import router as progress_router
 from app.submissions.router import router as submissions_router
 from app.tts.router import router as tts_router
+from app.mcp.http import router as mcp_http_router
+from app.mcp.router import router as mcp_router
 from app.users.router import router as users_router
 
 settings = get_settings()
@@ -42,6 +44,8 @@ app.include_router(notes_router)
 app.include_router(cheatsheets_router)
 app.include_router(users_router)
 app.include_router(tts_router)
+app.include_router(mcp_router)
+app.include_router(mcp_http_router)
 
 
 @app.get("/health")

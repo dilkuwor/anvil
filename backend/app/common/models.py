@@ -14,6 +14,7 @@ from app.learn.models import (
 from app.problems.models import Problem, ProblemTag, Tag, TestCase
 from app.progress.models import Activity, UserProblemProgress
 from app.submissions.models import Submission, SubmissionTestResult
+from app.mcp.models import McpAccessLog, McpToken
 from app.users.models import User, UserLlmKey
 
 __all__ = [
@@ -39,6 +40,8 @@ __all__ = [
     "Tag",
     "TestCase",
     "User",
+    "McpAccessLog",
+    "McpToken",
     "UserLlmKey",
     "UserProblemProgress",
 ]

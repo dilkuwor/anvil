@@ -28,6 +28,8 @@ export const queryKeys = {
   problemLists: ["problem-lists"] as const,
   problemList: (id: string) => ["problem-lists", id] as const,
   notes: (sourceType?: string, sourceId?: string) => ["notes", sourceType ?? "all", sourceId ?? "all"] as const,
+  mcpTokens: ["mcp-tokens"] as const,
+  mcpAccess: ["mcp-access"] as const,
 };
 
 export const fetchers = {

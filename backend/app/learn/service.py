@@ -342,9 +342,15 @@ def stream_lesson_tutor(
     return events()
 
 
-def get_lesson(db: Session, user_id: UUID | None, slug: str) -> LearningLessonDetail:
+def get_lesson(
+    db: Session,
+    user_id: UUID | None,
+    slug: str,
+    *,
+    record_progress: bool = True,
+) -> LearningLessonDetail:
     lesson = _lesson_by_slug(db, slug)
-    if user_id is not None:
+    if user_id is not None and record_progress:
         _touch_progress(db, user_id, lesson.id)
         db.commit()
     progress = _progress_map(db, user_id)

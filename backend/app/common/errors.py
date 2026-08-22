@@ -42,6 +42,11 @@ class ServiceUnavailableError(AppError):
         super().__init__(message, status_code=503, code="service_unavailable")
 
 
+class RateLimitError(AppError):
+    def __init__(self, message: str = "Too many MCP requests. Try again in a minute."):
+        super().__init__(message, status_code=429, code="rate_limited")
+
+
 def _error_body(message: str, code: str, status_code: int) -> dict:
     return {"error": {"message": message, "code": code, "status": status_code}}
 
