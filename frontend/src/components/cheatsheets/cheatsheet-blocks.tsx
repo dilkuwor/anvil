@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckSquare, Copy, Lightbulb, Sparkles, Square } from "lucide-react";
+import { Check, CheckSquare, Copy, Sparkles, Square } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 

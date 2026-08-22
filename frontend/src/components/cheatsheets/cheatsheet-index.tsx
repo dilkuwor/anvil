@@ -1,13 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, BookOpen, Clock, FileText, Flame, Layers, Search, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, FileText, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Input } from "@/components/ui/input";
-import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { CheatSheetCard } from "@/lib/cheatsheets";
@@ -41,7 +40,7 @@ export function CheatSheetIndex() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const list = sheets.data ?? [];
+  const list = useMemo(() => sheets.data ?? [], [sheets.data]);
 
   const filteredSheets = useMemo(() => {
     let result = list;
