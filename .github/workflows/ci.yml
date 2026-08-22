@@ -182,8 +182,11 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           NS: ${{ secrets.DOCKERHUB_USERNAME }}
+          # Baked into the standalone Next build; a client ID is public.
+          GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
         run: |
           docker build \
+            --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
             -t "$NS/interview-anvil-frontend:$SHA" \
             -t "$NS/interview-anvil-frontend:latest" \
             ./frontend
