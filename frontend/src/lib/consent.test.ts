@@ -4,15 +4,29 @@ import {
   clearFirstPartyGaCookies,
   readAnalyticsConsent,
   resetAnalyticsConsent,
+  setAnalyticsDefaultConsent,
   writeAnalyticsConsent,
 } from "@/lib/consent";
 
 describe("analytics consent", () => {
   afterEach(() => {
     localStorage.clear();
+    setAnalyticsDefaultConsent(null);
   });
 
   it("starts unset", () => {
+    expect(readAnalyticsConsent()).toBeNull();
+  });
+
+  it("falls back to the configured default when no choice is stored", () => {
+    setAnalyticsDefaultConsent("granted");
+    expect(readAnalyticsConsent()).toBe("granted");
+    // An explicit user choice always wins over the default.
+    writeAnalyticsConsent("denied");
+    expect(readAnalyticsConsent()).toBe("denied");
+    resetAnalyticsConsent();
+    expect(readAnalyticsConsent()).toBe("granted");
+    setAnalyticsDefaultConsent(null);
     expect(readAnalyticsConsent()).toBeNull();
   });
 

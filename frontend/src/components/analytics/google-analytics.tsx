@@ -5,7 +5,12 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useSyncExternalStore } from "react";
 
 import { GA_MEASUREMENT_ID, isAnalyticsEnabled, trackPageView } from "@/lib/analytics";
-import { readAnalyticsConsent, subscribeAnalyticsConsent } from "@/lib/consent";
+import {
+  readAnalyticsConsent,
+  setAnalyticsDefaultConsent,
+  subscribeAnalyticsConsent,
+  type AnalyticsConsent,
+} from "@/lib/consent";
 
 function AnalyticsRouteTracker() {
   const pathname = usePathname();
@@ -19,7 +24,11 @@ function AnalyticsRouteTracker() {
   return null;
 }
 
-export function GoogleAnalytics() {
+export function GoogleAnalytics({ defaultConsent }: { defaultConsent?: AnalyticsConsent | null }) {
+  // Mirrors the banner's default so consent is consistent regardless of
+  // sibling render order. Idempotent.
+  setAnalyticsDefaultConsent(defaultConsent ?? null);
+
   const consent = useSyncExternalStore(subscribeAnalyticsConsent, readAnalyticsConsent, () => null);
   if (!isAnalyticsEnabled || consent !== "granted") return null;
 

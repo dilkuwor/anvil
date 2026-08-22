@@ -4,13 +4,22 @@ export const COOKIE_PREFERENCES_EVENT = "ia-cookie-preferences";
 
 export type AnalyticsConsent = "granted" | "denied";
 
+// Default for visitors who have not made a choice yet. Null keeps the opt-in
+// behaviour (banner decides); "granted" enables analytics by default — used
+// when the cookie banner is hidden via COOKIE_BANNER=false.
+let defaultConsent: AnalyticsConsent | null = null;
+
+export function setAnalyticsDefaultConsent(value: AnalyticsConsent | null): void {
+  defaultConsent = value;
+}
+
 export function readAnalyticsConsent(): AnalyticsConsent | null {
   if (typeof window === "undefined") return null;
   try {
     const value = localStorage.getItem(ANALYTICS_CONSENT_KEY);
-    return value === "granted" || value === "denied" ? value : null;
+    return value === "granted" || value === "denied" ? value : defaultConsent;
   } catch {
-    return null;
+    return defaultConsent;
   }
 }
 

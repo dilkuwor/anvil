@@ -42,6 +42,18 @@ describe("analytics helpers", () => {
     expect(gtag).toHaveBeenCalledWith("event", "sign_up", { method: "password" });
   });
 
+  it("sends when a granted default is configured and no choice is stored", async () => {
+    const gtag = vi.fn();
+    window.gtag = gtag as typeof window.gtag;
+    const { trackEvent, AnalyticsEvent } = await loadAnalytics("G-7Q1GX64YSR");
+    // Import after resetModules so this is the same consent instance the
+    // freshly loaded analytics module resolves to.
+    const consent = await import("@/lib/consent");
+    consent.setAnalyticsDefaultConsent("granted");
+    trackEvent(AnalyticsEvent.Login, { method: "google" });
+    expect(gtag).toHaveBeenCalledWith("event", "login", { method: "google" });
+  });
+
   it("sends page_view with path and location", async () => {
     writeAnalyticsConsent("granted");
     const gtag = vi.fn();

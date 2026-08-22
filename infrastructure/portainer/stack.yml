@@ -21,6 +21,8 @@
 #   OLLAMA_BASE_URL
 #   OLLAMA_MODEL
 #   COOKIE_SECURE       (true if the site is served over HTTPS)
+#   COOKIE_BANNER       (false hides the cookie banner and enables
+#                        analytics by default; anything else shows it)
 # Google sign-in (set GOOGLE_CLIENT_ID on the API; the login page fetches it):
 #   GOOGLE_CLIENT_ID
 # Transactional email via Resend (empty RESEND_API_KEY disables email;
@@ -90,6 +92,7 @@ services:
     environment:
       API_PROXY_TARGET: http://api:8000
       SITE_URL: ${SITE_URL:-https://anvilprep.dev}
+      COOKIE_BANNER: ${COOKIE_BANNER:-true}
       GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
     ports:
       - "3333:3000"

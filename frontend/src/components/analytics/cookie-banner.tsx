@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { isAnalyticsEnabled } from "@/lib/analytics";
 import {
   readAnalyticsConsent,
+  setAnalyticsDefaultConsent,
   subscribeAnalyticsConsent,
   subscribeCookiePreferences,
   writeAnalyticsConsent,
@@ -14,7 +15,12 @@ import {
 
 const subscribeClient = () => () => {};
 
-export function CookieBanner() {
+export function CookieBanner({ bannerEnabled = true }: { bannerEnabled?: boolean }) {
+  // When the banner is hidden, undecided visitors are treated as granted so
+  // analytics still works. Idempotent, so safe on every render. Runs before
+  // any hook so this component's own reads see the updated default.
+  setAnalyticsDefaultConsent(bannerEnabled ? null : "granted");
+
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const mounted = useSyncExternalStore(subscribeClient, () => true, () => false);
   const consent = useSyncExternalStore(subscribeAnalyticsConsent, readAnalyticsConsent, () => null);
@@ -23,7 +29,7 @@ export function CookieBanner() {
 
   if (!isAnalyticsEnabled || !mounted) return null;
 
-  const showBanner = consent === null && !preferencesOpen;
+  const showBanner = bannerEnabled && consent === null && !preferencesOpen;
 
   return (
     <>

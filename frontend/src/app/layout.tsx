@@ -79,6 +79,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const origin = await publicSiteUrl();
+  // Runtime server env (not NEXT_PUBLIC_*): set COOKIE_BANNER=false in the
+  // hosting environment to hide the banner and enable analytics by default.
+  const cookieBannerEnabled = process.env.COOKIE_BANNER !== "false";
+  const analyticsDefaultConsent = cookieBannerEnabled ? null : ("granted" as const);
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} min-h-full dark`} suppressHydrationWarning>
       <head>
@@ -87,9 +91,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-background text-foreground antialiased">
         <JsonLd data={rootJsonLd(origin)} />
         <Providers>{children}</Providers>
-        <CookieBanner />
+        <CookieBanner bannerEnabled={cookieBannerEnabled} />
         <Suspense fallback={null}>
-          <GoogleAnalytics />
+          <GoogleAnalytics defaultConsent={analyticsDefaultConsent} />
         </Suspense>
       </body>
     </html>
