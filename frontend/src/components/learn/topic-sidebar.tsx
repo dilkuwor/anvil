@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, ChevronDown, ChevronRight, Circle, Clock, LayoutGrid, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, LayoutGrid } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Meter } from "@/components/dashboard/meter";
 import { CategoryIcon } from "@/components/learn/category-icon";
@@ -15,16 +15,15 @@ import { cn } from "@/lib/utils";
 const SIDEBAR_STORAGE_KEY = "anvil:learn:sidebar-collapsed";
 
 export function useTopicSidebarCollapsed() {
-  const [collapsed, setCollapsed] = useState<boolean>(false);
-
-  useEffect(() => {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
     try {
       const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
-      if (stored === "true") setCollapsed(true);
+      return stored === "true";
     } catch {
-      // ignore
+      return false;
     }
-  }, []);
+  });
 
   const toggle = (next?: boolean) => {
     setCollapsed((prev) => {
