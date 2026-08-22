@@ -81,7 +81,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const origin = await publicSiteUrl();
   // Runtime server env (not NEXT_PUBLIC_*): set COOKIE_BANNER=false in the
   // hosting environment to hide the banner and enable analytics by default.
-  const cookieBannerEnabled = process.env.COOKIE_BANNER !== "false";
+  // Accepts case-insensitive and trimmed values.
+  const cookieBannerEnabled = !((process.env.COOKIE_BANNER ?? "").trim().toLowerCase() === "false");
   const analyticsDefaultConsent = cookieBannerEnabled ? null : ("granted" as const);
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} min-h-full dark`} suppressHydrationWarning>
