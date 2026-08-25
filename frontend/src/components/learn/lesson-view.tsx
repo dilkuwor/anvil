@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  CheckCircle2,
   CircleCheck,
   CircleHelp,
   ListOrdered,
@@ -357,20 +358,23 @@ export function LessonView({ slug }: { slug: string }) {
                     size="sm"
                     variant={isCompleted ? "secondary" : "default"}
                     className={cn(
-                      "h-8 text-xs font-bold transition-all",
+                      "h-8 gap-1.5 text-xs font-bold transition-all",
                       isCompleted ? "bg-steel-800 text-emerald-400 border border-emerald-500/30" : "bg-accent text-white hover:bg-accent-light",
                     )}
                     disabled={complete.isPending || isCompleted}
                     onClick={() => complete.mutate()}
                   >
-                    {isCompleted ? "✓ Completed" : complete.isPending ? "Saving…" : "Mark Complete"}
-                    {!isCompleted ? (
-                      <kbd className="ml-1.5 hidden rounded bg-accent-light/40 px-1 py-0.5 text-[10px] text-primary-foreground sm:inline-block font-mono">C</kbd>
-                    ) : null}
+                    <CheckCircle2 className={cn("h-3.5 w-3.5", isCompleted ? "text-emerald-400" : "text-white")} />
+                    <span>{isCompleted ? "Completed" : complete.isPending ? "Saving…" : "Mark Complete"}</span>
                   </Button>
                 ) : (
-                  <Button size="sm" className="h-8 text-xs font-bold" onClick={() => setAuthPrompt("progress")}>
-                    Mark Complete
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs font-bold bg-accent text-white hover:bg-accent-light"
+                    onClick={() => setAuthPrompt("progress")}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                    <span>Mark Complete</span>
                   </Button>
                 )}
               </div>
