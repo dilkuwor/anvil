@@ -56,13 +56,16 @@ export function SplitPane({
   }, [onPointerMove, stop]);
 
   if (collapsed) {
-    return <div className="flex min-h-0 min-w-0 flex-1 flex-col">{right}</div>;
+    return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{right}</div>;
   }
 
   return (
     <div ref={frame} className="flex min-h-0 min-w-0 flex-1">
-      <div className="hidden min-h-0 min-w-0 xl:block" style={{ width: `${ratio * 100}%` }}>
-        {left}
+      <div
+        className="hidden h-full min-h-0 min-w-0 xl:flex xl:flex-col"
+        style={{ width: `${ratio * 100}%` }}
+      >
+        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{left}</div>
       </div>
       <div
         role="separator"
@@ -92,7 +95,7 @@ export function SplitPane({
       >
         <span className={cn("absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-steel-700")} />
       </div>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{right}</div>
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{right}</div>
     </div>
   );
 }

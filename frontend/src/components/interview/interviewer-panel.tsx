@@ -52,11 +52,11 @@ export function InterviewerPanel({
   return (
     <section
       className={cn(
-        "flex h-full flex-col overflow-hidden bg-steel-900",
+        "grid h-full min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-steel-900",
         compact ? "min-h-[18rem]" : "min-h-[22rem] rounded-2xl border border-steel-800 xl:min-h-0",
       )}
     >
-      <div className="flex items-start justify-between gap-3 border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
+      <div className="flex shrink-0 items-start justify-between gap-3 border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Interviewer</div>
           <div className="mt-1 flex items-center gap-2 text-[12px] text-muted-foreground font-medium">
@@ -83,7 +83,7 @@ export function InterviewerPanel({
         )}
       </div>
 
-      <div ref={scroller} className="min-h-0 flex-1 space-y-4 overflow-auto px-5 py-4">
+      <div ref={scroller} className="min-h-0 overflow-auto px-5 py-4 space-y-4">
         {session.messages.filter((message) => !isProblemHandout(message.content, session.problem_title)).map((message) => {
           const interviewer = message.role === "INTERVIEWER";
           return (
@@ -117,7 +117,7 @@ export function InterviewerPanel({
         {busy ? <p className="text-[12px] italic text-muted-foreground animate-pulse">The interviewer is listening…</p> : null}
       </div>
 
-      <div className="border-t border-steel-800/80 bg-steel-950/30 p-3.5">
+      <div className="shrink-0 border-t border-steel-800/80 bg-steel-950/30 p-3.5">
         {locked ? (
           lockFooter
         ) : (

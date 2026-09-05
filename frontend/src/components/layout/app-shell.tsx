@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn("flex min-h-0 flex-col", lockViewport ? "h-dvh overflow-hidden" : "min-h-dvh")}>
-      <header className="sticky top-0 z-50 border-b border-steel-800/80 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl transition-colors">
+      <header className="sticky top-0 z-50 shrink-0 border-b border-steel-800/80 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl transition-colors">
         <div className={cn(wide ? "mx-auto w-full max-w-[1600px] px-4" : "ia-content")}>
           <div className="flex h-13 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-6">
@@ -134,7 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             : designWorkspace
               ? "mx-auto h-[calc(100dvh-3rem)] min-h-0 w-full max-w-[1600px] overflow-hidden px-4 py-3"
               : editor
-                ? "mx-auto max-w-[1600px] px-4 py-3"
+                ? "mx-auto min-h-0 w-full max-w-[1600px] overflow-y-auto px-4 py-3 xl:overflow-hidden"
                 : "ia-content py-6",
         )}
       >
