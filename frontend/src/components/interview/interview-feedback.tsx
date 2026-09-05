@@ -26,7 +26,7 @@ export function InterviewFeedback({
   }
 
   return (
-    <section className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 xl:min-h-0">
+    <section className="flex h-full min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-steel-800 bg-steel-900 xl:min-h-0">
       <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
         <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Mock Interview Complete

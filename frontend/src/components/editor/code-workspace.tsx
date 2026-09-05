@@ -261,8 +261,8 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   ];
 
   const prompt = (
-    <section className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-steel-800/90 bg-steel-900 shadow-xs xl:min-h-0">
-      <div className="border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
+    <section className="flex h-full min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-steel-800/90 bg-steel-900 shadow-xs xl:min-h-0">
+      <div className="shrink-0 border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
         <Link href="/problems" className="text-[12px] font-medium text-muted-foreground hover:text-accent transition-colors">
           ← Problems
         </Link>
@@ -293,7 +293,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
         </div>
         <div className="mt-1.5 text-[12px] text-muted-foreground">{problem.tags.map((tag) => tag.name).join(" · ")}</div>
       </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-steel-800/80 bg-steel-950/20 px-3" role="tablist">
+      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-steel-800/80 bg-steel-950/20 px-3" role="tablist">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -335,8 +335,8 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   );
 
   const editor = (
-    <section className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-2xl border border-steel-800/90 bg-editor-surface shadow-xs xl:min-h-0">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-steel-800/80 bg-steel-950/40 px-4 py-2.5">
+    <section className="grid min-h-[28rem] flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-steel-800/90 bg-editor-surface shadow-xs xl:h-full xl:min-h-0">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-steel-800/80 bg-steel-950/40 px-4 py-2.5">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Java · Solution</div>
           <div className="text-[11px] text-muted-foreground/80">JDK types are imported automatically.</div>
@@ -382,7 +382,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
           </Button>
         </div>
       </div>
-      <div className="min-h-[18rem] flex-1">
+      <div className="min-h-[12rem] overflow-hidden xl:min-h-0">
         <Monaco
           language="java"
           theme={theme === "dark" ? "vs-dark" : "vs"}
@@ -399,7 +399,11 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
           height="100%"
         />
       </div>
-      <div className="max-h-64 overflow-auto border-t border-steel-800 px-4 py-3">
+      <div
+        className={`shrink-0 overflow-auto border-t border-steel-800 px-4 py-3 ${
+          result ? "max-h-56 min-h-[9rem]" : ""
+        }`}
+      >
         <ResultPanel result={result} />
       </div>
     </section>
@@ -425,21 +429,23 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
 
   const interviewLeft =
     interviewer && showProblem ? (
-      <div className="flex h-full min-h-0 flex-col gap-3">
-        <div className="min-h-0 min-w-0 flex-[1.15]">{interviewer}</div>
-        <div className="min-h-0 min-w-0 flex-1">{prompt}</div>
+      <div className="grid h-full min-h-0 grid-rows-[minmax(16rem,1.15fr)_minmax(8rem,1fr)] gap-3 overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">{interviewer}</div>
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">{prompt}</div>
       </div>
     ) : interviewer;
 
   const left = interviewMode && interviewLeft ? interviewLeft : prompt;
 
   return (
-    <div className="flex h-full min-h-[calc(100vh-6rem)] flex-col gap-3 xl:min-h-0 xl:flex-1">
+    <div className="flex flex-1 flex-col gap-3 max-xl:min-h-[calc(100dvh-6rem)] xl:h-full xl:min-h-0 xl:overflow-hidden">
       {interviewMode ? (
-        <InterviewBanner
-          phaseLabel={session?.phase_label ?? (startInterview.isPending ? "Introduction" : "…")}
-          remainingSeconds={remaining}
-        />
+        <div className="shrink-0">
+          <InterviewBanner
+            phaseLabel={session?.phase_label ?? (startInterview.isPending ? "Introduction" : "…")}
+            remainingSeconds={remaining}
+          />
+        </div>
       ) : null}
       <div className="flex flex-col gap-3 xl:hidden">
         {interviewer}
