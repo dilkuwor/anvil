@@ -136,6 +136,55 @@ public final class Helpers {
         return dummy.next;
     }
 
+    public static ListNode[] parseListNodeArray(String s) {
+        List<List<Integer>> rows = parseIntMatrixList(s);
+        ListNode[] arr = new ListNode[rows.size()];
+        for (int i = 0; i < rows.size(); i++) {
+            ListNode dummy = new ListNode(0);
+            ListNode cur = dummy;
+            for (int v : rows.get(i)) {
+                cur.next = new ListNode(v);
+                cur = cur.next;
+            }
+            arr[i] = dummy.next;
+        }
+        return arr;
+    }
+
+    public static String[][] parseStringMatrix(String s) {
+        List<List<String>> rows = parseStringMatrixList(s);
+        String[][] matrix = new String[rows.size()][];
+        for (int i = 0; i < rows.size(); i++) {
+            List<String> row = rows.get(i);
+            matrix[i] = row.toArray(new String[0]);
+        }
+        return matrix;
+    }
+
+    public static List<List<String>> parseStringMatrixList(String s) {
+        String t = s.trim();
+        List<List<String>> rows = new ArrayList<>();
+        if (t.equals("[]")) return rows;
+        if (t.startsWith("[")) t = t.substring(1);
+        if (t.endsWith("]")) t = t.substring(0, t.length() - 1);
+        int depth = 0;
+        int start = 0;
+        boolean quote = false;
+        for (int i = 0; i < t.length(); i++) {
+            char c = t.charAt(i);
+            if (c == '"' && (i == 0 || t.charAt(i - 1) != '\\')) quote = !quote;
+            if (quote) continue;
+            if (c == '[') {
+                if (depth == 0) start = i;
+                depth++;
+            } else if (c == ']') {
+                depth--;
+                if (depth == 0) rows.add(parseStringList(t.substring(start, i + 1)));
+            }
+        }
+        return rows;
+    }
+
     public static TreeNode parseTreeNode(String s) {
         List<String> tokens = splitNullable(s);
         if (tokens.isEmpty() || tokens.get(0).equalsIgnoreCase("null")) return null;
@@ -167,6 +216,8 @@ public final class Helpers {
         if (value instanceof char[] arr) return formatCharArray(arr);
         if (value instanceof String[] arr) return formatStringArray(arr);
         if (value instanceof int[][] matrix) return formatIntMatrix(matrix);
+        if (value instanceof String[][] matrix) return formatStringMatrix(matrix);
+        if (value instanceof ListNode[] nodes) return formatListNodeArray(nodes);
         if (value instanceof ListNode node) return formatListNode(node);
         if (value instanceof TreeNode node) return formatTreeNode(node);
         if (value instanceof List<?> list) return formatList(list);
@@ -234,6 +285,26 @@ public final class Helpers {
         for (int i = 0; i < matrix.length; i++) {
             if (i > 0) sb.append(',');
             sb.append(formatIntArray(matrix[i]));
+        }
+        return sb.append(']').toString();
+    }
+
+    public static String formatStringMatrix(String[][] matrix) {
+        if (matrix == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < matrix.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append(formatStringArray(matrix[i]));
+        }
+        return sb.append(']').toString();
+    }
+
+    public static String formatListNodeArray(ListNode[] nodes) {
+        if (nodes == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < nodes.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append(formatListNode(nodes[i]));
         }
         return sb.append(']').toString();
     }
@@ -442,10 +513,13 @@ _PARSE_MAP = {
     "String[]": "Helpers.parseStringArray",
     "char[]": "Helpers.parseCharArray",
     "int[][]": "Helpers.parseIntMatrix",
+    "String[][]": "Helpers.parseStringMatrix",
     "List<Integer>": "Helpers.parseIntList",
     "List<String>": "Helpers.parseStringList",
     "List<List<Integer>>": "Helpers.parseIntMatrixList",
+    "List<List<String>>": "Helpers.parseStringMatrixList",
     "ListNode": "Helpers.parseListNode",
+    "ListNode[]": "Helpers.parseListNodeArray",
     "TreeNode": "Helpers.parseTreeNode",
 }
 
