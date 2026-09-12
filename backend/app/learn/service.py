@@ -920,7 +920,14 @@ def _practice_tag(topic: LearningTopic) -> str | None:
 def _percent(completed: int, total: int) -> int:
     if total <= 0:
         return 0
-    return round(100 * completed / total)
+    value = round(100 * completed / total)
+    # A finished lesson must never render as 0%: with a catalog of hundreds of
+    # lessons the first completion rounds to zero and reads as "nothing saved".
+    if value == 0 and completed > 0:
+        return 1
+    if value == 100 and completed < total:
+        return 99
+    return value
 
 
 def _now() -> datetime:

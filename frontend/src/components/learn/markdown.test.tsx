@@ -100,3 +100,80 @@ Intro.
     expect(step.className).not.toContain("bg-accent");
   });
 });
+
+describe("LessonMarkdown — system design curriculum sections", () => {
+  it("renders case-study step headings, follow-ups, and pipeline flows", () => {
+    render(
+      <LessonMarkdown
+        content={`# Design a URL Shortener
+
+**Interviewer:** "Design a URL shortening service."
+
+## Why It Matters
+
+This is the most common opening prompt.
+
+## Step 1: Clarify the Requirements
+
+- Can users choose a custom alias?
+- Do links expire?
+
+## Step 2: Estimate the Scale
+
+Client → Load balancer → Link service → Redis → Postgres
+
+## Mental Model
+
+A cache is a bet that the same thing will be asked for again soon.
+
+## Trade-offs
+
+| Option | Gain | Cost |
+| --- | --- | --- |
+| 302 | Analytics | A request every time |
+
+## Interviewer Follow-ups
+
+- What happens if Redis goes down?
+
+## Mini Design Exercise
+
+Set a timer for eight minutes.
+`}
+      />,
+    );
+
+    expect(screen.getByText("Step 1: Clarify the Requirements")).toBeInTheDocument();
+    expect(screen.getByText("Step 2: Estimate the Scale")).toBeInTheDocument();
+    expect(screen.getByText("Mental Model")).toBeInTheDocument();
+    expect(screen.getByText("Interviewer Follow-ups")).toBeInTheDocument();
+    expect(screen.getByText("Mini Design Exercise")).toBeInTheDocument();
+    // The request-path line renders as a flow diagram, not a paragraph.
+    expect(screen.getByText("Link service")).toBeInTheDocument();
+    expect(screen.getByText("Redis")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Option" })).toBeInTheDocument();
+    expect(screen.getByText(/custom alias/)).toBeInTheDocument();
+  });
+
+  it("keeps section headings anchorable for the in-page table of contents", () => {
+    const { container } = render(
+      <LessonMarkdown
+        content={`# Caching
+
+Intro.
+
+## Common Failure Modes
+
+Stampedes and hot keys.
+
+## Step 3: API Design
+
+Two endpoints.
+`}
+      />,
+    );
+
+    expect(container.querySelector("#common-failure-modes")).not.toBeNull();
+    expect(container.querySelector("#step-3-api-design")).not.toBeNull();
+  });
+});

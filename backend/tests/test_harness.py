@@ -25,3 +25,22 @@ def test_generate_main_for_tree():
     )
     assert "Helpers.parseTreeNode" in source
     assert "sol.levelOrder(root)" in source
+
+
+def test_generate_main_for_list_node_array_and_string_matrix():
+    lists = generate_main(
+        {
+            "method_name": "mergeKLists",
+            "params": [{"name": "lists", "type": "ListNode[]"}],
+            "return_type": "ListNode",
+        }
+    )
+    assert "Helpers.parseListNodeArray" in lists
+    accounts = generate_main(
+        {
+            "method_name": "accountsMerge",
+            "params": [{"name": "accounts", "type": "List<List<String>>"}],
+            "return_type": "List<List<String>>",
+        }
+    )
+    assert "Helpers.parseStringMatrixList" in accounts

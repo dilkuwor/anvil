@@ -87,6 +87,8 @@ function HeadingIcon({ title }: { title: string }) {
       return <Flag {...props} />;
     case "map":
       return <Map {...props} />;
+    case "phrase":
+      return <MessageSquare {...props} />;
     case "checklist":
       return <ListChecks {...props} />;
     case "practice":
@@ -97,7 +99,11 @@ function HeadingIcon({ title }: { title: string }) {
 }
 
 function headingKey(title: string): string {
-  const t = title.trim().toLowerCase().replace(/^\d+\.\s*/, "");
+  const t = title
+    .trim()
+    .toLowerCase()
+    .replace(/^\d+\.\s*/, "")
+    .replace(/^step\s+\d+:\s*/, "");
   if (t === "why it matters") return "why";
   if (t === "how it works") return "how";
   if (t === "example") return "example";
@@ -105,6 +111,12 @@ function headingKey(title: string): string {
   if (t === "tradeoffs" || t.startsWith("trade-off")) return "tradeoffs";
   if (t === "common mistakes") return "mistakes";
   if (t === "interview tip") return "tip";
+  if (t === "mental model") return "map";
+  if (t.startsWith("design decision")) return "flow";
+  if (t.startsWith("interviewer follow-up") || t.startsWith("follow-up")) return "ask";
+  if (t.includes("strong candidate") || t.includes("what a strong")) return "phrase";
+  if (t.includes("exercise") || t.includes("evolution under pressure")) return "practice";
+  if (t.includes("when to use") || t.includes("what you need to know")) return "checklist";
   if (t.includes("study priority") || t.includes("30-second") || t.includes("review before")) return "checklist";
   if (t.includes("interview rule") || t.includes("what to say")) return "ask";
   if (t.includes("memory formula") || t.includes("one-line") || t.includes("golden number") || t.includes("mental math") || t.includes("powers of")) return "formula";
@@ -116,7 +128,7 @@ function headingKey(title: string): string {
   if (t.includes("users estimation") || t.startsWith("users")) return "users";
   if (t.includes("storage")) return "storage";
   if (t.includes("bandwidth") || t.includes("network")) return "bandwidth";
-  if (t.includes("estimation") || t.includes("envelope")) return "size";
+  if (t.includes("estimation") || t.includes("estimate") || t.includes("envelope")) return "size";
   if (t.startsWith("api") || t.includes("data model")) return "shape";
   if (t.includes("architecture")) return "architecture";
   if (t.includes("deep dive")) return "dive";
