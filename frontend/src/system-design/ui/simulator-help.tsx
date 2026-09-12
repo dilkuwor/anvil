@@ -77,7 +77,7 @@ const TAB_GROUPS: TabGroup[] = [
         items: [
           { label: "Throughput", body: "Requests the graph actually processed at peak, after drops and rejects." },
           { label: "p50 / p95 / p99", body: "End-to-end latency along the critical path." },
-          { label: "Errors", body: "Share of peak traffic lost to capacity, rate limits, or failures." },
+          { label: "Errors", body: "Share of peak traffic lost to capacity, rate limits, or failures on the request path. Losses behind a queue show as Async backlog instead: they delay users rather than fail them." },
           { label: "Availability", body: "Share of peak traffic that made it through." },
           { label: "PASS / FAIL", body: "Each SLO compared to the last run." },
           { label: "vs last run", body: "Delta in RPS, p95, and monthly cost versus the previous Simulate." },
@@ -119,6 +119,10 @@ const TAB_GROUPS: TabGroup[] = [
           { label: "produce / consume", body: "Kafka producer vs consumer capacity." },
           { label: "partitions", body: "Consumers relative to Kafka partitions." },
           { label: "read / write", body: "Split utilization on stores and object storage." },
+          { label: "connections / messages", body: "WebSocket gateway: sockets held vs slots, and messages (with fan-out and heartbeats) vs capacity." },
+          { label: "jobs", body: "Worker pool: jobs arriving vs instances × concurrency ÷ job time." },
+          { label: "queries / updates", body: "Search and geo indexes: query load, and the location-update firehose for geo." },
+          { label: "ids / ingest / provider", body: "ID generator, analytics ingest, and third-party notification quota." },
           { label: "In / Out", body: "Inspector: incoming RPS vs processed RPS for the selected node." },
         ],
       },
@@ -287,6 +291,7 @@ export function SimulatorHelp({ open, onClose }: { open: boolean; onClose: () =>
                 <span className="text-foreground">Users / Client</span>.
               </li>
               <li>Connect handles left → right in request-path order (users to edge to app to data).</li>
+              <li>Click a connection to set its share: how much of the source’s flow takes that edge (all reads to the cache, 5% to search).</li>
               <li>Select a box to rename it and edit capacity in the Inspector.</li>
               <li>Set DAU, peak, and SLOs in the bottom Workload tab, read the Estimate tab, then click Simulate.</li>
               <li>Open Review for the interviewer’s scorecard, fix the first fail, and simulate again.</li>
@@ -333,7 +338,7 @@ export function SimulatorHelp({ open, onClose }: { open: boolean; onClose: () =>
             <TermList
               items={[
                 { label: "Name", body: "Editable label. The smaller uppercase line is the component type." },
-                { label: "RPS", body: "After Simulate, each node shows processed RPS. Edges show the flow between them." },
+                { label: "RPS", body: "After Simulate, each node shows processed RPS. Edges show the flow between them, with the share in brackets when it is under 100%." },
                 { label: "Lost", body: "Appears when a node drops or rejects more than ~1 RPS." },
                 { label: "Selection", body: "Accent border on the selected box. Dashed + faded means disabled." },
               ]}

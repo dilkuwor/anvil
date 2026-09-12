@@ -2,6 +2,7 @@ import { applyQueueing, bool, num, str } from "../engine/queueing";
 import type { Latency, Traffic } from "../models/types";
 import { emptyTraffic, scaleTraffic } from "../models/types";
 import { result, type ComponentKind, type InterviewNotes } from "./kind";
+import { MORE_KINDS } from "./library-more";
 
 function latency(p50: number, p95 = p50 * 1.8, p99 = p50 * 3): Latency {
   return { p50, p95, p99 };
@@ -271,7 +272,7 @@ export const apiServerKind: ComponentKind = {
     p95LatencyMs: 40,
     maxConcurrency: 400,
     maxRps: 0,
-    failureRate: 0.001,
+    failureRate: 0.0005,
     healthCheck: true,
     autoscaling: false,
     minInstances: 4,
@@ -304,7 +305,7 @@ export const apiServerKind: ComponentKind = {
     const theoretical = apiInstanceTheoreticalRps(config) * instances;
     const effective = theoretical * API_SAFETY_FACTOR;
     const { processed, dropped, util } = saturate(incoming.rps, effective);
-    const fail = processed * num(config, "failureRate", 0.001);
+    const fail = processed * num(config, "failureRate", 0.0005);
     const cpu = incoming.rps / Math.max(cpuBound, 1);
     return result({
       effectiveConfig: fleet.scaled ? { instances } : undefined,
@@ -518,7 +519,9 @@ function databaseKind(
       const writes = incoming.writeRps || incoming.rps * 0.2;
       const readUtil = reads / Math.max(readCap, 1);
       const writeUtil = writes / Math.max(writeCap, 1);
-      const connUtil = incoming.rps / Math.max(num(config, "maxConnections", 2000), 1);
+      // Little's law: connections in flight = throughput × time each one is held.
+      const heldSec = (reads * num(config, "readLatencyMs", defaults.readMs) + writes * num(config, "writeLatencyMs", defaults.writeMs)) / Math.max(1, incoming.rps) / 1000;
+      const connUtil = (incoming.rps * heldSec) / Math.max(num(config, "maxConnections", 2000), 1);
       const iopsUtil = incoming.rps / Math.max(num(config, "iops", 12_000), 1);
       const readDrop = Math.max(0, reads - readCap);
       const writeDrop = Math.max(0, writes - writeCap);
@@ -592,15 +595,19 @@ export const kafkaKind: ComponentKind = {
     { key: "consumers", label: "Consumers", kind: "number", tier: "beginner", min: 1 },
     { key: "consumerMs", label: "Consumer processing", kind: "number", tier: "intermediate", unit: "ms" },
   ],
-  simulate(config, incoming) {
+  simulate(config, incoming, context) {
     const produceCap = Math.min(
       num(config, "producerThroughput", 80_000),
       num(config, "brokers", 3) * num(config, "brokerCapacity", 40_000),
     );
-    const consumerCap = Math.min(
-      num(config, "consumerThroughput", 60_000),
-      (num(config, "consumers", 12) * 1000) / Math.max(1, num(config, "consumerMs", 8)),
-    );
+    // With a consumer drawn downstream (workers, analytics), that node models the drain; the log only has to keep up with producers.
+    const handsOff = context.outgoingEdges > 0;
+    const consumerCap = handsOff
+      ? produceCap
+      : Math.min(
+          num(config, "consumerThroughput", 60_000),
+          (num(config, "consumers", 12) * 1000) / Math.max(1, num(config, "consumerMs", 8)),
+        );
     const ingested = Math.min(incoming.rps, produceCap);
     const produceDrop = Math.max(0, incoming.rps - produceCap);
     const consumed = Math.min(ingested, consumerCap);
@@ -613,9 +620,11 @@ export const kafkaKind: ComponentKind = {
       utilization: { produce: ingested / Math.max(produceCap, 1), consume: ingested / Math.max(consumerCap, 1), partitions: num(config, "consumers", 12) / Math.max(num(config, "partitions", 24), 1) },
       outgoing: [{ tag: "async", label: "consumers", traffic: scaleTraffic(incoming, consumed / Math.max(incoming.rps, 1)) }],
       notes: [
-        lagRate > 0
-          ? `Backlog grows by ${Math.round(lagRate).toLocaleString()} msg/s. One minute of this is ${Math.round(lagRate * 60).toLocaleString()} messages.`
-          : "Consumers keep up with producers.",
+        handsOff
+          ? `${Math.round(ingested).toLocaleString()} msg/s handed to the consumers drawn downstream; their capacity decides the lag.`
+          : lagRate > 0
+            ? `Backlog grows by ${Math.round(lagRate).toLocaleString()} msg/s. One minute of this is ${Math.round(lagRate * 60).toLocaleString()} messages.`
+            : "Consumers keep up with producers.",
       ],
     });
   },
@@ -749,4 +758,5 @@ export const ALL_KINDS: ComponentKind[] = [
   kafkaKind,
   objectStorageKind,
   rateLimiterKind,
+  ...MORE_KINDS,
 ];

@@ -92,6 +92,7 @@ export function viewAtCursor(result: SimulationResult, cursor: number): Simulati
       processedRps: result.throughput.processedRps * load,
       droppedRps: result.throughput.droppedRps * load,
       rejectedRps: result.throughput.rejectedRps * load,
+      backlogRps: result.throughput.backlogRps * load,
     },
     latency,
     errorRate,

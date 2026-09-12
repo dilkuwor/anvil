@@ -299,6 +299,7 @@ function MetricsTab({ result, previous }: { result: SimulationResult | null; pre
         <Pair label="Throughput" value={`${formatRps(result.throughput.processedRps)} rps`} />
         <Pair label="p50 / p95 / p99" value={`${formatMs(result.latency.p50)} / ${formatMs(result.latency.p95)} / ${formatMs(result.latency.p99)}`} />
         <Pair label="Errors" value={`${(result.errorRate * 100).toFixed(2)}%`} />
+        {result.throughput.backlogRps > 0 ? <Pair label="Async backlog" value={`${formatRps(result.throughput.backlogRps)} /s`} /> : null}
         <Pair label="Availability" value={`${(result.availability * 100).toFixed(3)}%`} />
         <Pair label="Review grade" value={`${result.review.grade} · ${result.review.score}/100`} />
         <Pair label="Cost / month" value={formatUsd(result.cost.total)} />

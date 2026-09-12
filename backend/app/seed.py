@@ -17,7 +17,7 @@ from app.common.database import SessionLocal  # noqa: E402
 from app.common.models import Problem, ProblemTag, Tag, TestCase  # noqa: E402
 from app.cheatsheets.seed import seed_cheatsheets  # noqa: E402
 from app.learn.seed import seed_learning  # noqa: E402
-from app.problems.seed_looptracker import seed_looptracker_problems  # noqa: E402
+from app.problems.seed_catalog import seed_problem_catalog  # noqa: E402
 
 
 def seed() -> None:
@@ -71,12 +71,12 @@ def seed() -> None:
                     )
                 )
 
-        created_lc, existing_lc = seed_looptracker_problems(db)
+        catalog = seed_problem_catalog(db)
         categories, topics, lessons = seed_learning(db)
         sheets, sections, blocks = seed_cheatsheets(db)
         db.commit()
         print(f"Seeded {len(PROBLEMS)} problems and {len(TAGS)} tags.")
-        print(f"LoopTracker: {created_lc} new, {existing_lc} already present ({created_lc + existing_lc} total).")
+        print(catalog.format())
         print(f"Seeded {categories} learning categories, {topics} topics, {lessons} lessons.")
         print(f"Seeded {sheets} cheat sheets, {sections} sections, {blocks} blocks.")
     finally:

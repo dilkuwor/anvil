@@ -182,6 +182,7 @@ export type SimulatorSample = {
     avg_response_bytes: number;
     peak_multiplier: number;
     traffic_growth: number;
+    avg_record_bytes?: number | null;
   };
   slo: {
     availability: number;
@@ -199,7 +200,7 @@ export type SimulatorSample = {
     y: number;
     config?: Record<string, string | number | boolean>;
   }[];
-  edges: { id: string; source: string; target: string; label?: string | null }[];
+  edges: { id: string; source: string; target: string; label?: string | null; weight?: number | null }[];
 };
 
 export type SystemDesignScenario = {

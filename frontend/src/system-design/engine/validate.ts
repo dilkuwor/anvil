@@ -33,7 +33,7 @@ export function validateDesign(design: SystemDesign): string[] {
 
   if (hasCycle(design)) warnings.push("The graph has a cycle. Traffic still flows, but latency can look optimistic.");
 
-  const stores = design.nodes.filter((node) => ["postgresql", "mysql", "nosql", "object_storage", "kafka"].includes(node.type));
+  const stores = design.nodes.filter((node) => ["postgresql", "mysql", "nosql", "object_storage", "kafka", "analytics_store"].includes(node.type));
   if (!stores.length) warnings.push("No durable store. Data will have nowhere to live.");
 
   const apis = design.nodes.filter((node) => node.type === "api_server");
@@ -42,8 +42,9 @@ export function validateDesign(design: SystemDesign): string[] {
 
   const primaries = design.nodes.filter((node) => ["postgresql", "mysql", "nosql"].includes(node.type));
   if (primaries.length === 1) {
-    const replicas = Number(primaries[0].config.readReplicas ?? 0);
-    if (replicas < 1) warnings.push("Single database with no replicas — a single point of failure.");
+    const [store] = primaries;
+    const copies = store.type === "nosql" ? Number(store.config.replicationFactor ?? 1) : 1 + Number(store.config.readReplicas ?? 0);
+    if (copies < 2) warnings.push("Single database with no replicas — a single point of failure.");
   }
 
   for (const node of design.nodes) {

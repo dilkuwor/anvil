@@ -5,7 +5,7 @@ import "@xyflow/react/dist/style.css";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { BookOpen } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ function SimulatorWorkspace() {
   const appliedSample = useRef<string | null>(null);
   const [design, setDesign] = useState<SystemDesign>(() => loadCurrent() ?? newDesign());
   const [selectedId, setSelectedId] = useState<string | null>(design.nodes[0]?.id ?? null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [previous, setPrevious] = useState<SimulationResult | null>(null);
   const [failures, setFailures] = useState<ActiveFailure[]>([]);
@@ -91,9 +92,11 @@ function SimulatorWorkspace() {
     return () => window.clearInterval(tick);
   }, [playing, result, speed]);
 
-  const live = result ? viewAtCursor(result, cursor) : null;
+  // Memoized so child effects keyed on the result do not refire on every unrelated render (which was wiping edge selection).
+  const live = useMemo(() => (result ? viewAtCursor(result, cursor) : null), [result, cursor]);
 
   const selected = design.nodes.find((node) => node.id === selectedId) ?? null;
+  const selectedEdge = selected ? null : (design.edges.find((edge) => edge.id === selectedEdgeId) ?? null);
   const scenario = scenarioForDesign(catalog.data, design.problemSlug);
   const samples = (catalog.data ?? []).filter((item) => item.sample);
 
@@ -297,6 +300,7 @@ function SimulatorWorkspace() {
           result={live}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          onSelectEdge={setSelectedEdgeId}
           onGraph={updateGraph}
           onDuplicate={(id) => {
             const source = design.nodes.find((node) => node.id === id);
@@ -328,6 +332,19 @@ function SimulatorWorkspace() {
         />
         <Inspector
           node={selected}
+          edge={selectedEdge}
+          edgeEnds={
+            selectedEdge
+              ? {
+                  source: design.nodes.find((node) => node.id === selectedEdge.source)?.label ?? selectedEdge.source,
+                  target: design.nodes.find((node) => node.id === selectedEdge.target)?.label ?? selectedEdge.target,
+                }
+              : undefined
+          }
+          edgeMetrics={selectedEdge ? live?.edges[selectedEdge.id] : undefined}
+          onEdgeChange={(patch) =>
+            commit({ ...design, edges: design.edges.map((edge) => (edge.id === selectedEdgeId ? { ...edge, ...patch } : edge)) })
+          }
           metrics={selected ? live?.nodes[selected.id] : undefined}
           difficulty={design.difficulty}
           onRename={(label) =>

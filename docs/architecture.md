@@ -57,6 +57,43 @@ Users implement a `Solution` class. The platform generates `Main.java` from `pro
 
 Before compilation, `app/execution/imports.py` scans the submitted source and injects any missing JDK imports for types that were actually used (`HashMap`, `List`, `PriorityQueue`, `Stream`, `BigInteger`, and other common `java.*` classes). `java.lang` types are left alone. Existing imports and user-defined types of the same name are not duplicated.
 
+## Problem catalog
+
+178 problems live in `database/seeds/`, all authored as Python dicts and seeded into
+PostgreSQL; nothing is hardcoded in the UI.
+
+| Module | Contents |
+|---|---|
+| `problems.py` | The 15 original custom problems, keyed by their own slugs |
+| `microsoft_interview.py` | The 47 Microsoft Interview tracker problems, keyed `lc-{id}` |
+| `looptracker.py` | The 65-problem LoopTracker curriculum, reusing Microsoft specs where they overlap |
+| `fang_extra.py` | 73 problems covering the categories neither tracker reached |
+| `problem_meta.py` | Reference solutions, complexity targets and hints for the two tracker catalogs |
+| `catalog.py` | The de-duplicated union of the three `lc-` modules, plus `validate_catalog()` |
+
+Every problem carries a worked reference solution, a time and space complexity target,
+at least two progressive hints, and at least two test cases. `catalog.py` enforces that at
+import time, and `backend/tests/test_problem_catalog.py` enforces the rest.
+
+`python -m app.seed` writes `problems.py` directly and then calls
+`app/problems/seed_catalog.py` for everything keyed by LeetCode ID. That seeder creates
+missing rows and refreshes authored content on rows that already exist, matching on slug so
+ids, submissions and progress survive. Test cases are rewritten only when they differ, which
+keeps `submission_test_results` intact on a no-op run. Two narrower CLIs remain for their own
+workflows: `app/problems/seed_looptracker.py` (the 65-problem subset) and
+`app/seed_microsoft_interview.py` (the per-user Microsoft list).
+
+Reference solutions are not shipped to the client; they are the ground truth that lets CI
+compile every problem and run it against its own tests:
+
+```
+ANVIL_RUN_JAVA_CATALOG=1 python -m pytest tests/test_problem_catalog.py -k java
+```
+
+The roadmap at `frontend/src/lib/roadmap.ts` maps each node to the catalog tags it counts
+(`relatedTags`) and the tag its Practice link filters on (`filterTag`). Both must be real tag
+slugs, which `src/lib/roadmap.test.ts` checks.
+
 ## Mock interviews
 
 A mock interview is a timed session bound to one problem. The editor stays the same; the left pane becomes the interviewer. Java correctness still comes from the sandbox — the model is not the judge.
@@ -106,7 +143,7 @@ The service advances after a minimum number of candidate turns in each phase. Hi
 
 ### System design simulator
 
-The simulator at `/system-design/simulator` runs entirely in the browser (`frontend/src/system-design/`, in a web worker when available). `engine/run.ts` pushes the workload's peak RPS through the canvas in topological order; each component kind in `components/library.ts` is a small capacity model (saturation, queueing delay, hit ratios, autoscaling) and carries interview notes shown in the Inspector. A cache with no outgoing edge still sends its misses to the stores its caller talks to. After the pass the run attaches an estimation worksheet (`engine/estimate.ts`: DAU → QPS → peak → bandwidth → storage → cache → servers, with the arithmetic spelled out) and a design review (`engine/review.ts`: SLO verdicts, single points of failure, redundancy-based availability in series, cache and queue coverage, storage headroom, unit cost), each check paired with the follow-up an interviewer would ask. Designs and runs persist in `localStorage`; the catalog of problems and sample graphs comes from `GET /api/v1/interviews/scenarios`.
+The simulator at `/system-design/simulator` runs entirely in the browser (`frontend/src/system-design/`, in a web worker when available). `engine/run.ts` pushes the workload's peak RPS through the canvas in topological order; each component kind in `components/library.ts` (request path: clients, DNS, load balancer, CDN, API servers, Redis, SQL/NoSQL, Kafka, object storage, rate limiter) and `components/library-more.ts` (API gateway, WebSocket gateway, worker pool, task queue, search index, geo index, ID generator, analytics store, scheduler, notification gateway) is a small capacity model (saturation, queueing delay, hit ratios, autoscaling, connection limits, provider quotas) and carries interview notes shown in the Inspector. A cache with no outgoing edge still sends its misses to the stores its caller talks to. After the pass the run attaches an estimation worksheet (`engine/estimate.ts`: DAU → QPS → peak → bandwidth → storage → cache → servers, with the arithmetic spelled out) and a design review (`engine/review.ts`: SLO verdicts, single points of failure, redundancy-based availability in series, cache and queue coverage, storage headroom, unit cost), each check paired with the follow-up an interviewer would ask. An edge can carry a `weight` (0–1): the share of the source's flow that takes it, so one API can send every read to a cache and 5% of them to search. The request path ends at a queue (`kafka`, `task_queue`): what drains it is async, its latency stays off the critical path, and its losses are reported as backlog rather than errors. Designs and runs persist in `localStorage`; the catalog of problems and sample graphs (`backend/app/interviews/samples/*.json`, one per catalog problem, each wired with the components its walkthrough calls for) comes from `GET /api/v1/interviews/scenarios`.
 
 ### What the interviewer is allowed to do
 

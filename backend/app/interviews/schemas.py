@@ -110,10 +110,13 @@ class SimulatorSampleNodeOut(BaseModel):
 
 
 class SimulatorSampleEdgeOut(BaseModel):
+    """`weight` is the share (0-1) of the source's flow that takes this edge; omitted means all of it."""
+
     id: str
     source: str
     target: str
     label: str | None = None
+    weight: float | None = None
 
 
 class SimulatorSampleWorkloadOut(BaseModel):
@@ -125,6 +128,7 @@ class SimulatorSampleWorkloadOut(BaseModel):
     avg_response_bytes: int
     peak_multiplier: float
     traffic_growth: float
+    avg_record_bytes: int | None = None
 
 
 class SimulatorSampleSloOut(BaseModel):

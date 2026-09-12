@@ -1,7 +1,7 @@
 {
   "slug": "autocomplete",
   "name": "Search Autocomplete",
-  "summary": "Users → DNS → CDN → LB → Suggest API. Redis serves prefix → top-k; Postgres logs queries; Kafka rebuilds the prefix lists offline.",
+  "summary": "Searchers → DNS → CDN → LB → Suggest API. Redis serves prefix → top-k; misses go to the trie service; sampled queries flow through Kafka to a builder that rebuilds the prefix index offline.",
   "difficulty": "intermediate",
   "workload": {
     "dau": 50000000,
@@ -11,7 +11,8 @@
     "avg_request_bytes": 200,
     "avg_response_bytes": 800,
     "peak_multiplier": 3,
-    "traffic_growth": 0.15
+    "traffic_growth": 0.15,
+    "avg_record_bytes": 100
   },
   "slo": {
     "availability": 0.999,
@@ -22,27 +23,55 @@
     "rto_seconds": 180
   },
   "nodes": [
-    { "id": "users", "type": "client", "label": "Searchers", "x": 40, "y": 240 },
-    { "id": "dns", "type": "dns", "label": "DNS", "x": 230, "y": 240, "config": { "latencyMs": 2, "qps": 250000 } },
+    {
+      "id": "users",
+      "type": "client",
+      "label": "Searchers",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 2,
+        "qps": 250000
+      }
+    },
     {
       "id": "cdn",
       "type": "cdn",
       "label": "Edge Cache",
-      "x": 430, "y": 240,
-      "config": { "hitRatio": 0.75, "maxRps": 200000, "edgeLatencyMs": 8, "ttlSec": 60 }
+      "x": 500,
+      "y": 230,
+      "config": {
+        "hitRatio": 0.75,
+        "maxRps": 200000,
+        "edgeLatencyMs": 8,
+        "ttlSec": 60
+      }
     },
     {
       "id": "lb",
       "type": "load_balancer",
       "label": "Load Balancer",
-      "x": 640, "y": 240,
-      "config": { "instances": 5, "maxRps": 100000, "algorithm": "least_connections" }
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 5,
+        "maxRps": 100000,
+        "algorithm": "least_connections"
+      }
     },
     {
       "id": "api",
       "type": "api_server",
       "label": "Suggest API",
-      "x": 860, "y": 240,
+      "x": 960,
+      "y": 230,
       "config": {
         "instances": 80,
         "vcpu": 8,
@@ -57,31 +86,129 @@
       "id": "prefixes",
       "type": "redis",
       "label": "Prefix → Top-k",
-      "x": 1140, "y": 80,
-      "config": { "memoryGb": 96, "hitRatio": 0.97, "maxOps": 200000, "ttlSec": 3600, "replicas": 2 }
+      "x": 1190,
+      "y": 80,
+      "config": {
+        "memoryGb": 96,
+        "hitRatio": 0.97,
+        "maxOps": 200000,
+        "ttlSec": 3600,
+        "replicas": 2
+      }
+    },
+    {
+      "id": "trie",
+      "type": "search_index",
+      "label": "Trie Service",
+      "x": 1420,
+      "y": 80,
+      "config": {
+        "nodes": 3,
+        "replicas": 2,
+        "shards": 4,
+        "queryCapacity": 20000,
+        "queryLatencyMs": 6,
+        "indexLagSec": 3600,
+        "documents": 200000000,
+        "docBytes": 60
+      }
     },
     {
       "id": "logs",
       "type": "postgresql",
       "label": "Query Logs",
-      "x": 1140, "y": 240,
-      "config": { "vcpu": 8, "storageGb": 3000, "readCapacity": 15000, "writeCapacity": 8000, "readReplicas": 2 }
+      "x": 1190,
+      "y": 230,
+      "config": {
+        "vcpu": 8,
+        "storageGb": 3000,
+        "readCapacity": 15000,
+        "writeCapacity": 8000,
+        "readReplicas": 1
+      }
     },
     {
       "id": "rebuild",
       "type": "kafka",
-      "label": "Rebuild Job",
-      "x": 1140, "y": 400,
-      "config": { "brokers": 4, "partitions": 24, "consumers": 8, "producerThroughput": 40000, "consumerThroughput": 30000 }
+      "label": "Sampled Queries",
+      "x": 1190,
+      "y": 380,
+      "config": {
+        "brokers": 4,
+        "partitions": 24,
+        "consumers": 8,
+        "producerThroughput": 40000,
+        "consumerThroughput": 30000
+      }
+    },
+    {
+      "id": "builder",
+      "type": "worker",
+      "label": "Trie Builder",
+      "x": 1420,
+      "y": 380,
+      "config": {
+        "instances": 4,
+        "concurrency": 8,
+        "jobMs": 10,
+        "idempotent": true
+      }
     }
   ],
   "edges": [
-    { "id": "e-users-dns", "source": "users", "target": "dns" },
-    { "id": "e-dns-cdn", "source": "dns", "target": "cdn" },
-    { "id": "e-cdn-lb", "source": "cdn", "target": "lb" },
-    { "id": "e-lb-api", "source": "lb", "target": "api" },
-    { "id": "e-api-prefixes", "source": "api", "target": "prefixes" },
-    { "id": "e-api-logs", "source": "api", "target": "logs" },
-    { "id": "e-api-rebuild", "source": "api", "target": "rebuild" }
+    {
+      "id": "e-users-dns",
+      "source": "users",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-cdn",
+      "source": "dns",
+      "target": "cdn"
+    },
+    {
+      "id": "e-cdn-lb",
+      "source": "cdn",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-api",
+      "source": "lb",
+      "target": "api"
+    },
+    {
+      "id": "e-api-prefixes",
+      "source": "api",
+      "target": "prefixes"
+    },
+    {
+      "id": "e-prefixes-trie",
+      "source": "prefixes",
+      "target": "trie",
+      "label": "misses",
+      "weight": 1.0
+    },
+    {
+      "id": "e-api-logs",
+      "source": "api",
+      "target": "logs"
+    },
+    {
+      "id": "e-api-rebuild",
+      "source": "api",
+      "target": "rebuild"
+    },
+    {
+      "id": "e-rebuild-builder",
+      "source": "rebuild",
+      "target": "builder"
+    },
+    {
+      "id": "e-builder-trie",
+      "source": "builder",
+      "target": "trie",
+      "label": "rebuilt prefixes",
+      "weight": 1.0
+    }
   ]
 }

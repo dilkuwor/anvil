@@ -42,7 +42,7 @@ const solid = () =>
       node("lb", "load_balancer", { instances: 2 }),
       node("api", "api_server", { instances: 80, autoscaling: true }),
       node("cache", "redis", { replicas: 1, hitRatio: 0.9 }),
-      node("db", "postgresql", { readReplicas: 2, storageGb: 10_000 }),
+      node("db", "postgresql", { readReplicas: 1, storageGb: 10_000 }),
     ],
     [
       ["users", "limiter"],

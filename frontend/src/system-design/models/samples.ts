@@ -23,6 +23,7 @@ export function designFromSample(sample: SimulatorSample): SystemDesign {
       avgResponseBytes: sample.workload.avg_response_bytes,
       peakMultiplier: sample.workload.peak_multiplier,
       trafficGrowth: sample.workload.traffic_growth,
+      avgRecordBytes: sample.workload.avg_record_bytes ?? DEFAULT_WORKLOAD.avgRecordBytes,
     },
     slo: {
       ...DEFAULT_SLO,
@@ -39,6 +40,7 @@ export function designFromSample(sample: SimulatorSample): SystemDesign {
       source: edge.source,
       target: edge.target,
       label: edge.label ?? undefined,
+      weight: edge.weight ?? undefined,
     })),
   };
 }

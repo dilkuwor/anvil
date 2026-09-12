@@ -70,6 +70,8 @@ export function runSimulation(request: SimulationRequest): SimulationResult {
     const result = kind.simulate(node.config, nodeTraffic.get(node.id) ?? emptyTraffic(), {
       difficulty: design.difficulty,
       peakRps: derived.peakRps,
+      concurrentUsers: design.workload.concurrentUsers,
+      outgoingEdges: design.edges.filter((edge) => edge.source === node.id).length,
       failures: request.failures,
     });
     if (result.effectiveConfig) effectiveConfig.set(node.id, result.effectiveConfig);
@@ -89,7 +91,10 @@ export function runSimulation(request: SimulationRequest): SimulationResult {
   }
 
   // What made it through end to end. Summing sinks would double-count fan-out (a write that hits both the database and the queue).
-  const dropped = Object.values(nodeMetrics).reduce((sum, item) => sum + item.droppedRps + item.rejectedRps, 0);
+  // Only losses on the synchronous side fail a user's request; losses behind a queue are backlog.
+  const sync = syncReachable(design.nodes, design.edges);
+  const dropped = Object.entries(nodeMetrics).reduce((sum, [id, item]) => (sync.has(id) ? sum + item.droppedRps + item.rejectedRps : sum), 0);
+  const backlog = Object.entries(nodeMetrics).reduce((sum, [id, item]) => (sync.has(id) ? sum : sum + item.droppedRps + item.rejectedRps), 0);
   const processed = Math.max(0, derived.peakRps - dropped);
   const errorRate = derived.peakRps > 0 ? dropped / derived.peakRps : 0;
   const availability = Math.max(0, 1 - errorRate);
@@ -110,6 +115,7 @@ export function runSimulation(request: SimulationRequest): SimulationResult {
     latency,
     criticalPath: path,
     costTotal: cost.total,
+    syncNodeIds: [...sync],
   });
 
   return {
@@ -119,8 +125,9 @@ export function runSimulation(request: SimulationRequest): SimulationResult {
     throughput: {
       incomingRps: derived.peakRps,
       processedRps: processed,
-      droppedRps: Object.values(nodeMetrics).reduce((sum, item) => sum + item.droppedRps, 0),
-      rejectedRps: Object.values(nodeMetrics).reduce((sum, item) => sum + item.rejectedRps, 0),
+      droppedRps: Object.entries(nodeMetrics).reduce((sum, [id, item]) => (sync.has(id) ? sum + item.droppedRps : sum), 0),
+      rejectedRps: Object.entries(nodeMetrics).reduce((sum, [id, item]) => (sync.has(id) ? sum + item.rejectedRps : sum), 0),
+      backlogRps: backlog,
     },
     latency,
     errorRate,
@@ -177,7 +184,7 @@ function applyFailures(design: SimulationRequest["design"], failures: ActiveFail
         node.config.consumerThroughput = 1;
       }
       if (failure.type === "network_latency") {
-        const key = node.config.baseLatencyMs != null ? "baseLatencyMs" : node.config.avgLatencyMs != null ? "avgLatencyMs" : node.config.readLatencyMs != null ? "readLatencyMs" : null;
+        const key = ["baseLatencyMs", "avgLatencyMs", "readLatencyMs", "queryLatencyMs", "latencyMs"].find((name) => node.config[name] != null) ?? null;
         if (key) node.config[key] = Number(node.config[key] ?? 10) + (failure.extraLatencyMs ?? 80);
       }
     }
@@ -222,9 +229,10 @@ function route(
   for (const edge of next) {
     const target = byId.get(edge.target);
     if (!target) continue;
-    const flow = pickFlow(outgoing, target.type);
-    nodeTraffic.set(edge.target, addTraffic(nodeTraffic.get(edge.target) ?? emptyTraffic(), flow.traffic));
-    edgeMetrics[edge.id] = { rps: flow.traffic.rps, label: flow.label ?? `${Math.round(flow.traffic.rps).toLocaleString()} rps` };
+    const picked = pickFlow(outgoing, target.type);
+    const traffic = scaleTraffic(picked.traffic, edgeShare(edge));
+    nodeTraffic.set(edge.target, addTraffic(nodeTraffic.get(edge.target) ?? emptyTraffic(), traffic));
+    edgeMetrics[edge.id] = { rps: traffic.rps, label: picked.label ?? `${Math.round(traffic.rps).toLocaleString()} rps` };
   }
 
   const miss = outgoing.find((item) => item.tag === "miss");
@@ -237,10 +245,21 @@ function route(
   }
 }
 
+/** Fraction of the picked flow that this edge carries. Lets one API fan reads to a cache and 5% of them to search. */
+export function edgeShare(edge: DesignEdge): number {
+  const weight = edge.weight;
+  if (typeof weight !== "number" || !Number.isFinite(weight)) return 1;
+  return Math.min(1, Math.max(0, weight));
+}
+
 function pickFlow(outgoing: { tag: string; label?: string; traffic: Traffic }[], targetType: string): { traffic: Traffic; label?: string } {
+  const first = (...tags: string[]) => tags.map((tag) => outgoing.find((item) => item.tag === tag)).find(Boolean);
   const cache = targetType === "redis";
-  const store = ["postgresql", "mysql", "nosql", "object_storage"].includes(targetType);
-  const queue = targetType === "kafka";
+  const store = ["postgresql", "mysql", "nosql", "object_storage", "analytics_store"].includes(targetType);
+  const queue = targetType === "kafka" || targetType === "task_queue";
+  if (targetType === "worker" || targetType === "notification_gateway") return first("async", "write", "default") ?? outgoing[0] ?? { traffic: emptyTraffic() };
+  if (targetType === "search_index" || targetType === "geo_index") return first("read", "default", "miss") ?? outgoing[0] ?? { traffic: emptyTraffic() };
+  if (targetType === "id_generator") return first("write", "default") ?? outgoing[0] ?? { traffic: emptyTraffic() };
   if (cache) return outgoing.find((item) => item.tag === "read" || item.tag === "hit") ?? outgoing[0] ?? { traffic: emptyTraffic() };
   if (store) {
     return (
@@ -284,6 +303,30 @@ function topo(nodes: DesignNode[], edges: DesignEdge[]): DesignNode[] {
   return [...seen, ...leftover].map((id) => byId.get(id)!);
 }
 
+/** Queues end the synchronous request: the enqueue is on the path, whatever drains it is not. */
+const ASYNC_BOUNDARY = new Set(["kafka", "task_queue"]);
+
+/** Nodes a user's request can reach without crossing a queue. Everything else is async and its losses are backlog. */
+export function syncReachable(nodes: DesignNode[], edges: DesignEdge[]): Set<string> {
+  const adj = new Map<string, string[]>();
+  for (const node of nodes) adj.set(node.id, []);
+  for (const edge of edges) adj.get(edge.source)?.push(edge.target);
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const starts = nodes.filter((node) => node.type === "client");
+  const seen = new Set<string>((starts.length ? starts : nodes.filter((node) => !edges.some((edge) => edge.target === node.id) && node.type !== "scheduler")).map((node) => node.id));
+  const queue = [...seen];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (ASYNC_BOUNDARY.has(byId.get(id)?.type ?? "")) continue;
+    for (const next of adj.get(id) ?? []) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return seen;
+}
+
 function criticalPath(nodes: DesignNode[], edges: DesignEdge[], metrics: Record<string, NodeMetrics>): { nodeId: string; label: string; ms: number }[] {
   const adj = new Map<string, string[]>();
   for (const node of nodes) adj.set(node.id, []);
@@ -294,7 +337,7 @@ function criticalPath(nodes: DesignNode[], edges: DesignEdge[], metrics: Record<
     const node = nodes.find((item) => item.id === id);
     if (!node) return;
     const next = [...acc, { nodeId: id, label: node.label, ms: metrics[id]?.latency.p95 ?? 0 }];
-    const children = adj.get(id) ?? [];
+    const children = ASYNC_BOUNDARY.has(node.type) ? [] : (adj.get(id) ?? []);
     if (!children.length) {
       const sum = next.reduce((total, item) => total + item.ms, 0);
       const bestSum = best.reduce((total, item) => total + item.ms, 0);
@@ -425,6 +468,25 @@ export function concreteFix(node: DesignNode, util: number, metric: string): str
     }
     case "rate_limiter":
       return `Raise the limit to about ${Math.round(num(c, "limitRps", 20_000) * scale).toLocaleString()} rps if this is legitimate traffic.`;
+    case "worker":
+    case "api_gateway":
+    case "websocket_gateway":
+    case "geo_index":
+    case "id_generator": {
+      const current = Math.max(1, num(c, "instances", 1));
+      const needed = Math.ceil(current * scale);
+      const what = node.type === "websocket_gateway" && metric === "connections" ? "to hold the connections" : node.type === "worker" ? "to drain the queue" : `to sit at ${Math.round(TARGET_UTIL * 100)}% utilization`;
+      return `Go from ${current} to about ${needed} instances ${what}.`;
+    }
+    case "search_index":
+    case "analytics_store": {
+      const current = Math.max(1, num(c, "nodes", 3));
+      return `Go from ${current} to about ${Math.ceil(current * scale)} nodes${node.type === "search_index" ? ", or add replicas per shard for read throughput" : ""}.`;
+    }
+    case "task_queue":
+      return `Raise queue throughput to about ${Math.round(num(c, "maxThroughput", 30_000) * scale).toLocaleString()} msg/s, or partition into several queues.`;
+    case "notification_gateway":
+      return `Provider quota is the ceiling: batch ${Math.ceil(num(c, "batchSize", 100) * scale)} per request, spread the burst over time, or ask for a higher limit.`;
     case "dns":
       return `Raise DNS capacity to about ${Math.round(num(c, "qps", 100_000) * scale).toLocaleString()} qps or lengthen the TTL so clients ask less often.`;
     case "cdn":

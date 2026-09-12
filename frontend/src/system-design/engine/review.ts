@@ -20,6 +20,8 @@ export type ReviewInput = {
   latency: Latency;
   criticalPath: { nodeId: string; label: string; ms: number }[];
   costTotal: number;
+  /** Nodes a request reaches without crossing a queue. Losses elsewhere are backlog, not errors. */
+  syncNodeIds?: string[];
 };
 
 const DB_TYPES = new Set(["postgresql", "mysql", "nosql"]);
@@ -37,7 +39,23 @@ const BASE_AVAILABILITY: Record<string, number> = {
   mysql: 0.999,
   nosql: 0.999,
   kafka: 0.999,
+  api_gateway: 0.999,
+  websocket_gateway: 0.999,
+  worker: 0.999,
+  task_queue: 0.9999,
+  search_index: 0.999,
+  geo_index: 0.999,
+  id_generator: 0.999,
+  analytics_store: 0.999,
+  scheduler: 0.999,
+  notification_gateway: 0.999,
 };
+
+/** Not on the synchronous request path: their failure delays work instead of failing requests. */
+const ASYNC_TYPES = new Set(["client", "kafka", "task_queue", "worker", "scheduler", "notification_gateway", "analytics_store"]);
+
+/** Managed or external: already redundant on the provider side, so not a single point of failure you own. */
+const MANAGED_TYPES = new Set(["dns", "cdn", "object_storage", "rate_limiter", "task_queue", "notification_gateway"]);
 
 /**
  * Grades the design against the rubric interviewers actually use: did the candidate
@@ -93,9 +111,11 @@ function requirementChecks(input: ReviewInput): ReviewCheck[] {
     });
   }
   if (errors) {
-    const shedding = Object.values(input.nodes).filter(
-      (metric) => peakUtil(metric.utilization) >= 1 || metric.droppedRps + metric.rejectedRps > Math.max(1, metric.incomingRps * 0.01),
-    );
+    const sync = input.syncNodeIds ? new Set(input.syncNodeIds) : null;
+    const shedding = Object.entries(input.nodes)
+      .filter(([id]) => !sync || sync.has(id))
+      .map(([, metric]) => metric)
+      .filter((metric) => peakUtil(metric.utilization) >= 1 || metric.droppedRps + metric.rejectedRps > Math.max(1, metric.incomingRps * 0.01));
     const saturated = shedding.length > 0;
     checks.push({
       id: "req-errors",
@@ -122,9 +142,10 @@ function scalabilityChecks(nodes: DesignNode[], input: ReviewInput, derived: Ret
   const dbs = nodes.filter((node) => DB_TYPES.has(node.type));
   const caches = nodes.filter((node) => node.type === "redis");
   const cdns = nodes.filter((node) => node.type === "cdn");
-  const queues = nodes.filter((node) => node.type === "kafka");
+  const queues = nodes.filter((node) => node.type === "kafka" || node.type === "task_queue");
   const blobs = nodes.filter((node) => node.type === "object_storage");
   const readRatio = input.design.workload.readRatio;
+  const sockets = nodes.filter((node) => node.type === "websocket_gateway");
 
   if (!apis.length) {
     checks.push({
@@ -166,7 +187,10 @@ function scalabilityChecks(nodes: DesignNode[], input: ReviewInput, derived: Ret
     });
   }
 
-  const heavyResponse = input.design.workload.avgResponseBytes >= 20_000 || blobs.length > 0;
+  // Blobs only need a CDN when users fetch them on the request path; a crawler's page store behind workers does not.
+  const syncIds = input.syncNodeIds ? new Set(input.syncNodeIds) : null;
+  const servedBlobs = blobs.filter((blob) => !syncIds || syncIds.has(blob.id));
+  const heavyResponse = input.design.workload.avgResponseBytes >= 20_000 || servedBlobs.length > 0;
   if (heavyResponse) {
     checks.push({
       id: "scale-cdn",
@@ -175,7 +199,7 @@ function scalabilityChecks(nodes: DesignNode[], input: ReviewInput, derived: Ret
       title: cdns.length ? "Large payloads served from the edge" : "Large payloads with no CDN",
       detail: cdns.length
         ? "Static and media responses are served near the user, cutting origin egress and latency."
-        : `Responses average ${input.design.workload.avgResponseBytes.toLocaleString()} B${blobs.length ? " and there is an object store" : ""}. Without a CDN the origin pays for every byte of egress.`,
+        : `Responses average ${input.design.workload.avgResponseBytes.toLocaleString()} B${servedBlobs.length ? " and users fetch from an object store" : ""}. Without a CDN the origin pays for every byte of egress.`,
       interviewer: "What is cacheable at the edge, and how do you invalidate it when the object changes?",
     });
   }
@@ -190,6 +214,34 @@ function scalabilityChecks(nodes: DesignNode[], input: ReviewInput, derived: Ret
         ? `${formatRps(derived.writeRps)} write rps can be absorbed by the log and drained at the consumers' pace.`
         : `${formatRps(derived.writeRps)} write rps hit the primary synchronously. A queue lets you absorb bursts and move non-critical work off the request path.`,
       interviewer: "Which writes must be synchronous for correctness, and which can be eventually consistent?",
+    });
+  }
+
+  if (queues.length) {
+    const orphaned = queues.filter((queue) => !input.design.edges.some((edge) => edge.source === queue.id));
+    checks.push({
+      id: "scale-consumers",
+      area: "scalability",
+      status: orphaned.length ? "warn" : "pass",
+      title: orphaned.length ? "Queue with nothing consuming it" : "Async work has consumers",
+      detail: orphaned.length
+        ? `${orphaned.map((queue) => queue.label).join(", ")} ${orphaned.length === 1 ? "has" : "have"} no outgoing edge. Messages go in and nothing comes out; draw the worker pool that drains it and where the results land.`
+        : `${queues.map((queue) => queue.label).join(", ")} feed downstream consumers, so the slow work has a place to run and a place to land.`,
+      interviewer: "Who consumes this queue, how many of them, and what do they write when they are done?",
+    });
+  }
+
+  if (sockets.length) {
+    const capacity = sockets.reduce((sum, node) => sum + Math.max(1, num(node.config, "instances", 8)) * num(node.config, "maxConnections", 50_000), 0);
+    const users = input.design.workload.concurrentUsers;
+    const ok = capacity >= users;
+    checks.push({
+      id: "scale-connections",
+      area: "scalability",
+      status: ok ? (capacity < users * 1.3 ? "warn" : "pass") : "fail",
+      title: ok ? "Connection capacity covers concurrent users" : "Not enough connection slots",
+      detail: `${users.toLocaleString()} concurrent users need a socket each; the gateway tier holds ${capacity.toLocaleString()}.${ok ? (capacity < users * 1.3 ? " Under 30% headroom: a single instance loss drops users." : "") : " The rest cannot connect at all."}`,
+      interviewer: "How many connections per box, what limits it, and how do you rebalance when one box dies?",
     });
   }
 
@@ -233,7 +285,7 @@ type AvailabilityEstimate = {
 /** Series of synchronous hops, each made redundant by its own instances: 1 − (1 − a)^n. */
 export function availabilityEstimate(nodes: DesignNode[]): AvailabilityEstimate {
   const hops = nodes
-    .filter((node) => node.type !== "client" && node.type !== "kafka")
+    .filter((node) => !ASYNC_TYPES.has(node.type))
     .map((node) => {
       const base = BASE_AVAILABILITY[node.type] ?? 0.999;
       const redundancy = redundancyOf(node);
@@ -255,7 +307,17 @@ export function redundancyOf(node: DesignNode): number {
   switch (node.type) {
     case "load_balancer":
     case "api_server":
+    case "api_gateway":
+    case "websocket_gateway":
+    case "worker":
+    case "geo_index":
+    case "id_generator":
+    case "scheduler":
       return Math.max(1, num(c, "instances", 1));
+    case "search_index":
+      return 1 + Math.max(0, num(c, "replicas", 0));
+    case "analytics_store":
+      return Math.max(1, Math.min(num(c, "replicationFactor", 1), num(c, "nodes", 1)));
     case "rate_limiter":
       // Runs inside the gateway fleet, so it inherits that fleet's redundancy.
       return 2;
@@ -281,7 +343,7 @@ function reliabilityChecks(
   slo: SloConfig,
 ): ReviewCheck[] {
   const checks: ReviewCheck[] = [];
-  const spofs = nodes.filter((node) => node.type !== "client" && redundancyOf(node) < 2 && !["dns", "cdn", "object_storage", "rate_limiter"].includes(node.type));
+  const spofs = nodes.filter((node) => node.type !== "client" && redundancyOf(node) < 2 && !MANAGED_TYPES.has(node.type));
   if (spofs.length) {
     for (const node of spofs) {
       checks.push({
@@ -350,8 +412,8 @@ function reliabilityChecks(
     });
   }
 
-  for (const queue of nodes.filter((node) => node.type === "kafka")) {
-    const consume = input.nodes[queue.id]?.utilization.consume ?? 0;
+  for (const queue of nodes.filter((node) => node.type === "kafka" || node.type === "worker")) {
+    const consume = input.nodes[queue.id]?.utilization.consume ?? input.nodes[queue.id]?.utilization.jobs ?? 0;
     if (consume >= 0.85) {
       checks.push({
         id: `rel-lag-${queue.id}`,
@@ -383,6 +445,22 @@ function spofDetail(node: DesignNode): string {
       return "Replication factor 1. One node loss means data loss.";
     case "kafka":
       return "Replication factor 1. A broker loss drops every partition it led.";
+    case "worker":
+      return "One worker. The queue backs up the moment it restarts, and there is no parallelism to drain it.";
+    case "websocket_gateway":
+      return "One gateway holds every connection. Its restart disconnects every user at once.";
+    case "api_gateway":
+      return "One gateway instance in front of everything. Every request dies with it.";
+    case "search_index":
+      return "No replicas. A node loss makes part of the corpus unsearchable until it is rebuilt.";
+    case "geo_index":
+      return "One instance holds every location. Nearby queries stop entirely when it restarts.";
+    case "id_generator":
+      return "One ID generator means every write stops when it is down. Run several with distinct node IDs.";
+    case "scheduler":
+      return "One scheduler. When it is down no jobs fire, and nobody notices until something is stale.";
+    case "analytics_store":
+      return "Replication factor 1. Losing a node loses that slice of history.";
     default:
       return "No redundancy configured.";
   }
@@ -445,14 +523,15 @@ function dataChecks(nodes: DesignNode[], input: ReviewInput, derived: ReturnType
 
   const dbs = nodes.filter((node) => DB_TYPES.has(node.type));
   if (dbs.length) {
-    const provisioned = dbs.reduce((sum, db) => sum + num(db.config, "storageGb", 2000), 0);
+    const blobCapacity = nodes.filter((node) => node.type === "object_storage").reduce((sum, blob) => sum + num(blob.config, "capacityTb", 50) * 1000, 0);
+    const provisioned = dbs.reduce((sum, db) => sum + num(db.config, "storageGb", 2000), 0) + blobCapacity;
     const enough = provisioned >= derived.storageYearGb;
     checks.push({
       id: "data-headroom",
       area: "data",
       status: enough ? "pass" : "warn",
       title: enough ? "Storage covers a year of growth" : "Storage fills up within a year",
-      detail: `${formatGb(provisioned)} provisioned across ${dbs.length} database${dbs.length === 1 ? "" : "s"}; the workload writes ${formatGb(derived.storageYearGb)} per year and ${formatGb(derived.storageFiveYearGb)} over five, before replicas and indexes, at ${(input.design.workload.avgRecordBytes ?? 1000).toLocaleString()} B per write (Workload → Stored bytes / write).`,
+      detail: `${formatGb(provisioned)} provisioned across ${dbs.length} database${dbs.length === 1 ? "" : "s"}${blobCapacity ? " and object storage" : ""}; the workload writes ${formatGb(derived.storageYearGb)} per year and ${formatGb(derived.storageFiveYearGb)} over five, before replicas and indexes, at ${(input.design.workload.avgRecordBytes ?? 1000).toLocaleString()} B per write (Workload → Stored bytes / write).`,
       interviewer: "What happens when the disk fills? Archive, shard, or tier to cold storage?",
     });
   }
@@ -483,8 +562,10 @@ function costChecks(nodes: DesignNode[], input: ReviewInput, derived: ReturnType
     interviewer: "If traffic doubles, does cost double? Which line item grows fastest?",
   });
 
+  // Only throughput-sized tiers can be "idle". Stores are priced by disk and shielded by caches, so they get their own replica check below.
+  const sizedByThroughput = new Set(["api_server", "worker", "load_balancer", "api_gateway", "websocket_gateway", "redis", "kafka", "geo_index", "id_generator", "scheduler", "task_queue"]);
   const idle = nodes
-    .filter((node) => node.type !== "client")
+    .filter((node) => sizedByThroughput.has(node.type))
     .map((node) => ({ node, util: peakUtil(input.nodes[node.id]?.utilization ?? {}), cost: costForNode(node) }))
     .filter((item) => item.util > 0 && item.util < 0.1 && item.cost >= 500);
   checks.push({
@@ -494,8 +575,23 @@ function costChecks(nodes: DesignNode[], input: ReviewInput, derived: ReturnType
     title: idle.length ? "Expensive tiers sitting mostly idle" : "Expensive tiers are pulling their weight",
     detail: idle.length
       ? idle.map((item) => `${item.node.label} at ${Math.round(item.util * 100)}% for ${formatUsd(item.cost)}/mo`).join("; ") + ". Headroom is good; 5× headroom is money."
-      : "Every tier costing over $500/month runs above 10% utilization at peak.",
+      : "Every compute tier costing over $500/month runs above 10% utilization at peak.",
     interviewer: "Where would you cut 30% of this bill without touching the SLO?",
   });
+
+  const lazyReplicas = nodes
+    .filter((node) => node.type === "postgresql" || node.type === "mysql")
+    .map((node) => ({ node, replicas: num(node.config, "readReplicas", 0), readUtil: input.nodes[node.id]?.utilization.read ?? 0 }))
+    .filter((item) => item.replicas >= 2 && item.readUtil < 0.05);
+  if (lazyReplicas.length) {
+    checks.push({
+      id: "cost-replicas",
+      area: "cost",
+      status: "warn",
+      title: "Read replicas with almost nothing to read",
+      detail: lazyReplicas.map((item) => `${item.node.label} has ${item.replicas} read replicas at ${Math.round(item.readUtil * 100)}% read utilization`).join("; ") + ". The cache is doing the reading. Keep one replica for failover and justify the rest.",
+      interviewer: "What are those replicas for: read scaling, failover, or reporting? Each answer sizes them differently.",
+    });
+  }
   return checks;
 }

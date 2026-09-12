@@ -1,7 +1,7 @@
 {
   "slug": "video-streaming",
   "name": "YouTube",
-  "summary": "Users → DNS → CDN for playback. Origin misses hit the catalog API, object storage for bytes, Kafka for async transcode.",
+  "summary": "Viewers → DNS → CDN for playback; CDN misses read straight from object storage. The catalog API serves metadata and search; uploads go to Kafka → transcode workers that write renditions back.",
   "difficulty": "advanced",
   "workload": {
     "dau": 50000000,
@@ -11,7 +11,8 @@
     "avg_request_bytes": 800,
     "avg_response_bytes": 80000,
     "peak_multiplier": 4,
-    "traffic_growth": 0.25
+    "traffic_growth": 0.25,
+    "avg_record_bytes": 5000
   },
   "slo": {
     "availability": 0.999,
@@ -22,27 +23,55 @@
     "rto_seconds": 300
   },
   "nodes": [
-    { "id": "users", "type": "client", "label": "Viewers", "x": 40, "y": 240 },
-    { "id": "dns", "type": "dns", "label": "DNS", "x": 230, "y": 240, "config": { "latencyMs": 3, "qps": 200000 } },
+    {
+      "id": "users",
+      "type": "client",
+      "label": "Viewers",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 3,
+        "qps": 200000
+      }
+    },
     {
       "id": "cdn",
       "type": "cdn",
       "label": "Video CDN",
-      "x": 440, "y": 240,
-      "config": { "hitRatio": 0.92, "maxRps": 200000, "edgeLatencyMs": 18, "ttlSec": 600 }
+      "x": 500,
+      "y": 230,
+      "config": {
+        "hitRatio": 0.92,
+        "maxRps": 200000,
+        "edgeLatencyMs": 18,
+        "ttlSec": 600
+      }
     },
     {
       "id": "lb",
       "type": "load_balancer",
       "label": "Origin LB",
-      "x": 660, "y": 240,
-      "config": { "instances": 4, "maxRps": 40000, "algorithm": "least_connections" }
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 4,
+        "maxRps": 40000,
+        "algorithm": "least_connections"
+      }
     },
     {
       "id": "api",
       "type": "api_server",
       "label": "Catalog API",
-      "x": 880, "y": 240,
+      "x": 960,
+      "y": 230,
       "config": {
         "instances": 40,
         "vcpu": 4,
@@ -57,31 +86,162 @@
       "id": "catalog",
       "type": "postgresql",
       "label": "Metadata",
-      "x": 1140, "y": 80,
-      "config": { "vcpu": 8, "storageGb": 2000, "readCapacity": 25000, "writeCapacity": 4000, "readReplicas": 3 }
+      "x": 1190,
+      "y": 230,
+      "config": {
+        "vcpu": 8,
+        "storageGb": 2000,
+        "readCapacity": 25000,
+        "writeCapacity": 4000,
+        "readReplicas": 1
+      }
+    },
+    {
+      "id": "search",
+      "type": "search_index",
+      "label": "Catalog Search",
+      "x": 1190,
+      "y": 80,
+      "config": {
+        "nodes": 3,
+        "replicas": 1,
+        "shards": 6,
+        "queryCapacity": 5000,
+        "documents": 50000000,
+        "docBytes": 800
+      }
     },
     {
       "id": "videos",
       "type": "object_storage",
       "label": "Video Store",
-      "x": 1140, "y": 240,
-      "config": { "capacityTb": 400, "avgObjectKb": 8192, "readRps": 40000, "writeRps": 4000 }
+      "x": 730,
+      "y": 530,
+      "config": {
+        "capacityTb": 400,
+        "avgObjectKb": 8192,
+        "readRps": 40000,
+        "writeRps": 4000
+      }
     },
     {
       "id": "transcode",
       "type": "kafka",
-      "label": "Transcode",
-      "x": 1140, "y": 400,
-      "config": { "brokers": 6, "partitions": 36, "consumers": 20, "producerThroughput": 20000, "consumerThroughput": 15000 }
+      "label": "Transcode Jobs",
+      "x": 1190,
+      "y": 380,
+      "config": {
+        "brokers": 6,
+        "partitions": 36,
+        "consumers": 20,
+        "producerThroughput": 20000,
+        "consumerThroughput": 15000
+      }
+    },
+    {
+      "id": "transcoders",
+      "type": "worker",
+      "label": "Transcode Workers",
+      "x": 1420,
+      "y": 380,
+      "config": {
+        "instances": 40,
+        "concurrency": 8,
+        "jobMs": 5000,
+        "idempotent": true
+      }
+    },
+    {
+      "id": "views",
+      "type": "analytics_store",
+      "label": "View Events",
+      "x": 1420,
+      "y": 80,
+      "config": {
+        "nodes": 3,
+        "retentionDays": 90,
+        "eventBytes": 200,
+        "eventsPerDay": 300000000
+      }
     }
   ],
   "edges": [
-    { "id": "e-users-dns", "source": "users", "target": "dns" },
-    { "id": "e-dns-cdn", "source": "dns", "target": "cdn" },
-    { "id": "e-cdn-lb", "source": "cdn", "target": "lb" },
-    { "id": "e-lb-api", "source": "lb", "target": "api" },
-    { "id": "e-api-catalog", "source": "api", "target": "catalog" },
-    { "id": "e-api-videos", "source": "api", "target": "videos" },
-    { "id": "e-api-transcode", "source": "api", "target": "transcode" }
+    {
+      "id": "e-users-dns",
+      "source": "users",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-cdn",
+      "source": "dns",
+      "target": "cdn"
+    },
+    {
+      "id": "e-cdn-videos",
+      "source": "cdn",
+      "target": "videos",
+      "label": "segment misses",
+      "weight": 1.0
+    },
+    {
+      "id": "e-cdn-lb",
+      "source": "cdn",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-api",
+      "source": "lb",
+      "target": "api"
+    },
+    {
+      "id": "e-api-catalog",
+      "source": "api",
+      "target": "catalog"
+    },
+    {
+      "id": "e-api-search",
+      "source": "api",
+      "target": "search",
+      "label": "search",
+      "weight": 0.2
+    },
+    {
+      "id": "e-api-videos",
+      "source": "api",
+      "target": "videos",
+      "label": "uploads",
+      "weight": 1.0
+    },
+    {
+      "id": "e-api-transcode",
+      "source": "api",
+      "target": "transcode"
+    },
+    {
+      "id": "e-transcode-transcoders",
+      "source": "transcode",
+      "target": "transcoders"
+    },
+    {
+      "id": "e-transcoders-videos",
+      "source": "transcoders",
+      "target": "videos",
+      "label": "renditions",
+      "weight": 1.0
+    },
+    {
+      "id": "e-transcoders-catalog",
+      "source": "transcoders",
+      "target": "catalog",
+      "label": "status",
+      "weight": 1.0
+    },
+    {
+      "id": "e-api-views",
+      "source": "api",
+      "target": "views",
+      "label": "view events",
+      "weight": 1.0
+    }
   ]
 }

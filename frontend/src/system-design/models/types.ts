@@ -10,7 +10,17 @@ export type ComponentType =
   | "nosql"
   | "kafka"
   | "object_storage"
-  | "rate_limiter";
+  | "rate_limiter"
+  | "api_gateway"
+  | "websocket_gateway"
+  | "worker"
+  | "task_queue"
+  | "search_index"
+  | "geo_index"
+  | "id_generator"
+  | "analytics_store"
+  | "scheduler"
+  | "notification_gateway";
 
 export type ComponentCategory =
   | "clients"
@@ -20,7 +30,9 @@ export type ComponentCategory =
   | "database"
   | "messaging"
   | "storage"
-  | "reliability";
+  | "reliability"
+  | "search"
+  | "coordination";
 
 export type Difficulty = "beginner" | "intermediate" | "advanced" | "expert";
 
@@ -82,6 +94,10 @@ export type FieldSpec = {
 export type SimContext = {
   difficulty: Difficulty;
   peakRps: number;
+  /** Simultaneous users holding a connection, for connection-bound components. */
+  concurrentUsers: number;
+  /** How many edges leave this node. A queue with consumers drawn hands off to them instead of modeling its own. */
+  outgoingEdges: number;
   failures: ActiveFailure[];
 };
 
@@ -193,6 +209,8 @@ export type DesignEdge = {
   source: string;
   target: string;
   label?: string;
+  /** Share (0–1) of the source's flow that takes this edge. Omitted means all of it. */
+  weight?: number;
 };
 
 export type SystemDesign = {
@@ -276,6 +294,8 @@ export type SimulationResult = {
     processedRps: number;
     droppedRps: number;
     rejectedRps: number;
+    /** Work lost behind a queue. It delays users instead of failing their requests, so it is not in the error rate. */
+    backlogRps: number;
   };
   latency: Latency;
   errorRate: number;
