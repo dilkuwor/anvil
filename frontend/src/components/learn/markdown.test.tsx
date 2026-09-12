@@ -177,3 +177,56 @@ Two endpoints.
     expect(container.querySelector("#step-3-api-design")).not.toBeNull();
   });
 });
+
+describe("LessonMarkdown — code blocks", () => {
+  it("renders fenced Java code verbatim with a language label", () => {
+    render(
+      <LessonMarkdown
+        content={`# Two Pointers
+
+Walk from both ends.
+
+\`\`\`java
+int left = 0, right = nums.length - 1;
+while (left < right) {
+
+    int sum = nums[left] + nums[right];
+    if (sum == target) return new int[] {left, right};
+    if (sum < target) left++;
+    else right--;
+}
+\`\`\`
+
+That is O(n) time and O(1) space.
+`}
+      />,
+    );
+
+    const code = document.querySelector("pre code");
+    expect(code).not.toBeNull();
+    expect(code?.textContent).toContain("int left = 0, right = nums.length - 1;");
+    // A blank line inside the fence must not split the block.
+    expect(code?.textContent).toContain("int sum = nums[left] + nums[right];");
+    expect(code?.textContent).not.toContain("```");
+    expect(screen.getByText("java")).toBeInTheDocument();
+    expect(screen.getByText(/O\(n\) time and O\(1\) space/)).toBeInTheDocument();
+  });
+
+  it("does not treat a code block as the lead paragraph callout", () => {
+    const { container } = render(
+      <LessonMarkdown
+        content={`# Binary Search
+
+\`\`\`java
+int mid = lo + (hi - lo) / 2;
+\`\`\`
+
+The prose lead comes after the snippet.
+`}
+      />,
+    );
+
+    const lead = container.querySelector("p.rounded-xl");
+    expect(lead?.textContent).toContain("The prose lead comes after the snippet.");
+  });
+});

@@ -116,7 +116,7 @@ def test_ai_category_is_additive(auth_client, db):
     assert "arrays-hashing" not in slugs
 
     dsa = auth_client.get("/api/v1/learn/categories/dsa").json()
-    assert dsa["lesson_count"] == 25
+    assert dsa["lesson_count"] == 81
 
     tokens = auth_client.get("/api/v1/learn/lessons/ai-token-counting-cost")
     assert tokens.status_code == 200
@@ -155,7 +155,7 @@ def test_learn_seed_is_idempotent(db):
     )
     assert first == second
     assert first[0] == 7
-    assert first[2] == 215
+    assert first[2] == 271
 
 
 def test_system_design_problems_topic(auth_client, db):
@@ -418,3 +418,69 @@ def test_system_design_curriculum_depth(auth_client, db):
         assert detail["takeaways"], slug
         assert detail["interview_questions"], slug
         assert "```" not in detail["content"], slug
+
+
+def test_dsa_curriculum_depth(auth_client, db):
+    """The DSA track is a structured FANG-interview course, not a glossary."""
+    _seed_catalog(db)
+
+    category = auth_client.get("/api/v1/learn/categories/dsa").json()
+    assert category["lesson_count"] == 81
+    slugs = [topic["slug"] for topic in category["topics"]]
+
+    # Progression: method, complexity, data structures, techniques, then worked problems.
+    assert slugs[0] == "coding-interview-method"
+    assert slugs[1] == "big-o-complexity"
+    assert slugs[-1] == "dsa-worked-problems"
+    for expected in ("sorting", "advanced-graphs", "math-geometry", "data-structure-design", "coding-execution"):
+        assert expected in slugs, expected
+    assert slugs.index("arrays-hashing") < slugs.index("binary-search")
+    assert slugs.index("binary-search") < slugs.index("dp-1d")
+    assert slugs.index("dp-1d") < slugs.index("dsa-worked-problems")
+
+    # Concept lessons teach reasoning, with runnable Java and interview follow-ups.
+    window = auth_client.get("/api/v1/learn/lessons/fixed-and-variable-windows").json()
+    for heading in (
+        "## Why It Matters",
+        "## Mental Model",
+        "## How It Works",
+        "## Trade-offs",
+        "## Interviewer Follow-ups",
+        "## Common Mistakes",
+    ):
+        assert heading in window["content"], heading
+    assert "```java" in window["content"]
+    assert len(window["content"]) > 5000
+
+    # New topics exist and are attached to the right modules.
+    on_answer = auth_client.get("/api/v1/learn/lessons/binary-search-on-answer").json()
+    assert on_answer["topic_slug"] == "binary-search"
+    assert "feasible" in on_answer["content"].lower()
+
+    union_find = auth_client.get("/api/v1/learn/lessons/union-find").json()
+    assert union_find["topic_slug"] == "advanced-graphs"
+
+    # Worked problems follow the interview arc and link to practice problems.
+    problems = auth_client.get("/api/v1/learn/topics/dsa-worked-problems").json()
+    assert problems["lesson_count"] == 13
+    two_sum = auth_client.get("/api/v1/learn/lessons/wp-two-sum").json()
+    for heading in ("## Step 1: Clarify", "## Step 2: Brute Force", "## Interviewer Follow-ups"):
+        assert heading in two_sum["content"], heading
+    assert any(p["slug"] == "pair-target" for p in two_sum["related_problems"])
+
+    # The roadmap nodes that previously had no lesson now resolve.
+    for key in ("advanced-graphs", "math-geometry"):
+        link = auth_client.get(f"/api/v1/learn/roadmap/{key}").json()
+        assert link["topic"] is not None, key
+        assert link["topic"]["slug"] == key
+
+    # Every published DSA lesson carries takeaways, questions, and balanced code fences.
+    catalog = auth_client.get("/api/v1/learn/catalog").json()
+    dsa = next(item for item in catalog if item["slug"] == "dsa")
+    lesson_slugs = [lesson["slug"] for topic in dsa["topics"] for lesson in topic["lessons"]]
+    assert len(lesson_slugs) == len(set(lesson_slugs))
+    for slug in lesson_slugs:
+        detail = auth_client.get(f"/api/v1/learn/lessons/{slug}").json()
+        assert detail["takeaways"], slug
+        assert detail["interview_questions"], slug
+        assert detail["content"].count("```") % 2 == 0, slug
