@@ -155,7 +155,7 @@ def test_learn_seed_is_idempotent(db):
     )
     assert first == second
     assert first[0] == 7
-    assert first[2] == 184
+    assert first[2] == 215
 
 
 def test_system_design_problems_topic(auth_client, db):
@@ -185,16 +185,21 @@ def test_system_design_problems_topic(auth_client, db):
 
     topic = auth_client.get("/api/v1/learn/topics/sd-design-problems").json()
     assert topic["category_slug"] == "system-design"
-    assert topic["lesson_count"] == 8
+    assert topic["lesson_count"] == 17
     titles = {lesson["title"] for lesson in topic["lessons"]}
     assert "Design a URL Shortener" in titles
-    assert "Design a News Feed" in titles
-    assert "Design a Chat System" in titles
+    assert "Design a News Feed (Twitter / X)" in titles
+    assert "Design WhatsApp (Chat System)" in titles
+    assert "Design a Payment System" in titles
+    assert "Design a Ticket Booking System" in titles
 
     lesson = auth_client.get("/api/v1/learn/lessons/sd-url-shortener").json()
     assert lesson["status"] == "IN_PROGRESS"
     assert lesson["topic_slug"] == "sd-design-problems"
     assert "302" in lesson["content"] or "base62" in lesson["content"]
+    # Case studies walk the full interview arc, not just an architecture sketch.
+    for heading in ("## Step 1: Clarify the Requirements", "## Evolution Under Pressure", "## Interviewer Follow-ups"):
+        assert heading in lesson["content"]
     assert lesson["takeaways"]
     assert lesson["interview_questions"]
     assert lesson["next"] is not None
@@ -355,3 +360,61 @@ def test_lesson_ask_ai_errors(auth_client, db, monkeypatch):
         json={"question": ""},
     )
     assert empty.status_code == 422
+
+
+def test_system_design_curriculum_depth(auth_client, db):
+    """The System Design track is a structured course, not a glossary."""
+    _seed_catalog(db)
+
+    category = auth_client.get("/api/v1/learn/categories/system-design").json()
+    assert category["lesson_count"] == 60
+    slugs = [topic["slug"] for topic in category["topics"]]
+
+    # Progression: method, foundations, building blocks, distributed systems,
+    # production architecture, then case studies last.
+    assert slugs[0] == "system-design-template"
+    assert slugs[-1] == "sd-design-problems"
+    for expected in (
+        "networking-foundations",
+        "microservices",
+        "resilience-operations",
+    ):
+        assert expected in slugs, expected
+    assert slugs.index("system-design-fundamentals") < slugs.index("caching")
+    assert slugs.index("caching") < slugs.index("cap-theorem")
+    assert slugs.index("cap-theorem") < slugs.index("sd-design-problems")
+
+    # Concept lessons teach reasoning: trade-offs, failures, and follow-ups.
+    caching = auth_client.get("/api/v1/learn/lessons/caching").json()
+    for heading in (
+        "## Why It Matters",
+        "## How It Works",
+        "## Trade-offs",
+        "## Interviewer Follow-ups",
+        "## Mini Design Exercise",
+        "## Common Mistakes",
+    ):
+        assert heading in caching["content"], heading
+    assert "cache-aside" in caching["content"].lower()
+    assert "write-through" in caching["content"].lower()
+    assert len(caching["content"]) > 6000
+
+    # New building-block lessons exist and are attached to the right topics.
+    stampede = auth_client.get("/api/v1/learn/lessons/sd-cache-invalidation").json()
+    assert stampede["topic_slug"] == "caching"
+    assert "stampede" in stampede["content"].lower()
+
+    idempotency = auth_client.get("/api/v1/learn/lessons/sd-idempotency").json()
+    assert idempotency["topic_slug"] == "distributed-systems"
+    assert "idempotency" in idempotency["content"].lower()
+
+    # Every published System Design lesson carries takeaways and questions.
+    catalog = auth_client.get("/api/v1/learn/catalog").json()
+    system_design = next(item for item in catalog if item["slug"] == "system-design")
+    lesson_slugs = [lesson["slug"] for topic in system_design["topics"] for lesson in topic["lessons"]]
+    assert len(lesson_slugs) == len(set(lesson_slugs))
+    for slug in lesson_slugs:
+        detail = auth_client.get(f"/api/v1/learn/lessons/{slug}").json()
+        assert detail["takeaways"], slug
+        assert detail["interview_questions"], slug
+        assert "```" not in detail["content"], slug
