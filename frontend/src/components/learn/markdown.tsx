@@ -171,6 +171,51 @@ function LessonHeading({ title }: { title: string }) {
   );
 }
 
+function splitLessonBlocks(content: string): string[] {
+  const lines = content.replaceAll("\r\n", "\n").trim().split("\n");
+  const blocks: string[] = [];
+  let buffer: string[] = [];
+
+  function flush() {
+    const text = buffer.join("\n").trim();
+    if (text) blocks.push(text);
+    buffer = [];
+  }
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index].startsWith("```")) {
+      flush();
+      const fence = [lines[index]];
+      index += 1;
+      while (index < lines.length && !lines[index].startsWith("```")) {
+        fence.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length) fence.push(lines[index]);
+      blocks.push(fence.join("\n"));
+      continue;
+    }
+    if (lines[index].trim() === "") {
+      flush();
+      continue;
+    }
+    buffer.push(lines[index]);
+  }
+  flush();
+  return blocks;
+}
+
+function isCodeBlock(block: string): boolean {
+  return block.startsWith("```");
+}
+
+function parseCodeBlock(block: string): { language: string; code: string } {
+  const lines = block.split("\n");
+  const language = lines[0].slice(3).trim();
+  const end = lines[lines.length - 1]?.startsWith("```") ? -1 : undefined;
+  return { language, code: lines.slice(1, end).join("\n") };
+}
+
 function isHeadingBlock(block: string): boolean {
   const first = block.split("\n")[0] ?? "";
   return first.startsWith("# ") || first.startsWith("## ") || first.startsWith("### ");
@@ -227,6 +272,7 @@ function isStatList(block: string): boolean {
 
 function isSpecialBlock(block: string): boolean {
   return (
+    isCodeBlock(block) ||
     isHeadingBlock(block) ||
     isListBlock(block) ||
     isOrderedListBlock(block) ||
@@ -341,6 +387,21 @@ function FormulaCard({ text }: { text: string }) {
   );
 }
 
+function CodeCard({ language, code }: { language: string; code: string }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-steel-700 bg-steel-950">
+      {language ? (
+        <div className="border-b border-steel-800 px-3.5 py-1.5">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{language}</span>
+        </div>
+      ) : null}
+      <pre className="overflow-x-auto px-3.5 py-3 font-mono text-[12.5px] leading-6 text-foreground/90">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
 function ExampleCard({ text }: { text: string }) {
   const body = text.replace(/^example:\s*/i, "");
   return (
@@ -430,7 +491,7 @@ export function LessonMarkdown({
   skipLeadingTitle?: boolean;
   className?: string;
 }) {
-  const blocks = content.replaceAll("\r\n", "\n").trim().split(/\n{2,}/);
+  const blocks = splitLessonBlocks(content);
   const skipFirstTitle = skipLeadingTitle && Boolean(blocks[0]?.startsWith("# "));
   const leadIndex = blocks.findIndex((block, index) => {
     if (index === 0 && skipFirstTitle) return false;
@@ -440,6 +501,10 @@ export function LessonMarkdown({
     <div className={cn("w-full space-y-5 text-sm leading-7 text-foreground", className)}>
       {blocks.map((block, index) => {
         if (index === 0 && skipFirstTitle) return null;
+        if (isCodeBlock(block)) {
+          const { language, code } = parseCodeBlock(block);
+          return <CodeCard key={index} language={language} code={code} />;
+        }
         const lines = block.split("\n");
         if (lines[0].startsWith("# ")) {
           return <LessonHeading key={index} title={lines[0].slice(2)} />;
