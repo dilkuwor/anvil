@@ -10,7 +10,7 @@ const CARDS = [
   {
     href: "/system-design/simulator",
     title: "Simulator",
-    body: "Build an architecture, set a workload, and watch capacity, latency, and cost respond.",
+    body: "Build an architecture, run the estimation worksheet, and get an interviewer-style review with bottlenecks and fixes.",
     icon: Network,
   },
   {

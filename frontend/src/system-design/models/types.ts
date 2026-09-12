@@ -62,6 +62,8 @@ export type ComponentSimResult = {
   utilization: UtilizationMap;
   outgoing: OutgoingFlow[];
   notes: string[];
+  /** Config values the component changed for this run (e.g. autoscaled instance count). Cost follows these. */
+  effectiveConfig?: Record<string, ConfigValue>;
 };
 
 export type FieldSpec = {
@@ -108,6 +110,8 @@ export type WorkloadConfig = {
   avgResponseBytes: number;
   peakMultiplier: number;
   trafficGrowth: number;
+  /** Bytes persisted per write. Optional so older saved designs keep loading; defaults to 1 KB. */
+  avgRecordBytes?: number;
 };
 
 export type DerivedWorkload = {
@@ -119,6 +123,42 @@ export type DerivedWorkload = {
   writeRps: number;
   ingressBps: number;
   egressBps: number;
+  writesPerDay: number;
+  storageYearGb: number;
+  storageFiveYearGb: number;
+  cacheWorkingSetGb: number;
+};
+
+/** One line of the back-of-envelope worksheet, shown the way you would write it on a whiteboard. */
+export type EstimationStep = {
+  key: string;
+  label: string;
+  formula: string;
+  value: string;
+  note?: string;
+};
+
+export type ReviewArea = "requirements" | "scalability" | "reliability" | "performance" | "data" | "cost";
+
+export type ReviewStatus = "pass" | "warn" | "fail" | "info";
+
+export type ReviewCheck = {
+  id: string;
+  area: ReviewArea;
+  status: ReviewStatus;
+  title: string;
+  detail: string;
+  /** The follow-up an interviewer would ask about this point. */
+  interviewer: string;
+};
+
+export type DesignReview = {
+  score: number;
+  grade: "A" | "B" | "C" | "D";
+  summary: string;
+  estimatedAvailability: number;
+  weakestHop: { nodeId: string; label: string; availability: number } | null;
+  checks: ReviewCheck[];
 };
 
 export type SloConfig = {
@@ -169,6 +209,8 @@ export type SystemDesign = {
 };
 
 export type NodeMetrics = {
+  label: string;
+  type: ComponentType;
   incomingRps: number;
   processedRps: number;
   droppedRps: number;
@@ -194,6 +236,8 @@ export type Bottleneck = {
   utilization: number;
   extraLatencyMs: number;
   why: string;
+  /** Concrete, numeric fix derived from the node's own config (e.g. how many instances to add). */
+  fix?: string;
   suggestions: string[];
 };
 
@@ -245,6 +289,8 @@ export type SimulationResult = {
   warnings: string[];
   timeline: TimelineSample[];
   criticalPath: { nodeId: string; label: string; ms: number }[];
+  estimate: EstimationStep[];
+  review: DesignReview;
 };
 
 export type SimulationRequest = {

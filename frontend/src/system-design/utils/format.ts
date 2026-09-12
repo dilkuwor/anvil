@@ -27,3 +27,19 @@ export function formatGb(value: number): string {
 export function formatCompact(value: number): string {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
+
+export function formatBytesPerSec(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB/s (${((value * 8) / 1_000_000_000).toFixed(1)} Gbps)`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} MB/s (${((value * 8) / 1_000_000).toFixed(0)} Mbps)`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)} KB/s`;
+  return `${Math.round(value)} B/s`;
+}
+
+export function formatNines(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const pctValue = value * 100;
+  if (pctValue >= 99.999) return `${pctValue.toFixed(4)}%`;
+  if (pctValue >= 99.9) return `${pctValue.toFixed(3)}%`;
+  return `${pctValue.toFixed(2)}%`;
+}

@@ -35,6 +35,8 @@ export function cheatSheetSpeech(sheet: CheatSheetDetail): string {
       for (const item of asStringList(block.items)) parts.push(item);
       const table = asTable(block.items);
       if (table) {
+        // Read the header row first so the values that follow have context.
+        if (table.headers.length) parts.push(table.headers.join(", "));
         for (const row of table.rows) parts.push(row.join(", "));
       }
     }

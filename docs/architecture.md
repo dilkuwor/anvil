@@ -104,6 +104,10 @@ REQUIREMENTS → CAPACITY → HIGH_LEVEL → DEEP_DIVE → SCALABILITY → RELIA
 
 The service advances after a minimum number of candidate turns in each phase. High-level design waits for a core canvas (compute + store) before moving on. Architecture updates do not change phase; the next chat turn sees the latest graph.
 
+### System design simulator
+
+The simulator at `/system-design/simulator` runs entirely in the browser (`frontend/src/system-design/`, in a web worker when available). `engine/run.ts` pushes the workload's peak RPS through the canvas in topological order; each component kind in `components/library.ts` is a small capacity model (saturation, queueing delay, hit ratios, autoscaling) and carries interview notes shown in the Inspector. A cache with no outgoing edge still sends its misses to the stores its caller talks to. After the pass the run attaches an estimation worksheet (`engine/estimate.ts`: DAU → QPS → peak → bandwidth → storage → cache → servers, with the arithmetic spelled out) and a design review (`engine/review.ts`: SLO verdicts, single points of failure, redundancy-based availability in series, cache and queue coverage, storage headroom, unit cost), each check paired with the follow-up an interviewer would ask. Designs and runs persist in `localStorage`; the catalog of problems and sample graphs comes from `GET /api/v1/interviews/scenarios`.
+
 ### What the interviewer is allowed to do
 
 The system prompt in `_system_prompt` tells Gemma it is a live interviewer, not a tutor:

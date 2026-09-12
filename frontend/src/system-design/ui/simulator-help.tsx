@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
 
 const TOOLBAR = [
   { label: "Level", body: "How many knobs the Inspector shows. Beginner keeps the basics; Expert reveals failure rates, compression, and manual caps." },
-  { label: "Sample", body: "Loads the URL Shortener architecture so you can simulate immediately." },
+  { label: "Brief", body: "Shows the problem statement and requirements next to the canvas when a catalog problem or sample is loaded." },
+  { label: "Load sample…", body: "Loads a wired architecture for any catalog problem so you can simulate, then break and rebuild it." },
   { label: "Reset", body: "Starts a blank design. The current graph is pushed onto undo." },
   { label: "Save", body: "Stores this architecture in the browser. Shortcut: ⌘S / Ctrl+S." },
   { label: "Simulate", body: "Runs the capacity, latency, storage, and cost model on the current graph and workload." },
@@ -56,6 +57,19 @@ const TAB_GROUPS: TabGroup[] = [
     ],
   },
   {
+    title: "Estimate",
+    intro: "The back-of-envelope worksheet, computed from the Workload tab. No Simulate needed.",
+    sections: [
+      {
+        items: [
+          { label: "Formula lines", body: "Each row shows the arithmetic with real numbers: DAU → daily requests → QPS → peak → bandwidth → storage → cache → servers." },
+          { label: "Cache working set", body: "80/20 rule: 20% of a day's reads × response size. The memory to ask for." },
+          { label: "App servers", body: "Peak QPS ÷ per-server QPS, using the API server on the canvas if there is one." },
+        ],
+      },
+    ],
+  },
+  {
     title: "Metrics",
     intro: "Headline result of the last Simulate. Empty until you run one.",
     sections: [
@@ -67,7 +81,24 @@ const TAB_GROUPS: TabGroup[] = [
           { label: "Availability", body: "Share of peak traffic that made it through." },
           { label: "PASS / FAIL", body: "Each SLO compared to the last run." },
           { label: "vs last run", body: "Delta in RPS, p95, and monthly cost versus the previous Simulate." },
-          { label: "Primary bottleneck", body: "Banner above the canvas: the hottest node and why." },
+          { label: "Primary bottleneck", body: "Banner above the canvas: the hottest node, why, and a numeric fix (how many instances, replicas, or shards)." },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Review",
+    intro: "An interviewer’s scorecard for the design you drew. Every line ends with the follow-up question you should expect.",
+    sections: [
+      {
+        items: [
+          { label: "Grade", body: "Pass = 1, warn = ½, fail = 0 across the scored checks. A ≥ 85, B ≥ 70, C ≥ 50." },
+          { label: "Requirements", body: "Did the run meet the p95 and error-rate SLOs you set?" },
+          { label: "Scalability", body: "Stateless tier behind a load balancer, cache for read-heavy load, CDN for big payloads, queue for heavy writes, sharding when the primary is write-bound, autoscaling for spiky peaks." },
+          { label: "Reliability", body: "Single points of failure, rate limiting at the edge, whether the database survives a cold cache, and consumer lag." },
+          { label: "Redundancy math", body: "Each synchronous hop is 1 − (1 − a)^n with n = instances or replicas; hops in series multiply. Compared to the availability SLO." },
+          { label: "Performance / Data / Cost", body: "Hop count on the critical path, replication trade-offs, storage headroom for a year of writes, blob storage, cost per million requests, idle expensive tiers." },
+          { label: "Info", body: "Talking points that do not affect the grade, such as stale reads from async replicas." },
         ],
       },
     ],
@@ -153,6 +184,7 @@ const TAB_GROUPS: TabGroup[] = [
 const SHORTCUTS = [
   { label: "⌘S / Ctrl+S", body: "Save locally." },
   { label: "⌘Z / Ctrl+Z", body: "Undo the last graph change." },
+  { label: "⌘⇧Z / Ctrl+Y", body: "Redo." },
   { label: "⌘D / Ctrl+D", body: "Duplicate the selected component." },
   { label: "Delete / Backspace", body: "Remove selected nodes or edges." },
   { label: "Right-click a node", body: "Duplicate, disable, or delete." },
@@ -256,7 +288,8 @@ export function SimulatorHelp({ open, onClose }: { open: boolean; onClose: () =>
               </li>
               <li>Connect handles left → right in request-path order (users to edge to app to data).</li>
               <li>Select a box to rename it and edit capacity in the Inspector.</li>
-              <li>Set DAU, peak, and SLOs in the bottom Workload tab, then click Simulate.</li>
+              <li>Set DAU, peak, and SLOs in the bottom Workload tab, read the Estimate tab, then click Simulate.</li>
+              <li>Open Review for the interviewer’s scorecard, fix the first fail, and simulate again.</li>
               <li>Editing the graph clears the last run — simulate again after each change.</li>
             </ol>
             <p className="text-[13px] leading-6 text-muted-foreground">
@@ -270,7 +303,9 @@ export function SimulatorHelp({ open, onClose }: { open: boolean; onClose: () =>
 
           <HelpSection title="Components">
             <p className="text-[13px] leading-6 text-muted-foreground">
-              Every box is a capacity model. Disabled nodes drop all incoming traffic and stay out of the path.
+              Every box is a capacity model. Disabled nodes drop all incoming traffic and stay out of the path. Select a box
+              to see its Interview notes in the Inspector: when to use it, the trade-offs to say out loud, and the questions
+              to expect.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               {kindsByCategory().map((group) => (

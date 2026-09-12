@@ -7,6 +7,13 @@ import type {
   Traffic,
 } from "../models/types";
 
+/** What to say about this component in an interview: when it belongs, what it costs you, what you will be asked. */
+export type InterviewNotes = {
+  whenToUse: string;
+  tradeoffs: string[];
+  questions: string[];
+};
+
 export type ComponentKind = {
   type: ComponentType;
   label: string;
@@ -14,6 +21,7 @@ export type ComponentKind = {
   description: string;
   icon: string;
   defaultLabel: string;
+  interview: InterviewNotes;
   defaultConfig: Record<string, string | number | boolean>;
   fields: FieldSpec[];
   simulate: (

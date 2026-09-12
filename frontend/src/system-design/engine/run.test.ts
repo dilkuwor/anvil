@@ -57,15 +57,32 @@ describe("system design simulation engine", () => {
     expect(Math.round(derived.peakRps)).toBe(115741);
   });
 
-  it("sends cache misses to the database", () => {
+  it("sends cache misses plus writes to the database", () => {
     const result = runSimulation({ design: design(), failures: [] });
+    const api = result.nodes.api1;
     const redis = result.nodes.r1;
     const db = result.nodes.db1;
     expect(redis.incomingRps).toBeGreaterThan(0);
-    expect(db.incomingRps).toBeGreaterThan(0);
+    const misses = redis.incomingRps * 0.1;
+    const writes = api.processedRps * 0.1;
+    expect(db.incomingRps).toBeCloseTo(misses + writes, 0);
     expect(db.incomingRps).toBeLessThan(redis.incomingRps);
     expect(result.cost.total).toBeGreaterThan(0);
     expect(result.timeline.length).toBeGreaterThan(2);
+  });
+
+  it("evaluates the store after the cache even when the store edge is drawn first", () => {
+    const reordered = design();
+    reordered.edges = [
+      { id: "e1", source: "c1", target: "lb1" },
+      { id: "e2", source: "lb1", target: "api1" },
+      { id: "e4", source: "api1", target: "db1" },
+      { id: "e3", source: "api1", target: "r1" },
+    ];
+    const result = runSimulation({ design: reordered, failures: [] });
+    const canonical = runSimulation({ design: design(), failures: [] });
+    expect(result.nodes.db1.incomingRps).toBeCloseTo(canonical.nodes.db1.incomingRps, 5);
+    expect(result.nodes.db1.processedRps).toBeCloseTo(canonical.nodes.db1.processedRps, 5);
   });
 
   it("flags an undersized database as a bottleneck", () => {
@@ -90,5 +107,20 @@ describe("system design simulation engine", () => {
     });
     const result = runSimulation({ design: limited, failures: [] });
     expect(result.nodes.rl1.rejectedRps).toBeGreaterThan(1000);
+  });
+
+  it("sends every read to the database when the cache is down", () => {
+    const healthy = runSimulation({ design: design(), failures: [] });
+    const cold = runSimulation({ design: design(), failures: [{ id: "cache_down", type: "cache_down" }] });
+    expect(cold.nodes.db1.incomingRps).toBeGreaterThan(healthy.nodes.db1.incomingRps * 5);
+    expect(cold.nodes.r1.droppedRps).toBeLessThan(1);
+    expect(cold.nodes.r1.notes[0]).toContain("fall through");
+  });
+
+  it("explains an injected failure instead of suggesting shards for it", () => {
+    const dead = runSimulation({ design: design(), failures: [{ id: "database_down", type: "database_down" }] });
+    const db = dead.bottlenecks.find((item) => item.nodeId === "db1");
+    expect(db?.why).toContain("Database impaired");
+    expect(db?.fix).toContain("failure itself");
   });
 });
