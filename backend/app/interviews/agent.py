@@ -204,6 +204,8 @@ class MockInterviewAgent:
             if snapshot.architecture is not None:
                 graph = {"nodes": snapshot.architecture.nodes, "edges": snapshot.architecture.edges}
             lifts = merge_signals(lifts, infer_from_architecture(graph), kind)
+        elif kind == InterviewKind.BEHAVIORAL.value:
+            pass
         else:
             lifts = merge_signals(
                 lifts,
@@ -265,7 +267,23 @@ class MockInterviewAgent:
     ) -> dict:
         kind_value = kind.value if isinstance(kind, InterviewKind) else str(kind)
         coverage = coverage_score(signals, kind_value)
-        if kind_value == InterviewKind.SYSTEM_DESIGN.value:
+        if kind_value == InterviewKind.BEHAVIORAL.value:
+            prompt = (
+                "Score this completed BEHAVIORAL mock interview against the STAR rubric. Return JSON only with keys: "
+                "understanding, approach, coding, communication, reasoning, complexity, follow_up "
+                "(numbers 1-10), strengths (2-3 short strings), improvements (2-3 short strings), summary "
+                "(2-4 sentences in the interviewer's voice).\n"
+                "Map scores as: understanding=STAR structure, approach=specificity (names, numbers, dates), "
+                "coding=ownership (first-person actions, not 'we'), complexity=impact of results, "
+                "reasoning=reflection and learning, follow_up=how well probes were answered.\n"
+                "Reward concrete stories with measurable outcomes. Penalize vague, hypothetical, or team-only answers.\n"
+                f"Track: {problem_title}.\n"
+                f"Signals: {normalize_signals(signals, kind_value)}.\n"
+                f"Signal coverage 1-10: {coverage}.\n"
+                f"Objective: stories={followups_asked}, hints={hints_used}, candidate_turns={candidate_turns}.\n"
+                f"Transcript:\n{transcript}"
+            )
+        elif kind_value == InterviewKind.SYSTEM_DESIGN.value:
             prompt = (
                 "Score this completed SYSTEM DESIGN mock interview. Return JSON only with keys: "
                 "understanding, approach, coding, communication, reasoning, complexity, follow_up "
@@ -346,6 +364,29 @@ class MockInterviewAgent:
             else "Do not announce a phase change. The service controls when the interview advances."
         )
         gaps = ", ".join(missing_signals(signals, kind=kind)) or "none"
+        if kind == InterviewKind.BEHAVIORAL.value:
+            nudge = (
+                "They asked for a hint. Remind them of the STAR shape in one sentence; do not supply a story."
+                if context.allow_hint_nudge
+                else "Never answer the question for them or suggest what their story should be."
+            )
+            return (
+                "You are a live BEHAVIORAL interviewer at InterviewAnvil, the kind a hiring manager runs. "
+                "Speak like a calm senior engineer in the room — warm, direct, not a chatbot.\n"
+                "The candidate can see the current question in the left pane. Do not repeat it.\n"
+                "Your job is to probe their story for the STAR gaps: a situation that drags on, actions described as 'we', "
+                "a result with no number, no reflection.\n"
+                "Rules:\n"
+                "- Ask exactly one concise follow-up question about what they just said.\n"
+                "- Keep replies to 1–3 short sentences. No praise padding.\n"
+                "- Do not ask a new behavioral question; the service moves to the next question.\n"
+                f"- {nudge}\n"
+                f"- {advance}\n"
+                f"Current phase: {context.phase}. Focus next on: {focus or 'the weakest part of the story'}.\n"
+                f"Recorded signals: {signals}. Still missing or partial: {gaps}.\n"
+                f"Remaining seconds: {context.remaining_seconds}.\n\n"
+                f"{context.problem.public_context}"
+            )
         if kind == InterviewKind.SYSTEM_DESIGN.value:
             notes = context.scenario.interviewer_notes if context.scenario else ""
             architecture = context.architecture.summary if context.architecture else "The canvas is empty."
@@ -428,11 +469,11 @@ class MockInterviewAgent:
         description = context.scenario.prompt if context.scenario else context.problem.description
         if _looks_like_problem_dump(text, title, description):
             return context.fallback
-        if kind != InterviewKind.SYSTEM_DESIGN.value and not context.allow_hint_nudge and (
+        if kind == InterviewKind.CODING.value and not context.allow_hint_nudge and (
             _CODE_FENCE.search(text) or _SOLUTION_LEAK.search(text)
         ):
             return context.fallback
-        if kind == InterviewKind.SYSTEM_DESIGN.value:
+        if kind in {InterviewKind.SYSTEM_DESIGN.value, InterviewKind.BEHAVIORAL.value}:
             return _first_question_block(text)
         failed = sandbox.status in {"WRONG_ANSWER", "COMPILATION_ERROR", "RUNTIME_ERROR"} or (
             sandbox.total and sandbox.passed < sandbox.total and not sandbox.accepted
@@ -474,7 +515,17 @@ def _first_question_block(text: str) -> str:
 
 
 def _signal_adjustment(score_key: str, signals: dict[str, str], kind: str = "CODING") -> float:
-    if kind == InterviewKind.SYSTEM_DESIGN.value:
+    if kind == InterviewKind.BEHAVIORAL.value:
+        mapping = {
+            "understanding": "situation",
+            "approach": "specificity",
+            "coding": "ownership",
+            "communication": "communication",
+            "reasoning": "reflection",
+            "complexity": "result",
+            "follow_up": "action",
+        }
+    elif kind == InterviewKind.SYSTEM_DESIGN.value:
         mapping = {
             "understanding": "requirements",
             "approach": "high_level",

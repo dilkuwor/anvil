@@ -166,6 +166,20 @@ export function LessonView({ slug }: { slug: string }) {
         </SectionCard>
       ) : null}
 
+      {data.category_slug === "behavioral" ? (
+        <SectionCard>
+          <SectionTitle>Next step</SectionTitle>
+          <div className="mt-3 flex flex-col gap-2">
+            <Button asChild size="sm" className="font-semibold">
+              <Link href={`/behavioral#${data.topic_slug}`}>Write your STAR story</Link>
+            </Button>
+            <Button asChild size="sm" variant="secondary" className="font-semibold">
+              <Link href="/behavioral">Mock Interview</Link>
+            </Button>
+          </div>
+        </SectionCard>
+      ) : null}
+
       {firstProblem ? (
         <SectionCard>
           <SectionTitle>Next step</SectionTitle>

@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { getViz, parseVizDirective } from "./viz/registry";
+import { VizBlock } from "./viz/viz-block";
 
 function escapeHtml(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -209,6 +211,12 @@ function isCodeBlock(block: string): boolean {
   return block.startsWith("```");
 }
 
+/** A one-line `:::viz <id> {json}` directive that mounts a step-through visualizer. */
+function isVizBlock(block: string): boolean {
+  const text = block.trim();
+  return /^:::\s*viz\b/i.test(text) && !text.includes("\n");
+}
+
 function parseCodeBlock(block: string): { language: string; code: string } {
   const lines = block.split("\n");
   const language = lines[0].slice(3).trim();
@@ -272,6 +280,7 @@ function isStatList(block: string): boolean {
 
 function isSpecialBlock(block: string): boolean {
   return (
+    isVizBlock(block) ||
     isCodeBlock(block) ||
     isHeadingBlock(block) ||
     isListBlock(block) ||
@@ -501,6 +510,13 @@ export function LessonMarkdown({
     <div className={cn("w-full space-y-5 text-sm leading-7 text-foreground", className)}>
       {blocks.map((block, index) => {
         if (index === 0 && skipFirstTitle) return null;
+        if (isVizBlock(block)) {
+          const directive = parseVizDirective(block);
+          if (directive && getViz(directive.id)) {
+            return <VizBlock key={index} id={directive.id} params={directive.params} />;
+          }
+          return null;
+        }
         if (isCodeBlock(block)) {
           const { language, code } = parseCodeBlock(block);
           return <CodeCard key={index} language={language} code={code} />;

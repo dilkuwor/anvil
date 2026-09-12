@@ -114,6 +114,8 @@ The agent depends only on `LLMProvider`. Concrete backends live under `app/inter
 | Problem workspace | required | `POST /api/v1/interviews` | Full session. One active (unended) session per user per problem is reused. Duration is `INTERVIEW_DURATION_SECONDS` (default 45 minutes). |
 | System design picker | none to browse | `GET /api/v1/interviews/scenarios` | Catalog of design prompts. Auth required to start. |
 | System design workspace | required | `POST /api/v1/interviews/system-design`, `PUT /{id}/architecture` | Timed 3-panel session. One active session per user per scenario. Canvas JSON is persisted; the interviewer reads a summary of it. |
+| Behavioral question bank | none to browse | `GET /api/v1/interviews/behavioral/questions`, `/behavioral/tracks` | One question per competency with probes and "what a strong answer contains"; three tracks of four questions. Auth required to start. |
+| Behavioral workspace | required | `POST /api/v1/interviews/behavioral`, `GET /behavioral/active?track=` | Timed 2-panel session (question card + interviewer). One active session per user per track. STAR stories are saved as Notes with `source_type = BEHAVIORAL`. |
 
 Preview sessions do not expire on the timer and do not write feedback. Authenticated sessions expire when remaining time hits zero; the API then records a `TIMEOUT` event and completes the interview.
 
@@ -140,6 +142,18 @@ REQUIREMENTS → CAPACITY → HIGH_LEVEL → DEEP_DIVE → SCALABILITY → RELIA
 ```
 
 The service advances after a minimum number of candidate turns in each phase. High-level design waits for a core canvas (compute + store) before moving on. Architecture updates do not change phase; the next chat turn sees the latest graph.
+
+Behavioral interviews use a third machine, owned by `app/interviews/behavioral.py`. The question plan (opener plus three competency questions from the chosen track) is stored in `session.scenario` with a `current` index:
+
+```text
+QUESTION → PROBE → (next question) … → CLOSING → FEEDBACK
+```
+
+The candidate tells a story (`QUESTION`); the agent asks one probing follow-up about the STAR gap it sees (`PROBE`); the service then moves to the next question deterministically. After the last probe the interviewer asks for the candidate's questions (`CLOSING`), and the next reply completes the session. Signals are STAR-shaped (`situation`, `action`, `result`, `ownership`, `specificity`, `reflection`, `communication`); ownership and specificity come from pronoun and number counts in the candidate's own words, not from the model. Feedback maps the shared score keys to STAR structure, specificity, ownership, results, impact, communication, reflection, and follow-up handling.
+
+### Lesson visualizers
+
+Lesson markdown can mount a step-through visualizer with a one-line directive, `:::viz <id> {json params}`, placed where the concept is explained (usually "How It Works"). The renderer in `frontend/src/components/learn/markdown.tsx` maps the id through `components/learn/viz/registry.ts`; unknown ids render nothing, so old clients and typos never break a lesson. Each visualizer in `components/learn/viz/` is a `VizDefinition`: a `parse()` that normalizes inputs without throwing, a pure `steps(params)` that returns frames, and a `View` that only draws a frame's state. Every frame carries three sentences: what happened, and what the candidate should say at that moment, tagged as an invariant, decision, trade-off, setup, or result. The player (`viz-block.tsx`) is the only stateful piece: it holds the frame index and the editable inputs, steps with buttons, a scrubber, or arrow keys, and never autoplays. Because frames are pure data, the teaching content is unit-tested without a DOM. Shipped: sliding window, binary search (exact and boundary variants), BFS/DFS, cache-aside with LRU, and consistent hashing.
 
 ### System design simulator
 
@@ -168,6 +182,36 @@ On complete, `_build_feedback` mixes:
 Overall is a weighted blend (correctness 28%, approach 14%, understanding and coding 12% each, the rest 8–10%). Strengths, improvements, and a short interviewer-voiced summary are stored on `interview_sessions.feedback`.
 
 Transcripts keep the last 12 messages when calling Ollama.
+
+## Learn catalog
+
+Seven categories, seeded from `database/seeds/`. `learn.py` holds the category list, the
+shared `_topic`/`L` helpers, and the four compact tracks (Java, CS fundamentals, behavioral,
+plus the legacy helpers). The four full-depth tracks live in their own modules because each is
+a course rather than a glossary:
+
+| Module | Track | Topics / lessons |
+|---|---|---|
+| `learn_dsa.py`, `learn_dsa_patterns.py`, `learn_dsa_problems.py` | Data Structures & Algorithms | 30 / 81 |
+| `learn_system_design.py`, `learn_system_design_cases.py` | System Design | 24 / 60 |
+| `learn_ood.py` | Object-Oriented Design | 36 / 55 |
+| `learn_ai.py` | AI & Machine Learning | 16 / 70 |
+
+Each deep module exports one function (`dsa_core_topics()`, `system_design_topics()`,
+`ood_topics()`, `ai_topics()`) and builds lesson markdown from a lead paragraph plus
+`## heading` sections, raising on a duplicate heading inside a lesson.
+
+Two constraints bind every lesson. `frontend/src/components/learn/markdown.tsx` is a custom
+block renderer, not a markdown library: flat lists only, blockquote lines must each start with
+`> `, a literal `|` breaks a table cell, and a short single line containing `=` renders as a
+formula card. And `app/learn/service.py::_parse_lesson_sections` keys the AI tutor's context off
+exact `## ` headings (`Why It Matters`, `How It Works`, `Example`, `Common Use Cases`,
+`Trade-offs`, `Common Mistakes`, `Interview Tip`), so those headings appear on every lesson.
+
+Topic and lesson slugs are the match key for seeding, progress (`user_learning_progress` is keyed
+by `lesson_id`), deep links and search. Renaming one silently resets a learner's progress, so
+`ood_topics()` asserts that every slug from the original catalog still exists, and
+`backend/tests/test_learn.py` checks the same thing through the API.
 
 ## Ask AI (Learn tutor)
 

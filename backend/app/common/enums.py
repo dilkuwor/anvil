@@ -44,6 +44,7 @@ class Language(StrEnum):
 class InterviewKind(StrEnum):
     CODING = "CODING"
     SYSTEM_DESIGN = "SYSTEM_DESIGN"
+    BEHAVIORAL = "BEHAVIORAL"
 
 
 class InterviewPhase(StrEnum):
@@ -60,6 +61,9 @@ class InterviewPhase(StrEnum):
     SCALABILITY = "SCALABILITY"
     RELIABILITY = "RELIABILITY"
     TRADEOFFS = "TRADEOFFS"
+    QUESTION = "QUESTION"
+    PROBE = "PROBE"
+    CLOSING = "CLOSING"
     FEEDBACK = "FEEDBACK"
 
 
@@ -88,6 +92,7 @@ class NoteSourceType(StrEnum):
     LESSON = "LESSON"
     PROBLEM = "PROBLEM"
     SYSTEM_DESIGN = "SYSTEM_DESIGN"
+    BEHAVIORAL = "BEHAVIORAL"
 
 
 class NoteKind(StrEnum):

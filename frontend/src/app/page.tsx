@@ -31,6 +31,12 @@ const FEATURES = [
     href: "/system-design",
   },
   {
+    title: "Behavioral",
+    body: "Build a bank of STAR stories, then sit a mock loop where the interviewer probes each one.",
+    icon: MessageSquare,
+    href: "/behavioral",
+  },
+  {
     title: "AI & Machine Learning",
     body: "Prepare for modern AI interviews covering ML, LLMs, RAG, agents, and production AI.",
     icon: Sparkles,
@@ -38,9 +44,15 @@ const FEATURES = [
   },
   {
     title: "Mock Interviews",
-    body: "Simulate real interviews and receive structured feedback on your approach, communication, and solution.",
-    icon: MessageSquare,
+    body: "Coding, system design, and behavioral interviews with an AI interviewer and structured feedback.",
+    icon: Code2,
     href: "/problems",
+  },
+  {
+    title: "Cheat Sheets & Notes",
+    body: "One-page references for every topic, plus your own notes and STAR stories in one place.",
+    icon: ListChecks,
+    href: "/cheatsheets",
   },
 ];
 

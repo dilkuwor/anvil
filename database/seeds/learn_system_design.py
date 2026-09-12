@@ -2627,7 +2627,9 @@ The hit rate depends almost entirely on whether access is skewed. Most real work
                     ),
                     (
                         "How It Works",
-                        """### Where caches live
+                        """:::viz cache-aside {"ops": ["R:user1", "R:user1", "R:user2", "R:user3", "W:user1", "R:user1", "R:user2"], "capacity": 2, "writePolicy": "invalidate"}
+
+### Where caches live
 
 Every layer can cache, and they compound.
 
@@ -4135,7 +4137,9 @@ Two distinctions worth being precise about:
                     ),
                     (
                         "How It Works",
-                        """### Partitioning strategies
+                        """:::viz consistent-hashing {"nodes": ["N1", "N2", "N3"], "add": "N4", "virtual": 1}
+
+### Partitioning strategies
 
 | Strategy | How | Strength | Weakness |
 | --- | --- | --- | --- |

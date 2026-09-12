@@ -185,6 +185,23 @@ export function TopicView({ slug }: { slug: string }) {
             </div>
           )}
 
+          {data.category_slug === "behavioral" ? (
+            <div className="rounded-xl border border-steel-800/80 bg-steel-950/40 p-4 sm:p-5">
+              <SectionTitle>Practice</SectionTitle>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                See the question, the follow-ups, and what a strong answer contains, then save your STAR story for this competency.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button asChild size="sm" className="font-semibold">
+                  <Link href={`/behavioral#${data.slug}`}>Open in the question bank</Link>
+                </Button>
+                <Button asChild size="sm" variant="secondary" className="font-semibold">
+                  <Link href="/behavioral">Mock Interview</Link>
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           {/* Related Problems */}
           {showRelated ? (
             <div className="rounded-xl border border-steel-800/80 bg-steel-950/40 overflow-hidden">

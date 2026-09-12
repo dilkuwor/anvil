@@ -89,6 +89,27 @@ class StartSystemDesignRequest(BaseModel):
     scenario_slug: str = Field(min_length=1, max_length=80)
 
 
+class StartBehavioralRequest(BaseModel):
+    track: str = Field(default="general", min_length=1, max_length=40)
+
+
+class BehavioralQuestionOut(BaseModel):
+    slug: str
+    competency: str
+    competency_title: str
+    question: str
+    probes: list[str]
+    looking_for: list[str]
+    learn_slug: str
+
+
+class BehavioralTrackOut(BaseModel):
+    slug: str
+    title: str
+    summary: str
+    questions: list[str]
+
+
 class ArchitectureUpdateRequest(BaseModel):
     architecture: dict
 

@@ -13,6 +13,8 @@ export const queryKeys = {
   interview: (id: string) => ["interview", id] as const,
   activeInterview: (problemId: string) => ["interview-active", problemId] as const,
   designScenarios: ["system-design", "scenarios"] as const,
+  behavioralQuestions: ["behavioral", "questions"] as const,
+  behavioralTracks: ["behavioral", "tracks"] as const,
   designScenario: (slug: string) => ["system-design", "scenario", slug] as const,
   activeDesignInterview: (slug: string) => ["system-design-active", slug] as const,
   learnCategories: ["learn", "categories"] as const,

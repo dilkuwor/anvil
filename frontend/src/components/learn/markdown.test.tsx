@@ -230,3 +230,16 @@ The prose lead comes after the snippet.
     expect(lead?.textContent).toContain("The prose lead comes after the snippet.");
   });
 });
+
+describe("LessonMarkdown — visualizers", () => {
+  it("renders a :::viz directive as a step-through player and drops unknown ids", () => {
+    const { container } = render(
+      <LessonMarkdown content={'# T\n\nLead.\n\n## How It Works\n\n:::viz sliding-window {"array": [1,2,3], "target": 3}\n\n:::viz nope\n\nText after.\n'} />,
+    );
+    expect(container.querySelectorAll(".viz-block").length).toBe(1);
+    expect(container.textContent).toContain("Say this to the interviewer");
+    expect(container.textContent).toContain("Variable-size sliding window");
+    expect(container.textContent).not.toContain(":::viz");
+    expect(container.textContent).toContain("Text after.");
+  });
+});
