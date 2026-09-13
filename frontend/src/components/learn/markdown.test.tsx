@@ -243,3 +243,74 @@ describe("LessonMarkdown — visualizers", () => {
     expect(container.textContent).toContain("Text after.");
   });
 });
+
+describe("LessonMarkdown — mobile overflow", () => {
+  /**
+   * Lesson prose carries unbreakable tokens (API paths, Java call chains) far wider than a
+   * ~290px phone content box. Without wrapping they pushed the whole page sideways.
+   */
+  const LONG = "/v1/conversations/{id}/messages?after_seq=&limit=";
+
+  it("lets long unbreakable tokens wrap instead of widening the page", () => {
+    const { container } = render(
+      <LessonMarkdown
+        content={`# Endpoints
+
+Poll ${LONG} on reconnect.
+
+## How It Works
+
+- Client calls ${LONG} once per resume.
+
+1. Send ${LONG} with the last seq.
+`}
+      />,
+    );
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain("break-words");
+    expect(root.className).toContain("min-w-0");
+
+    // Flex/grid children default to min-width:auto, so the long token would still blow out
+    // the row unless every text cell opts into min-w-0.
+    for (const li of container.querySelectorAll("li")) {
+      const cell = li.querySelector("span:last-child");
+      if (cell && cell.textContent?.includes(LONG)) {
+        expect(cell.className).toContain("min-w-0");
+      }
+    }
+  });
+
+  it("keeps heading labels shrinkable next to their fixed-width icon", () => {
+    const { container } = render(
+      <LessonMarkdown content={"# T\n\nLead.\n\n## How It Works\n\n### A very long subheading that must wrap on a narrow phone screen\n\nBody.\n"} />,
+    );
+
+    for (const heading of container.querySelectorAll("h2, h3")) {
+      const spans = heading.querySelectorAll(":scope > span");
+      if (spans.length === 2) {
+        expect(spans[0].className).toContain("shrink-0");
+        expect(spans[1].className).toContain("min-w-0");
+      }
+    }
+  });
+
+  it("scrolls a wide table inside its own box rather than the page", () => {
+    const { container } = render(
+      <LessonMarkdown
+        content={`# T
+
+Lead.
+
+| Endpoint | Notes |
+| --- | --- |
+| ${LONG} | Resume cursor |
+`}
+      />,
+    );
+
+    const wrapper = container.querySelector("table")?.parentElement as HTMLElement;
+    expect(wrapper.className).toContain("overflow-x-auto");
+    expect(wrapper.className).toContain("max-w-full");
+  });
+});
