@@ -21,14 +21,14 @@ describe("AnvilMark", () => {
         <AnvilMark />
       </>,
     );
-    const ids = [...container.querySelectorAll("linearGradient, radialGradient")].map((el) => el.id);
+    const ids = [...container.querySelectorAll("linearGradient, radialGradient, clipPath")].map((el) => el.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("drops the tile and spark dots for the bare glyph", () => {
+  it("drops the tile for the bare glyph but keeps both halves of the slice", () => {
     const { container } = render(<AnvilMark variant="glyph" title="" />);
     expect(container.querySelectorAll("rect").length).toBe(0);
-    expect(container.querySelectorAll("circle").length).toBe(0);
+    expect(container.querySelectorAll("path").length).toBe(2);
     expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   });
 });
@@ -47,6 +47,6 @@ describe("anvilMarkSvg", () => {
     expect(anvilMarkSvg("tile")).toContain('rx="114"');
     expect(anvilMarkSvg("square")).toContain('rx="0"');
     expect(anvilMarkSvg("maskable")).toContain("scale(0.74)");
-    expect(anvilMarkSvg("glyph")).not.toContain("<rect");
+    expect(anvilMarkSvg("glyph")).not.toContain("url(#bg)");
   });
 });

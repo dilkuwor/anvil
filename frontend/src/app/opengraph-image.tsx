@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-import { ANVIL_BODY, ANVIL_FACE_SHADOW, ANVIL_SHEEN, BRAND, MARK_RADIUS, MARK_SIZE, SPARK, SPARK_DOTS } from "@/lib/brand";
+import { BRAND, MARK_LETTER, MARK_LOWER_CLIP, MARK_RADIUS, MARK_SIZE, MARK_UPPER_CLIP } from "@/lib/brand";
 
 export const alt = "Anvil — Build Skills. Break Limits. Ace the Interview.";
 export const size = { width: 1200, height: 630 };
@@ -34,25 +34,31 @@ export default function OpenGraphImage() {
                 <stop offset="0.5" stopColor={BRAND.orange} stopOpacity="0.08" />
                 <stop offset="1" stopColor={BRAND.orange} stopOpacity="0" />
               </radialGradient>
-              <linearGradient id="iron" x1="0.1" y1="0" x2="0.9" y2="1">
-                <stop offset="0" stopColor={BRAND.orangePale} />
-                <stop offset="0.4" stopColor={BRAND.orangeLight} />
-                <stop offset="1" stopColor={BRAND.orangeDeep} />
+              <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor={BRAND.cream} />
+                <stop offset="0.45" stopColor={BRAND.orangePale} />
+                <stop offset="1" stopColor={BRAND.orangeLight} />
               </linearGradient>
-              <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#ffffff" stopOpacity="0.6" />
-                <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+              <linearGradient id="bottom" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor={BRAND.orangeLight} />
+                <stop offset="0.6" stopColor={BRAND.orange} />
+                <stop offset="1" stopColor={BRAND.orangeDark} />
               </linearGradient>
+              <clipPath id="upper">
+                <polygon points={MARK_UPPER_CLIP} />
+              </clipPath>
+              <clipPath id="lower">
+                <polygon points={MARK_LOWER_CLIP} />
+              </clipPath>
             </defs>
             <rect width={MARK_SIZE} height={MARK_SIZE} rx={MARK_RADIUS} fill="url(#bg)" stroke="#2c2c36" strokeWidth={6} />
             <rect width={MARK_SIZE} height={MARK_SIZE} rx={MARK_RADIUS} fill="url(#glow)" />
-            <path fill="url(#iron)" d={ANVIL_BODY} />
-            <path fill="#000" opacity="0.16" d={ANVIL_FACE_SHADOW} />
-            <path fill="url(#sheen)" d={ANVIL_SHEEN} />
-            <path fill={BRAND.spark} d={SPARK} />
-            {SPARK_DOTS.map((dot) => (
-              <circle key={`${dot.cx}-${dot.cy}`} cx={dot.cx} cy={dot.cy} r={dot.r} fill={BRAND.sparkDim} opacity={dot.opacity} />
-            ))}
+            <g clipPath="url(#upper)">
+              <path fill="url(#top)" d={MARK_LETTER} />
+            </g>
+            <g clipPath="url(#lower)">
+              <path fill="url(#bottom)" d={MARK_LETTER} />
+            </g>
           </svg>
           <div style={{ color: "#f4f4f6", fontSize: 40, fontWeight: 700, letterSpacing: -0.5 }}>Anvil</div>
         </div>
