@@ -10,7 +10,17 @@ export type ComponentType =
   | "nosql"
   | "kafka"
   | "object_storage"
-  | "rate_limiter";
+  | "rate_limiter"
+  | "api_gateway"
+  | "websocket_gateway"
+  | "worker"
+  | "task_queue"
+  | "search_index"
+  | "geo_index"
+  | "id_generator"
+  | "analytics_store"
+  | "scheduler"
+  | "notification_gateway";
 
 export type ComponentCategory =
   | "clients"
@@ -20,7 +30,9 @@ export type ComponentCategory =
   | "database"
   | "messaging"
   | "storage"
-  | "reliability";
+  | "reliability"
+  | "search"
+  | "coordination";
 
 export type Difficulty = "beginner" | "intermediate" | "advanced" | "expert";
 
@@ -62,6 +74,8 @@ export type ComponentSimResult = {
   utilization: UtilizationMap;
   outgoing: OutgoingFlow[];
   notes: string[];
+  /** Config values the component changed for this run (e.g. autoscaled instance count). Cost follows these. */
+  effectiveConfig?: Record<string, ConfigValue>;
 };
 
 export type FieldSpec = {
@@ -80,6 +94,10 @@ export type FieldSpec = {
 export type SimContext = {
   difficulty: Difficulty;
   peakRps: number;
+  /** Simultaneous users holding a connection, for connection-bound components. */
+  concurrentUsers: number;
+  /** How many edges leave this node. A queue with consumers drawn hands off to them instead of modeling its own. */
+  outgoingEdges: number;
   failures: ActiveFailure[];
 };
 
@@ -108,6 +126,8 @@ export type WorkloadConfig = {
   avgResponseBytes: number;
   peakMultiplier: number;
   trafficGrowth: number;
+  /** Bytes persisted per write. Optional so older saved designs keep loading; defaults to 1 KB. */
+  avgRecordBytes?: number;
 };
 
 export type DerivedWorkload = {
@@ -119,6 +139,42 @@ export type DerivedWorkload = {
   writeRps: number;
   ingressBps: number;
   egressBps: number;
+  writesPerDay: number;
+  storageYearGb: number;
+  storageFiveYearGb: number;
+  cacheWorkingSetGb: number;
+};
+
+/** One line of the back-of-envelope worksheet, shown the way you would write it on a whiteboard. */
+export type EstimationStep = {
+  key: string;
+  label: string;
+  formula: string;
+  value: string;
+  note?: string;
+};
+
+export type ReviewArea = "requirements" | "scalability" | "reliability" | "performance" | "data" | "cost";
+
+export type ReviewStatus = "pass" | "warn" | "fail" | "info";
+
+export type ReviewCheck = {
+  id: string;
+  area: ReviewArea;
+  status: ReviewStatus;
+  title: string;
+  detail: string;
+  /** The follow-up an interviewer would ask about this point. */
+  interviewer: string;
+};
+
+export type DesignReview = {
+  score: number;
+  grade: "A" | "B" | "C" | "D";
+  summary: string;
+  estimatedAvailability: number;
+  weakestHop: { nodeId: string; label: string; availability: number } | null;
+  checks: ReviewCheck[];
 };
 
 export type SloConfig = {
@@ -153,6 +209,8 @@ export type DesignEdge = {
   source: string;
   target: string;
   label?: string;
+  /** Share (0–1) of the source's flow that takes this edge. Omitted means all of it. */
+  weight?: number;
 };
 
 export type SystemDesign = {
@@ -169,6 +227,8 @@ export type SystemDesign = {
 };
 
 export type NodeMetrics = {
+  label: string;
+  type: ComponentType;
   incomingRps: number;
   processedRps: number;
   droppedRps: number;
@@ -194,6 +254,8 @@ export type Bottleneck = {
   utilization: number;
   extraLatencyMs: number;
   why: string;
+  /** Concrete, numeric fix derived from the node's own config (e.g. how many instances to add). */
+  fix?: string;
   suggestions: string[];
 };
 
@@ -232,6 +294,8 @@ export type SimulationResult = {
     processedRps: number;
     droppedRps: number;
     rejectedRps: number;
+    /** Work lost behind a queue. It delays users instead of failing their requests, so it is not in the error rate. */
+    backlogRps: number;
   };
   latency: Latency;
   errorRate: number;
@@ -245,6 +309,8 @@ export type SimulationResult = {
   warnings: string[];
   timeline: TimelineSample[];
   criticalPath: { nodeId: string; label: string; ms: number }[];
+  estimate: EstimationStep[];
+  review: DesignReview;
 };
 
 export type SimulationRequest = {

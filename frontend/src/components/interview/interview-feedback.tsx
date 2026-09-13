@@ -3,7 +3,7 @@
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Button } from "@/components/ui/button";
 import { formatMemory, formatRuntime } from "@/lib/utils";
-import { DESIGN_SCORE_ROWS, formatScore, SCORE_ROWS, type InterviewSession } from "@/lib/interview";
+import { BEHAVIORAL_SCORE_ROWS, DESIGN_SCORE_ROWS, formatScore, SCORE_ROWS, type InterviewSession } from "@/lib/interview";
 
 export function InterviewFeedback({
   session,
@@ -16,7 +16,8 @@ export function InterviewFeedback({
 }) {
   const feedback = session.feedback;
   const design = session.kind === "SYSTEM_DESIGN";
-  const rows = design ? DESIGN_SCORE_ROWS : SCORE_ROWS;
+  const behavioral = session.kind === "BEHAVIORAL";
+  const rows = design ? DESIGN_SCORE_ROWS : behavioral ? BEHAVIORAL_SCORE_ROWS : SCORE_ROWS;
   if (!feedback) {
     return (
       <section className="flex h-full min-h-[22rem] flex-col justify-center overflow-auto rounded-2xl border border-steel-800 bg-steel-900 px-5 py-6 xl:min-h-0">
@@ -86,7 +87,7 @@ export function InterviewFeedback({
           <blockquote className="mt-2 text-sm leading-7 text-foreground">“{feedback.summary}”</blockquote>
         </section>
 
-        {design ? (
+        {design || behavioral ? (
           <p className="mt-5 text-[12px] text-muted-foreground">
             {feedback.objective.hints_used} hint{feedback.objective.hints_used === 1 ? "" : "s"}
           </p>
@@ -107,10 +108,10 @@ export function InterviewFeedback({
 
       <div className="flex flex-wrap gap-2 border-t border-steel-800 px-4 py-3">
         <Button variant="secondary" size="sm" onClick={onBack}>
-          {design ? "Back to Scenarios" : "Back to Problem"}
+          {design ? "Back to Scenarios" : behavioral ? "Back to Behavioral" : "Back to Problem"}
         </Button>
         <Button size="sm" onClick={onRetry}>
-          {design ? "Try Another Scenario" : "Try Another Mock Interview"}
+          {design ? "Try Another Scenario" : behavioral ? "Try Another Track" : "Try Another Mock Interview"}
         </Button>
       </div>
     </section>

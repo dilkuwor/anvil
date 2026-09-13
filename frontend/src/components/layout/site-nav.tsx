@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 export const SITE_NAV = [
   { href: "/problems", label: "Problems" },
   { href: "/system-design", label: "System Design" },
+  { href: "/behavioral", label: "Behavioral" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
   { href: "/notes", label: "Notes" },

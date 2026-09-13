@@ -1,7 +1,7 @@
 {
   "slug": "rate-limiter",
   "name": "Rate Limiter",
-  "summary": "Users → DNS → limiter → LB → API. Redis holds distributed counters; Postgres stores per-plan rules.",
+  "summary": "API clients → DNS → API gateway with the rate limiter → LB → API. Redis holds the distributed counters; Postgres stores per-plan rules; rejections stream to an analytics store.",
   "difficulty": "intermediate",
   "workload": {
     "dau": 5000000,
@@ -11,43 +11,87 @@
     "avg_request_bytes": 400,
     "avg_response_bytes": 400,
     "peak_multiplier": 6,
-    "traffic_growth": 0.2
+    "traffic_growth": 0.2,
+    "avg_record_bytes": 20
   },
   "slo": {
     "availability": 0.9999,
-    "p95_ms": 50,
-    "p99_ms": 120,
+    "p95_ms": 75,
+    "p99_ms": 150,
     "error_rate": 0.001,
     "rpo_seconds": 30,
     "rto_seconds": 60
   },
   "nodes": [
-    { "id": "users", "type": "client", "label": "API Clients", "x": 40, "y": 220 },
-    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 220, "config": { "latencyMs": 2, "qps": 100000 } },
+    {
+      "id": "users",
+      "type": "client",
+      "label": "API Clients",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 2,
+        "qps": 100000
+      }
+    },
+    {
+      "id": "gateway",
+      "type": "api_gateway",
+      "label": "API Gateway",
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 3,
+        "maxRps": 30000,
+        "authMs": 1,
+        "baseLatencyMs": 2
+      }
+    },
     {
       "id": "limiter",
       "type": "rate_limiter",
       "label": "Rate Limiter",
-      "x": 470, "y": 220,
-      "config": { "limitRps": 25000, "burst": 5000, "algorithm": "sliding_window", "storage": "redis", "latencyMs": 1 }
+      "x": 730,
+      "y": 230,
+      "config": {
+        "limitRps": 25000,
+        "burst": 5000,
+        "algorithm": "sliding_window",
+        "storage": "redis",
+        "latencyMs": 1
+      }
     },
     {
       "id": "lb",
       "type": "load_balancer",
       "label": "Load Balancer",
-      "x": 700, "y": 220,
-      "config": { "instances": 3, "maxRps": 30000, "algorithm": "round_robin" }
+      "x": 960,
+      "y": 230,
+      "config": {
+        "instances": 3,
+        "maxRps": 30000,
+        "algorithm": "round_robin",
+        "baseLatencyMs": 2
+      }
     },
     {
       "id": "api",
       "type": "api_server",
       "label": "Public API",
-      "x": 920, "y": 220,
+      "x": 1190,
+      "y": 230,
       "config": {
         "instances": 40,
         "vcpu": 4,
-        "avgLatencyMs": 6,
-        "p95LatencyMs": 16,
+        "avgLatencyMs": 4,
+        "p95LatencyMs": 10,
         "autoscaling": true,
         "minInstances": 16,
         "maxInstances": 80
@@ -57,23 +101,107 @@
       "id": "counters",
       "type": "redis",
       "label": "Counters",
-      "x": 1180, "y": 100,
-      "config": { "memoryGb": 32, "hitRatio": 0.99, "maxOps": 120000, "ttlSec": 60, "replicas": 1 }
+      "x": 1420,
+      "y": 80,
+      "config": {
+        "memoryGb": 32,
+        "hitRatio": 0.99,
+        "maxOps": 120000,
+        "ttlSec": 60,
+        "replicas": 1
+      }
     },
     {
       "id": "rules",
       "type": "postgresql",
       "label": "Quota Rules",
-      "x": 1180, "y": 280,
-      "config": { "vcpu": 4, "storageGb": 200, "readCapacity": 10000, "writeCapacity": 2000, "readReplicas": 1 }
+      "x": 1420,
+      "y": 230,
+      "config": {
+        "vcpu": 4,
+        "storageGb": 500,
+        "readCapacity": 10000,
+        "writeCapacity": 2000,
+        "readReplicas": 1,
+        "readLatencyMs": 3,
+        "writeLatencyMs": 6
+      }
+    },
+    {
+      "id": "events",
+      "type": "kafka",
+      "label": "Decision Events",
+      "x": 1420,
+      "y": 380,
+      "config": {
+        "brokers": 3,
+        "partitions": 12,
+        "consumers": 6,
+        "producerThroughput": 30000,
+        "consumerThroughput": 25000
+      }
+    },
+    {
+      "id": "audit",
+      "type": "analytics_store",
+      "label": "Limit Analytics",
+      "x": 1650,
+      "y": 380,
+      "config": {
+        "nodes": 2,
+        "retentionDays": 30,
+        "eventBytes": 120,
+        "eventsPerDay": 200000000
+      }
     }
   ],
   "edges": [
-    { "id": "e-users-dns", "source": "users", "target": "dns" },
-    { "id": "e-dns-rl", "source": "dns", "target": "limiter" },
-    { "id": "e-rl-lb", "source": "limiter", "target": "lb" },
-    { "id": "e-lb-api", "source": "lb", "target": "api" },
-    { "id": "e-api-counters", "source": "api", "target": "counters" },
-    { "id": "e-api-rules", "source": "api", "target": "rules" }
+    {
+      "id": "e-users-dns",
+      "source": "users",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-gateway",
+      "source": "dns",
+      "target": "gateway"
+    },
+    {
+      "id": "e-gateway-limiter",
+      "source": "gateway",
+      "target": "limiter"
+    },
+    {
+      "id": "e-limiter-lb",
+      "source": "limiter",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-api",
+      "source": "lb",
+      "target": "api"
+    },
+    {
+      "id": "e-api-counters",
+      "source": "api",
+      "target": "counters"
+    },
+    {
+      "id": "e-api-rules",
+      "source": "api",
+      "target": "rules",
+      "label": "plan changes",
+      "weight": 0.02
+    },
+    {
+      "id": "e-api-events",
+      "source": "api",
+      "target": "events"
+    },
+    {
+      "id": "e-events-audit",
+      "source": "events",
+      "target": "audit"
+    }
   ]
 }

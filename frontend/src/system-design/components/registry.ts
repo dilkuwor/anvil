@@ -25,9 +25,11 @@ export function kindsByCategory(): { category: ComponentKind["category"]; label:
     { category: "compute", label: "Compute" },
     { category: "cache", label: "Cache" },
     { category: "database", label: "Database" },
+    { category: "search", label: "Search & Analytics" },
     { category: "messaging", label: "Messaging" },
     { category: "storage", label: "Storage" },
     { category: "reliability", label: "Reliability" },
+    { category: "coordination", label: "Coordination" },
   ];
   return order
     .map((group) => ({ ...group, items: listKinds().filter((item) => item.category === group.category) }))

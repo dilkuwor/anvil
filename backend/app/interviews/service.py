@@ -38,6 +38,9 @@ PHASE_LABELS = {
     InterviewPhase.SCALABILITY.value: "Scalability",
     InterviewPhase.RELIABILITY.value: "Reliability",
     InterviewPhase.TRADEOFFS.value: "Trade-offs",
+    InterviewPhase.QUESTION.value: "Your Story",
+    InterviewPhase.PROBE.value: "Follow-up",
+    InterviewPhase.CLOSING.value: "Your Questions",
     InterviewPhase.FEEDBACK.value: "Feedback",
 }
 
@@ -122,6 +125,10 @@ def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content:
         from app.interviews import system_design
 
         return system_design.add_message(db, session, content)
+    if _is_behavioral(session):
+        from app.interviews import behavioral
+
+        return behavioral.add_message(db, session, content)
     problem = _get_problem(db, session.problem_id)
     text = content.strip()
     _add_message(session, InterviewMessageRole.CANDIDATE, text)
@@ -163,6 +170,10 @@ def request_hint(db: Session, session_id: UUID, user_id: UUID) -> InterviewSessi
         from app.interviews import system_design
 
         return system_design.request_hint(db, session)
+    if _is_behavioral(session):
+        from app.interviews import behavioral
+
+        return behavioral.request_hint(db, session)
     problem = _get_problem(db, session.problem_id)
     session.hints_used += 1
     _add_event(session, InterviewEventType.HINT, {"n": session.hints_used})
@@ -201,8 +212,8 @@ def record_execution_event(
 ) -> InterviewSession:
     session = get_session(db, session_id, user_id)
     _ensure_open(session)
-    if _is_system_design(session):
-        raise AppError("Execution events are not used in system design interviews.", status_code=400, code="bad_request")
+    if _is_system_design(session) or _is_behavioral(session):
+        raise AppError("Execution events are only used in coding interviews.", status_code=400, code="bad_request")
     problem = _get_problem(db, session.problem_id)
     accepted = status == "ACCEPTED"
 
@@ -293,7 +304,7 @@ def to_out(session: InterviewSession, problem: Problem | None = None) -> Intervi
         slug = session.problem.slug
         difficulty = session.problem.difficulty
     scenario = session.scenario if isinstance(getattr(session, "scenario", None), dict) else None
-    if _is_system_design(session) and scenario:
+    if (_is_system_design(session) or _is_behavioral(session)) and scenario:
         title = str(scenario.get("title") or title)
         slug = str(session.scenario_slug or scenario.get("slug") or slug)
         difficulty = str(scenario.get("difficulty") or difficulty)
@@ -369,6 +380,10 @@ def _complete(db: Session, session: InterviewSession, problem: Problem | None) -
         from app.interviews import system_design
 
         session.feedback = system_design.build_feedback(session)
+    elif _is_behavioral(session):
+        from app.interviews import behavioral
+
+        session.feedback = behavioral.build_feedback(session)
     else:
         if problem is None:
             raise AppError("Interview problem is missing.", status_code=500, code="internal_error")
@@ -403,7 +418,13 @@ def _agent(session: InterviewSession) -> MockInterviewAgent:
 
     db = object_session(session)
     user = db.get(User, session.user_id) if db is not None and session.user_id else None
-    kind = InterviewKind.SYSTEM_DESIGN if _is_system_design(session) else InterviewKind.CODING
+    kind = (
+        InterviewKind.SYSTEM_DESIGN
+        if _is_system_design(session)
+        else InterviewKind.BEHAVIORAL
+        if _is_behavioral(session)
+        else InterviewKind.CODING
+    )
     return MockInterviewAgent(get_llm_provider_for_user(user), kind=kind)
 
 
@@ -889,6 +910,10 @@ def _load_session(db: Session, session_id: UUID, user_id: UUID) -> InterviewSess
 
 def _is_system_design(session: InterviewSession) -> bool:
     return getattr(session, "kind", InterviewKind.CODING.value) == InterviewKind.SYSTEM_DESIGN.value
+
+
+def _is_behavioral(session: InterviewSession) -> bool:
+    return getattr(session, "kind", InterviewKind.CODING.value) == InterviewKind.BEHAVIORAL.value
 
 
 def _ensure_open(session: InterviewSession) -> None:

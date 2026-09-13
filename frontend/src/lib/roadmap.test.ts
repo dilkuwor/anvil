@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ProblemListItem } from "@/lib/api";
 import {
+  ROADMAP_TOPICS,
   fitRoadmapView,
   hydrateRoadmap,
   readableRoadmapScale,
@@ -110,5 +111,40 @@ describe("recommendNextTopic", () => {
     ]);
     const next = recommendNextTopic(topics);
     expect(next?.id).toBe("two-pointers");
+  });
+});
+
+describe("roadmap tag wiring", () => {
+  it("gives every node a non-empty related tag list that contains its filter tag", () => {
+    for (const topic of ROADMAP_TOPICS) {
+      expect(topic.relatedTags.length, `${topic.id} has no related tags`).toBeGreaterThan(0);
+      expect(topic.relatedTags, `${topic.id} filters on a tag it does not count`).toContain(
+        topic.filterTag,
+      );
+    }
+  });
+
+  it("does not reuse a topic's own subject tag on an unrelated node", () => {
+    // Each of these tags exists in the problem catalog and belongs to exactly one node.
+    const owners: Record<string, string> = {
+      "two-pointers": "two-pointers",
+      "sliding-window": "sliding-window",
+      "binary-search": "binary-search",
+      "linked-list": "linked-list",
+      intervals: "intervals",
+      greedy: "greedy",
+      trie: "tries",
+      heap: "heap",
+      backtracking: "backtracking",
+      "bit-manipulation": "bit-manipulation",
+      "union-find": "advanced-graphs",
+      math: "math-geometry",
+    };
+    for (const [tag, ownerId] of Object.entries(owners)) {
+      const holders = ROADMAP_TOPICS.filter((topic) => topic.relatedTags.includes(tag)).map(
+        (topic) => topic.id,
+      );
+      expect(holders, `${tag} should belong to ${ownerId} alone`).toEqual([ownerId]);
+    }
   });
 });

@@ -202,8 +202,11 @@ def _create_problem(db: Session, spec: dict) -> Problem:
         explanation=spec["explanation"],
         hints=spec["hints"],
         examples=spec["examples"],
+        time_complexity=spec["time_complexity"],
+        space_complexity=spec["space_complexity"],
         starter_code=spec["starter_code"],
         function_signature=spec["function_signature"],
+        reference_solution=spec["reference_solution"],
         is_active=True,
     )
     db.add(problem)

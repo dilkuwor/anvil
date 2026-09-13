@@ -12,9 +12,40 @@ export type InterviewPhase =
   | "SCALABILITY"
   | "RELIABILITY"
   | "TRADEOFFS"
+  | "QUESTION"
+  | "PROBE"
+  | "CLOSING"
   | "FEEDBACK";
 
-export type InterviewKind = "CODING" | "SYSTEM_DESIGN";
+export type InterviewKind = "CODING" | "SYSTEM_DESIGN" | "BEHAVIORAL";
+
+export type BehavioralQuestion = {
+  slug: string;
+  competency: string;
+  competency_title: string;
+  question: string;
+  probes: string[];
+  looking_for: string[];
+  learn_slug: string;
+};
+
+export type BehavioralTrack = {
+  slug: string;
+  title: string;
+  summary: string;
+  questions: string[];
+};
+
+/** Stored in `session.scenario` for behavioral interviews. */
+export type BehavioralPlan = {
+  slug: string;
+  title: string;
+  difficulty: string;
+  track: string;
+  summary: string;
+  questions: BehavioralQuestion[];
+  current: number;
+};
 
 export type InterviewMessage = {
   id: string;
@@ -64,7 +95,7 @@ export type InterviewSession = {
   difficulty: string;
   kind?: InterviewKind;
   scenario_slug?: string | null;
-  scenario?: SystemDesignScenario | null;
+  scenario?: SystemDesignScenario | BehavioralPlan | null;
   architecture?: ArchitectureGraph | null;
   phase: InterviewPhase;
   phase_label: string;
@@ -116,6 +147,22 @@ export const SCORE_ROWS: { key: keyof InterviewScores; label: string }[] = [
   { key: "complexity", label: "Complexity" },
   { key: "communication", label: "Communication" },
 ];
+
+export const BEHAVIORAL_SCORE_ROWS: { key: keyof InterviewScores; label: string }[] = [
+  { key: "understanding", label: "STAR Structure" },
+  { key: "approach", label: "Specificity" },
+  { key: "coding", label: "Ownership" },
+  { key: "correctness", label: "Results" },
+  { key: "complexity", label: "Impact" },
+  { key: "communication", label: "Communication" },
+  { key: "reasoning", label: "Reflection" },
+  { key: "follow_up", label: "Follow-ups" },
+];
+
+export function behavioralPlan(session: Pick<InterviewSession, "kind" | "scenario">): BehavioralPlan | null {
+  if (session.kind !== "BEHAVIORAL" || !session.scenario) return null;
+  return session.scenario as BehavioralPlan;
+}
 
 export const DESIGN_SCORE_ROWS: { key: keyof InterviewScores; label: string }[] = [
   { key: "understanding", label: "Requirements" },
@@ -182,6 +229,7 @@ export type SimulatorSample = {
     avg_response_bytes: number;
     peak_multiplier: number;
     traffic_growth: number;
+    avg_record_bytes?: number | null;
   };
   slo: {
     availability: number;
@@ -199,7 +247,7 @@ export type SimulatorSample = {
     y: number;
     config?: Record<string, string | number | boolean>;
   }[];
-  edges: { id: string; source: string; target: string; label?: string | null }[];
+  edges: { id: string; source: string; target: string; label?: string | null; weight?: number | null }[];
 };
 
 export type SystemDesignScenario = {

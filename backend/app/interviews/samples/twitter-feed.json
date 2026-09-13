@@ -1,7 +1,7 @@
 {
   "slug": "twitter-feed",
   "name": "Twitter",
-  "summary": "Users → DNS → LB → Timeline API. Redis holds the home timeline, NoSQL stores tweets, Postgres the follow graph, Kafka fans out new posts.",
+  "summary": "Users → DNS → LB → Timeline API. Redis holds the home timeline, NoSQL stores tweets, Postgres the follow graph, Kafka → fan-out workers write timelines and feed tweet search.",
   "difficulty": "advanced",
   "workload": {
     "dau": 100000000,
@@ -11,7 +11,8 @@
     "avg_request_bytes": 800,
     "avg_response_bytes": 4000,
     "peak_multiplier": 5,
-    "traffic_growth": 0.2
+    "traffic_growth": 0.2,
+    "avg_record_bytes": 500
   },
   "slo": {
     "availability": 0.9999,
@@ -22,20 +23,42 @@
     "rto_seconds": 180
   },
   "nodes": [
-    { "id": "users", "type": "client", "label": "Users", "x": 40, "y": 260 },
-    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 260, "config": { "latencyMs": 3, "qps": 400000 } },
+    {
+      "id": "users",
+      "type": "client",
+      "label": "Users",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 3,
+        "qps": 400000
+      }
+    },
     {
       "id": "lb",
       "type": "load_balancer",
       "label": "Load Balancer",
-      "x": 500, "y": 260,
-      "config": { "instances": 8, "maxRps": 200000, "algorithm": "least_connections" }
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 8,
+        "maxRps": 200000,
+        "algorithm": "least_connections"
+      }
     },
     {
       "id": "api",
       "type": "api_server",
       "label": "Timeline API",
-      "x": 760, "y": 260,
+      "x": 730,
+      "y": 230,
       "config": {
         "instances": 160,
         "vcpu": 8,
@@ -47,41 +70,190 @@
       }
     },
     {
+      "id": "ids",
+      "type": "id_generator",
+      "label": "Tweet IDs",
+      "x": 960,
+      "y": 80,
+      "config": {
+        "instances": 4,
+        "scheme": "snowflake"
+      }
+    },
+    {
       "id": "timeline",
       "type": "redis",
       "label": "Home Timeline",
-      "x": 1060, "y": 60,
-      "config": { "memoryGb": 256, "hitRatio": 0.94, "maxOps": 250000, "replicas": 2 }
+      "x": 960,
+      "y": 230,
+      "config": {
+        "memoryGb": 256,
+        "hitRatio": 0.94,
+        "maxOps": 300000,
+        "replicas": 2
+      }
     },
     {
       "id": "tweets",
       "type": "nosql",
       "label": "Tweet Store",
-      "x": 1060, "y": 220,
-      "config": { "vcpu": 16, "storageGb": 8000, "readCapacity": 80000, "writeCapacity": 25000, "readReplicas": 4 }
+      "x": 960,
+      "y": 380,
+      "config": {
+        "vcpu": 16,
+        "storageGb": 40000,
+        "readCapacity": 80000,
+        "writeCapacity": 25000,
+        "replicationFactor": 3,
+        "iops": 60000
+      }
     },
     {
       "id": "graph",
       "type": "postgresql",
       "label": "Follow Graph",
-      "x": 1060, "y": 380,
-      "config": { "vcpu": 12, "storageGb": 4000, "readCapacity": 40000, "writeCapacity": 8000, "readReplicas": 3 }
+      "x": 960,
+      "y": 530,
+      "config": {
+        "vcpu": 12,
+        "storageGb": 4000,
+        "readCapacity": 40000,
+        "writeCapacity": 8000,
+        "readReplicas": 3,
+        "iops": 30000
+      }
+    },
+    {
+      "id": "search",
+      "type": "search_index",
+      "label": "Tweet Search",
+      "x": 1190,
+      "y": 80,
+      "config": {
+        "nodes": 8,
+        "replicas": 1,
+        "shards": 16,
+        "queryCapacity": 5000,
+        "indexLagSec": 3,
+        "documents": 5000000000,
+        "docBytes": 400
+      }
     },
     {
       "id": "fanout",
       "type": "kafka",
       "label": "Fan-out",
-      "x": 1060, "y": 540,
-      "config": { "brokers": 9, "partitions": 72, "consumers": 24, "producerThroughput": 80000, "consumerThroughput": 70000 }
+      "x": 960,
+      "y": 680,
+      "config": {
+        "brokers": 9,
+        "partitions": 72,
+        "consumers": 24,
+        "producerThroughput": 80000,
+        "consumerThroughput": 70000
+      }
+    },
+    {
+      "id": "workers",
+      "type": "worker",
+      "label": "Fan-out Workers",
+      "x": 1190,
+      "y": 680,
+      "config": {
+        "instances": 80,
+        "concurrency": 16,
+        "jobMs": 40,
+        "idempotent": true
+      }
+    },
+    {
+      "id": "push",
+      "type": "notification_gateway",
+      "label": "Push",
+      "x": 1420,
+      "y": 680,
+      "config": {
+        "providerRateLimit": 800,
+        "batchSize": 100,
+        "channel": "push"
+      }
     }
   ],
   "edges": [
-    { "id": "e-users-dns", "source": "users", "target": "dns" },
-    { "id": "e-dns-lb", "source": "dns", "target": "lb" },
-    { "id": "e-lb-api", "source": "lb", "target": "api" },
-    { "id": "e-api-timeline", "source": "api", "target": "timeline" },
-    { "id": "e-api-tweets", "source": "api", "target": "tweets" },
-    { "id": "e-api-graph", "source": "api", "target": "graph" },
-    { "id": "e-api-fanout", "source": "api", "target": "fanout" }
+    {
+      "id": "e-users-dns",
+      "source": "users",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-lb",
+      "source": "dns",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-api",
+      "source": "lb",
+      "target": "api"
+    },
+    {
+      "id": "e-api-ids",
+      "source": "api",
+      "target": "ids"
+    },
+    {
+      "id": "e-api-timeline",
+      "source": "api",
+      "target": "timeline"
+    },
+    {
+      "id": "e-api-tweets",
+      "source": "api",
+      "target": "tweets"
+    },
+    {
+      "id": "e-api-graph",
+      "source": "api",
+      "target": "graph",
+      "label": "follows",
+      "weight": 0.15
+    },
+    {
+      "id": "e-api-search",
+      "source": "api",
+      "target": "search",
+      "label": "search queries",
+      "weight": 0.05
+    },
+    {
+      "id": "e-api-fanout",
+      "source": "api",
+      "target": "fanout"
+    },
+    {
+      "id": "e-fanout-workers",
+      "source": "fanout",
+      "target": "workers"
+    },
+    {
+      "id": "e-workers-timeline",
+      "source": "workers",
+      "target": "timeline",
+      "label": "timeline writes",
+      "weight": 1.0
+    },
+    {
+      "id": "e-workers-search",
+      "source": "workers",
+      "target": "search",
+      "label": "index",
+      "weight": 1.0
+    },
+    {
+      "id": "e-workers-push",
+      "source": "workers",
+      "target": "push",
+      "label": "mentions",
+      "weight": 0.1
+    }
   ]
 }

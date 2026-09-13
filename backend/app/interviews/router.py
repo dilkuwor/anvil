@@ -5,15 +5,18 @@ from sqlalchemy.orm import Session
 
 from app.common.database import get_db
 from app.common.deps import get_current_user
-from app.interviews import service
+from app.interviews import behavioral, service
 from app.interviews import system_design
 from app.interviews.scenarios import list_scenarios, public_catalog_item
 from app.interviews.schemas import (
     ActiveInterviewResponse,
     ArchitectureUpdateRequest,
+    BehavioralQuestionOut,
+    BehavioralTrackOut,
     InterviewEventRequest,
     InterviewMessageRequest,
     InterviewSessionOut,
+    StartBehavioralRequest,
     StartInterviewRequest,
     StartSystemDesignRequest,
     SystemDesignScenarioOut,
@@ -72,6 +75,38 @@ def get_active_system_design_interview(
     current_user: User = Depends(get_current_user),
 ) -> ActiveInterviewResponse:
     session = system_design.get_active_session(db, current_user.id, scenario_slug)
+    if session is None or session.ended_at is not None:
+        return ActiveInterviewResponse(session=None)
+    return ActiveInterviewResponse(session=service.serialize(db, session))
+
+
+@router.get("/behavioral/questions", response_model=list[BehavioralQuestionOut])
+def list_behavioral_questions() -> list[BehavioralQuestionOut]:
+    return [BehavioralQuestionOut.model_validate(item) for item in behavioral.list_questions()]
+
+
+@router.get("/behavioral/tracks", response_model=list[BehavioralTrackOut])
+def list_behavioral_tracks() -> list[BehavioralTrackOut]:
+    return [BehavioralTrackOut.model_validate(item) for item in behavioral.list_tracks()]
+
+
+@router.post("/behavioral", response_model=InterviewSessionOut)
+def start_behavioral_interview(
+    payload: StartBehavioralRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InterviewSessionOut:
+    session = behavioral.start_session(db, current_user.id, payload.track)
+    return service.serialize(db, session)
+
+
+@router.get("/behavioral/active", response_model=ActiveInterviewResponse)
+def get_active_behavioral_interview(
+    track: str = Query("general"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ActiveInterviewResponse:
+    session = behavioral.get_active_session(db, current_user.id, track)
     if session is None or session.ended_at is not None:
         return ActiveInterviewResponse(session=None)
     return ActiveInterviewResponse(session=service.serialize(db, session))

@@ -31,6 +31,7 @@ export function SimulatorCanvas({
   onGraph,
   selectedId,
   onSelect,
+  onSelectEdge,
   onDuplicate,
   onToggleDisabled,
   onDelete,
@@ -41,6 +42,7 @@ export function SimulatorCanvas({
   onGraph: (nodes: DesignNode[], edges: DesignEdge[]) => void;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  onSelectEdge: (id: string | null) => void;
   onDuplicate: (id: string) => void;
   onToggleDisabled: (id: string) => void;
   onDelete: (id: string) => void;
@@ -82,7 +84,11 @@ export function SimulatorCanvas({
         data: { ...node.data, metrics: result?.nodes[node.id] },
       })),
     );
-    setEdges(toRfEdges(designEdges, result));
+    // Keep whatever the user has selected; this only refreshes labels.
+    setEdges((current) => {
+      const selected = new Set(current.filter((edge) => edge.selected).map((edge) => edge.id));
+      return toRfEdges(designEdges, result).map((edge) => ({ ...edge, selected: selected.has(edge.id) }));
+    });
   }, [metricsKey, result, designEdges, setNodes, setEdges]);
 
   const [menu, setMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -140,19 +146,22 @@ export function SimulatorCanvas({
           setMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
         }}
         onPaneClick={() => setMenu(null)}
-        onSelectionChange={({ nodes: selected }) => {
+        onSelectionChange={({ nodes: selected, edges: selectedEdges }) => {
           const id = selected[0]?.id ?? null;
           if (id !== selectedRef.current) onSelect(id);
+          onSelectEdge(id ? null : (selectedEdges[0]?.id ?? null));
         }}
         onConnect={(connection: Connection) => {
           const next = addEdge({ ...connection, id: uid("e") }, edges);
           setEdges(next);
           const { designNodes: current, onGraph: emit } = designRef.current;
+          const known = new Map(designRef.current.designEdges.map((edge) => [edge.id, edge]));
           emit(current, next.map((edge) => ({
             id: edge.id,
             source: edge.source,
             target: edge.target,
-            label: typeof edge.label === "string" ? edge.label : undefined,
+            label: known.get(edge.id)?.label,
+            weight: known.get(edge.id)?.weight,
           })));
         }}
         onNodesDelete={(deleted) => {
@@ -205,7 +214,7 @@ export function SimulatorCanvas({
 function graphSignature(nodes: DesignNode[], edges: DesignEdge[], result: SimulationResult | null): string {
   return [
     nodes.map((node) => `${node.id}:${node.label}:${node.type}:${node.disabled ? "off" : "on"}`).join(","),
-    edges.map((edge) => `${edge.id}:${edge.source}:${edge.target}`).join(","),
+    edges.map((edge) => `${edge.id}:${edge.source}:${edge.target}:${edge.weight ?? 1}:${edge.label ?? ""}`).join(","),
     result?.timestamp ?? "",
   ].join("|");
 }
@@ -227,11 +236,13 @@ function toRfNodes(nodes: DesignNode[], result: SimulationResult | null): Archit
 function toRfEdges(edges: DesignEdge[], result: SimulationResult | null): Edge[] {
   return edges.map((edge) => {
     const metrics = result?.edges[edge.id];
+    const share = edge.weight != null && edge.weight < 1 ? `${Math.round(edge.weight * 100)}%` : undefined;
+    const idle = [edge.label, share].filter(Boolean).join(" · ") || undefined;
     return {
       id: edge.id,
       source: edge.source,
       target: edge.target,
-      label: metrics ? formatRps(metrics.rps) : edge.label,
+      label: metrics ? (share ? `${formatRps(metrics.rps)} (${share})` : formatRps(metrics.rps)) : idle,
       style: { stroke: "var(--steel-600)" },
       labelStyle: { fill: "var(--muted-foreground)", fontSize: 10 },
     };

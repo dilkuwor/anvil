@@ -3810,7 +3810,9 @@ Expand right → update summary → while invalid, contract left → record answ
                     ),
                     (
                         "How It Works",
-                        """### Fixed-size window
+                        """:::viz sliding-window {"array": [2, 3, 1, 2, 4, 3], "target": 7}
+
+### Fixed-size window
 
 ```java
 // Maximum sum of any k consecutive elements
@@ -5262,7 +5264,9 @@ Every standard variant is a choice of predicate:
                     ),
                     (
                         "How It Works",
-                        """### The one template to memorise
+                        """:::viz binary-search {"array": [1, 3, 4, 4, 4, 7, 9, 12, 15], "target": 4, "variant": "first"}
+
+### The one template to memorise
 
 ```java
 // Returns the first index in [0, n] where predicate(i) is true.

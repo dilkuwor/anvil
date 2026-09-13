@@ -1,28 +1,38 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { getKind, visibleFields } from "../components/registry";
-import type { ConfigValue, DesignNode, Difficulty, NodeMetrics } from "../models/types";
+import type { ConfigValue, DesignEdge, DesignNode, Difficulty, EdgeMetrics, NodeMetrics } from "../models/types";
 import { formatMs, formatPct, formatRps } from "../utils/format";
 import { KindIcon } from "./icons";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export function Inspector({
   node,
+  edge,
+  edgeEnds,
+  edgeMetrics,
   metrics,
   difficulty,
   onChange,
   onRename,
+  onEdgeChange,
 }: {
   node: DesignNode | null;
+  edge?: DesignEdge | null;
+  edgeEnds?: { source: string; target: string };
+  edgeMetrics?: EdgeMetrics;
   metrics?: NodeMetrics;
   difficulty: Difficulty;
   onChange: (key: string, value: ConfigValue) => void;
   onRename: (label: string) => void;
+  onEdgeChange?: (patch: Partial<Pick<DesignEdge, "label" | "weight">>) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(true);
   const kind = node ? getKind(node.type) : null;
 
   if (!open) {
@@ -45,6 +55,48 @@ export function Inspector({
         <span className="mt-2 rotate-180 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground [writing-mode:vertical-rl]">
           Inspector
         </span>
+      </aside>
+    );
+  }
+
+  if (!node && edge && onEdgeChange) {
+    const share = edge.weight ?? 1;
+    return (
+      <aside className="flex h-full w-[280px] shrink-0 flex-col border-l border-steel-800 bg-steel-900 transition-[width] duration-200 ease-out">
+        <div className="border-b border-steel-800 px-4 py-3">
+          <InspectorHeader open onToggle={() => setOpen(false)} />
+          <div className="mt-2 text-[13px] font-medium">
+            {edgeEnds?.source ?? edge.source} → {edgeEnds?.target ?? edge.target}
+          </div>
+          <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
+            Connection. Share sets how much of the source’s flow takes this edge, so one API can send all reads to a cache and 5% of
+            them to search.
+          </p>
+        </div>
+        <div className="space-y-3 px-4 py-3">
+          <label className="block">
+            <span className="text-[11px] text-muted-foreground">Share of flow · {Math.round(share * 100)}%</span>
+            <input
+              type="range"
+              min={0.01}
+              max={1}
+              step={0.01}
+              value={share}
+              className="mt-1 w-full"
+              aria-label="Share of flow"
+              onChange={(event) => onEdgeChange({ weight: Number(event.target.value) >= 1 ? undefined : Number(event.target.value) })}
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted-foreground">Label</span>
+            <Input className="mt-1 h-8" value={edge.label ?? ""} placeholder="e.g. search queries" onChange={(event) => onEdgeChange({ label: event.target.value || undefined })} />
+          </label>
+          {edgeMetrics ? (
+            <dl className="space-y-1 text-[12px]">
+              <Row label="Last run" value={`${formatRps(edgeMetrics.rps)} rps`} />
+            </dl>
+          ) : null}
+        </div>
       </aside>
     );
   }
@@ -74,6 +126,41 @@ export function Inspector({
         <p className="mt-2 text-[12px] leading-5 text-muted-foreground">{kind.description}</p>
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-auto px-4 py-3">
+        <section className="rounded-lg border border-steel-800 bg-background/40">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+            aria-expanded={notesOpen}
+            onClick={() => setNotesOpen((value) => !value)}
+          >
+            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Interview notes</span>
+            <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", !notesOpen && "-rotate-90")} />
+          </button>
+          {notesOpen ? (
+            <div className="space-y-2.5 px-3 pb-3 text-[11px] leading-5">
+              <p className="text-foreground/90">{kind.interview.whenToUse}</p>
+              <div>
+                <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Trade-offs to say out loud</div>
+                <ul className="mt-1 space-y-1 text-muted-foreground">
+                  {kind.interview.tradeoffs.map((item) => (
+                    <li key={item} className="flex gap-2">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Expect to be asked</div>
+                <ul className="mt-1 space-y-1 italic text-foreground/80">
+                  {kind.interview.questions.map((item) => (
+                    <li key={item}>“{item}”</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+        </section>
         {groups.map((group) => (
           <section key={group.title}>
             <h3 className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{group.title}</h3>

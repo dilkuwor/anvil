@@ -326,7 +326,8 @@ public final class Helpers {
     public static String formatTreeNode(TreeNode root) {
         if (root == null) return "[]";
         List<String> out = new ArrayList<>();
-        Queue<TreeNode> q = new ArrayDeque<>();
+        // LinkedList, not ArrayDeque: null children are enqueued on purpose as level-order holes.
+        Queue<TreeNode> q = new LinkedList<>();
         q.add(root);
         while (!q.isEmpty()) {
             TreeNode node = q.poll();
@@ -422,21 +423,25 @@ public final class Helpers {
         List<String> out = new ArrayList<>();
         if (t.isEmpty()) return out;
         boolean quote = false;
+        boolean quoted = false;
         StringBuilder cur = new StringBuilder();
         for (int i = 0; i < t.length(); i++) {
             char c = t.charAt(i);
             if (c == '"' && (i == 0 || t.charAt(i - 1) != '\\')) {
                 quote = !quote;
+                quoted = true;
                 continue;
             }
             if (c == ',' && !quote) {
                 out.add(unescape(cur.toString().trim()));
                 cur.setLength(0);
+                quoted = false;
                 continue;
             }
             cur.append(c);
         }
-        if (cur.length() > 0) out.add(unescape(cur.toString().trim()));
+        // `quoted` keeps a trailing empty element: ["a",""] must parse as two strings, not one.
+        if (quoted || cur.length() > 0) out.add(unescape(cur.toString().trim()));
         return out;
     }
 
@@ -524,6 +529,15 @@ _PARSE_MAP = {
 }
 
 
+# Helpers.format() dispatches on the runtime class, so a null reference always renders as
+# "null". Linked lists and trees are expected to render as "[]" when empty, so the generated
+# Main calls the type-specific formatter for those returns instead.
+_FORMAT_MAP = {
+    "ListNode": "Helpers.formatListNode",
+    "TreeNode": "Helpers.formatTreeNode",
+}
+
+
 def sanitize_source(source: str) -> str:
     """Strip package declarations so user code stays in the sandbox workspace."""
     lines = []
@@ -559,13 +573,14 @@ def generate_main(signature: dict) -> str:
     if return_type == "void":
         invoke = f"        {call};\n        System.out.print(\"\");"
     else:
-        invoke = f"        {return_type} result = {call};\n        System.out.print(Helpers.format(result));"
+        formatter = _FORMAT_MAP.get(return_type, "Helpers.format")
+        invoke = f"        {return_type} result = {call};\n        System.out.print({formatter}(result));"
 
     return f"""
 import java.util.*;
 
 public class Main {{
-    public static void main(String[] args) throws Exception {{
+    public static void main(String[] cliArgs) throws Exception {{
         Scanner sc = new Scanner(System.in);
         {class_name} sol = new {class_name}();
 {chr(10).join(parse_lines)}

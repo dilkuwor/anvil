@@ -3,7 +3,7 @@ import type { DesignNode, StorageBreakdown, WorkloadConfig } from "../models/typ
 
 export function estimateStorage(nodes: DesignNode[], workload: WorkloadConfig): StorageBreakdown[] {
   return nodes
-    .filter((node) => ["postgresql", "mysql", "nosql", "object_storage", "kafka", "redis"].includes(node.type))
+    .filter((node) => ["postgresql", "mysql", "nosql", "object_storage", "kafka", "redis", "search_index", "analytics_store"].includes(node.type))
     .map((node) => breakdown(node, workload));
 }
 
@@ -37,6 +37,42 @@ function breakdown(node: DesignNode, workload: WorkloadConfig): StorageBreakdown
       backupGb: 0,
       compressedGb: replica * 0.8,
       assumptions: [`Retention ${num(c, "retentionHours", 72)}h at peak produce rate.`],
+    };
+  }
+  if (node.type === "search_index") {
+    const raw = (num(c, "documents", 100_000_000) * num(c, "docBytes", 1_000)) / 1_000_000_000;
+    const index = raw * 0.4;
+    const replica = (raw + index) * (1 + num(c, "replicas", 1));
+    return {
+      nodeId: node.id,
+      label: node.label,
+      rawGb: raw,
+      indexGb: index,
+      replicaGb: replica,
+      backupGb: 0,
+      compressedGb: replica,
+      assumptions: [
+        `${num(c, "documents", 100_000_000).toLocaleString()} docs × ${num(c, "docBytes", 1_000)} B, inverted index ≈ 40% on top, ${num(c, "replicas", 1)} replica${num(c, "replicas", 1) === 1 ? "" : "s"} per shard.`,
+        "Derived data: rebuildable from the primary store, so no backups counted.",
+      ],
+    };
+  }
+  if (node.type === "analytics_store") {
+    const raw = (num(c, "eventsPerDay", 100_000_000) * num(c, "eventBytes", 200) * num(c, "retentionDays", 90)) / 1_000_000_000;
+    const replica = raw * Math.max(1, num(c, "replicationFactor", 2));
+    const compressed = replica * num(c, "compression", 0.3);
+    return {
+      nodeId: node.id,
+      label: node.label,
+      rawGb: raw,
+      indexGb: 0,
+      replicaGb: replica,
+      backupGb: 0,
+      compressedGb: compressed,
+      assumptions: [
+        `${num(c, "eventsPerDay", 100_000_000).toLocaleString()} events/day × ${num(c, "eventBytes", 200)} B × ${num(c, "retentionDays", 90)} days retention.`,
+        `Columnar compression ${num(c, "compression", 0.3)}×; retention is the cost lever.`,
+      ],
     };
   }
   if (node.type === "redis") {

@@ -1,7 +1,7 @@
 {
   "slug": "web-crawler",
   "name": "Web Crawler",
-  "summary": "Ops/seeds → DNS → LB → Crawler API. Redis dedups URLs, Kafka is the frontier, object storage holds pages, Postgres tracks crawl metadata.",
+  "summary": "Operators seed URLs through the crawl API; a recrawl scheduler tops up the Kafka frontier. Fetch workers dedup against Redis, store pages in object storage, update crawl metadata, and index pages for search.",
   "difficulty": "intermediate",
   "workload": {
     "dau": 1000000,
@@ -9,9 +9,10 @@
     "requests_per_user_day": 80,
     "read_ratio": 0.25,
     "avg_request_bytes": 2000,
-    "avg_response_bytes": 40000,
+    "avg_response_bytes": 2000,
     "peak_multiplier": 2,
-    "traffic_growth": 0.15
+    "traffic_growth": 0.15,
+    "avg_record_bytes": 2000
   },
   "slo": {
     "availability": 0.99,
@@ -22,66 +23,211 @@
     "rto_seconds": 600
   },
   "nodes": [
-    { "id": "users", "type": "client", "label": "Seeds / Workers", "x": 40, "y": 240 },
-    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 240, "config": { "latencyMs": 5, "qps": 50000 } },
+    {
+      "id": "users",
+      "type": "client",
+      "label": "Operators / Seed API",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 5,
+        "qps": 50000
+      }
+    },
     {
       "id": "lb",
       "type": "load_balancer",
       "label": "Load Balancer",
-      "x": 480, "y": 240,
-      "config": { "instances": 3, "maxRps": 10000, "algorithm": "round_robin" }
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 2,
+        "maxRps": 10000,
+        "algorithm": "round_robin"
+      }
     },
     {
       "id": "crawler",
       "type": "api_server",
-      "label": "Crawler Workers",
-      "x": 720, "y": 240,
+      "label": "Crawl API",
+      "x": 730,
+      "y": 230,
       "config": {
-        "instances": 16,
+        "instances": 12,
         "vcpu": 4,
         "avgLatencyMs": 15,
         "p95LatencyMs": 40,
         "autoscaling": true,
-        "minInstances": 8,
-        "maxInstances": 48
+        "minInstances": 6,
+        "maxInstances": 24
+      }
+    },
+    {
+      "id": "cron",
+      "type": "scheduler",
+      "label": "Recrawl Scheduler",
+      "x": 730,
+      "y": 380,
+      "config": {
+        "instances": 2,
+        "jobsPerSec": 2000,
+        "leaderElection": true,
+        "bytesPerJob": 200
+      }
+    },
+    {
+      "id": "frontier",
+      "type": "kafka",
+      "label": "URL Frontier",
+      "x": 960,
+      "y": 380,
+      "config": {
+        "brokers": 5,
+        "partitions": 48,
+        "consumers": 16,
+        "producerThroughput": 30000,
+        "consumerThroughput": 25000
+      }
+    },
+    {
+      "id": "fetchers",
+      "type": "worker",
+      "label": "Fetch Workers",
+      "x": 1190,
+      "y": 380,
+      "config": {
+        "instances": 80,
+        "concurrency": 32,
+        "jobMs": 400,
+        "idempotent": true,
+        "maxRetries": 2
       }
     },
     {
       "id": "seen",
       "type": "redis",
       "label": "Seen URLs",
-      "x": 1000, "y": 60,
-      "config": { "memoryGb": 64, "hitRatio": 0.85, "maxOps": 60000, "ttlSec": 86400, "replicas": 1 }
-    },
-    {
-      "id": "frontier",
-      "type": "kafka",
-      "label": "URL Frontier",
-      "x": 1000, "y": 200,
-      "config": { "brokers": 5, "partitions": 48, "consumers": 16, "producerThroughput": 30000, "consumerThroughput": 25000 }
+      "x": 1420,
+      "y": 80,
+      "config": {
+        "memoryGb": 64,
+        "hitRatio": 0.85,
+        "maxOps": 60000,
+        "ttlSec": 86400,
+        "replicas": 1
+      }
     },
     {
       "id": "pages",
       "type": "object_storage",
       "label": "Page Store",
-      "x": 1000, "y": 340,
-      "config": { "capacityTb": 80, "avgObjectKb": 128, "readRps": 8000, "writeRps": 6000 }
+      "x": 1420,
+      "y": 230,
+      "config": {
+        "capacityTb": 80,
+        "avgObjectKb": 128,
+        "readRps": 8000,
+        "writeRps": 6000
+      }
     },
     {
       "id": "meta",
       "type": "postgresql",
       "label": "Crawl Meta",
-      "x": 1000, "y": 480,
-      "config": { "vcpu": 8, "storageGb": 2000, "readCapacity": 8000, "writeCapacity": 6000, "readReplicas": 1 }
+      "x": 1420,
+      "y": 380,
+      "config": {
+        "vcpu": 16,
+        "storageGb": 4000,
+        "readCapacity": 12000,
+        "writeCapacity": 12000,
+        "readReplicas": 1,
+        "iops": 40000
+      }
+    },
+    {
+      "id": "index",
+      "type": "search_index",
+      "label": "Page Index",
+      "x": 1420,
+      "y": 530,
+      "config": {
+        "nodes": 6,
+        "replicas": 1,
+        "shards": 12,
+        "queryCapacity": 3000,
+        "indexLagSec": 60,
+        "documents": 1000000000,
+        "docBytes": 2000
+      }
     }
   ],
   "edges": [
-    { "id": "e-users-dns", "source": "users", "target": "dns" },
-    { "id": "e-dns-lb", "source": "dns", "target": "lb" },
-    { "id": "e-lb-crawler", "source": "lb", "target": "crawler" },
-    { "id": "e-crawler-seen", "source": "crawler", "target": "seen" },
-    { "id": "e-crawler-frontier", "source": "crawler", "target": "frontier" },
-    { "id": "e-crawler-pages", "source": "crawler", "target": "pages" },
-    { "id": "e-crawler-meta", "source": "crawler", "target": "meta" }
+    {
+      "id": "e-users-dns",
+      "source": "users",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-lb",
+      "source": "dns",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-crawler",
+      "source": "lb",
+      "target": "crawler"
+    },
+    {
+      "id": "e-crawler-meta",
+      "source": "crawler",
+      "target": "meta"
+    },
+    {
+      "id": "e-crawler-frontier",
+      "source": "crawler",
+      "target": "frontier",
+      "label": "seeds",
+      "weight": 1.0
+    },
+    {
+      "id": "e-cron-frontier",
+      "source": "cron",
+      "target": "frontier",
+      "label": "recrawls",
+      "weight": 1.0
+    },
+    {
+      "id": "e-frontier-fetchers",
+      "source": "frontier",
+      "target": "fetchers"
+    },
+    {
+      "id": "e-fetchers-seen",
+      "source": "fetchers",
+      "target": "seen"
+    },
+    {
+      "id": "e-fetchers-pages",
+      "source": "fetchers",
+      "target": "pages"
+    },
+    {
+      "id": "e-fetchers-meta",
+      "source": "fetchers",
+      "target": "meta"
+    },
+    {
+      "id": "e-fetchers-index",
+      "source": "fetchers",
+      "target": "index"
+    }
   ]
 }

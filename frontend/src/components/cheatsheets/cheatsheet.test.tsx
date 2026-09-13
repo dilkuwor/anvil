@@ -74,3 +74,72 @@ describe("CheatSheetBlockRenderer", () => {
     expect(screen.getByText("0.5 ns")).toBeInTheDocument();
   });
 });
+
+describe("inline formatting", () => {
+  it("renders `code` and **bold** markers as elements, not literal characters", () => {
+    const block: CheatSheetBlock = {
+      kind: "rule",
+      title: "Rule",
+      body: "Use `lo + (hi - lo) / 2` and **never** `(lo + hi) / 2`.",
+      items: null,
+    };
+    const { container } = render(<CheatSheetBlockRenderer block={block} />, { wrapper });
+
+    const codes = [...container.querySelectorAll("code")].map((el) => el.textContent);
+    expect(codes).toContain("lo + (hi - lo) / 2");
+    expect(codes).toContain("(lo + hi) / 2");
+    expect(container.querySelector("strong")?.textContent).toBe("never");
+    // The markers themselves must not survive into the rendered text.
+    expect(container.textContent).not.toContain("`");
+    expect(container.textContent).not.toContain("**");
+  });
+
+  it("formats inline markers inside table cells and checklist items", () => {
+    const table: CheatSheetBlock = {
+      kind: "table",
+      title: "Costs",
+      body: "",
+      items: { headers: ["Op", "Cost"], rows: [["`ArrayList.get`", "**O(1)**"]] },
+    };
+    const { container, unmount } = render(<CheatSheetBlockRenderer block={table} />, { wrapper });
+    expect(container.querySelector("td code")?.textContent).toBe("ArrayList.get");
+    expect(container.querySelector("td strong")?.textContent).toBe("O(1)");
+    unmount();
+
+    const list: CheatSheetBlock = {
+      kind: "bullets",
+      title: "Rules",
+      body: "",
+      items: ["Prefer `ArrayDeque` over `Stack`"],
+    };
+    const { container: listContainer } = render(<CheatSheetBlockRenderer block={list} />, { wrapper });
+    expect([...listContainer.querySelectorAll("li code")].map((el) => el.textContent)).toEqual([
+      "ArrayDeque",
+      "Stack",
+    ]);
+  });
+
+  it("leaves unmatched markers alone rather than mangling the text", () => {
+    const block: CheatSheetBlock = {
+      kind: "tip",
+      title: "Tip",
+      body: "A lone ` backtick and a 2 * 3 product.",
+      items: null,
+    };
+    const { container } = render(<CheatSheetBlockRenderer block={block} />, { wrapper });
+    expect(container.querySelector("code")).toBeNull();
+    expect(container.textContent).toContain("A lone ` backtick and a 2 * 3 product.");
+  });
+
+  it("preserves line breaks in example blocks", () => {
+    const block: CheatSheetBlock = {
+      kind: "example",
+      title: "Confusion matrix",
+      body: "line one\nline two",
+      items: null,
+    };
+    const { container } = render(<CheatSheetBlockRenderer block={block} />, { wrapper });
+    const body = container.querySelector(".whitespace-pre-wrap");
+    expect(body?.textContent).toBe("line one\nline two");
+  });
+});

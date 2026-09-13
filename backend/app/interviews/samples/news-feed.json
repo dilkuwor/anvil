@@ -1,7 +1,7 @@
 {
   "slug": "news-feed",
   "name": "News Feed",
-  "summary": "Users → DNS → CDN → LB → Feed API. Redis precomputes the home feed, NoSQL stores posts, Postgres the friend graph, Kafka publishes fan-out.",
+  "summary": "Users → DNS → CDN → LB → Feed API. Redis serves the precomputed home feed, NoSQL stores posts, Postgres the friend graph, Kafka → fan-out workers write timelines and push notifications.",
   "difficulty": "advanced",
   "workload": {
     "dau": 80000000,
@@ -11,7 +11,8 @@
     "avg_request_bytes": 800,
     "avg_response_bytes": 8000,
     "peak_multiplier": 4,
-    "traffic_growth": 0.2
+    "traffic_growth": 0.2,
+    "avg_record_bytes": 2000
   },
   "slo": {
     "availability": 0.999,
@@ -22,27 +23,55 @@
     "rto_seconds": 180
   },
   "nodes": [
-    { "id": "users", "type": "client", "label": "Users", "x": 40, "y": 260 },
-    { "id": "dns", "type": "dns", "label": "DNS", "x": 230, "y": 260, "config": { "latencyMs": 3, "qps": 300000 } },
+    {
+      "id": "users",
+      "type": "client",
+      "label": "Users",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 3,
+        "qps": 300000
+      }
+    },
     {
       "id": "cdn",
       "type": "cdn",
       "label": "Media CDN",
-      "x": 430, "y": 260,
-      "config": { "hitRatio": 0.7, "maxRps": 200000, "edgeLatencyMs": 20, "ttlSec": 180 }
+      "x": 500,
+      "y": 230,
+      "config": {
+        "hitRatio": 0.7,
+        "maxRps": 200000,
+        "edgeLatencyMs": 20,
+        "ttlSec": 180
+      }
     },
     {
       "id": "lb",
       "type": "load_balancer",
       "label": "Load Balancer",
-      "x": 640, "y": 260,
-      "config": { "instances": 6, "maxRps": 150000, "algorithm": "least_connections" }
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 6,
+        "maxRps": 150000,
+        "algorithm": "least_connections"
+      }
     },
     {
       "id": "api",
       "type": "api_server",
       "label": "Feed API",
-      "x": 860, "y": 260,
+      "x": 960,
+      "y": 230,
       "config": {
         "instances": 120,
         "vcpu": 8,
@@ -54,42 +83,192 @@
       }
     },
     {
+      "id": "ids",
+      "type": "id_generator",
+      "label": "Post IDs",
+      "x": 1190,
+      "y": 80,
+      "config": {
+        "instances": 3,
+        "scheme": "snowflake"
+      }
+    },
+    {
       "id": "feed",
       "type": "redis",
       "label": "Feed Cache",
-      "x": 1140, "y": 60,
-      "config": { "memoryGb": 192, "hitRatio": 0.93, "maxOps": 200000, "replicas": 2 }
+      "x": 1190,
+      "y": 230,
+      "config": {
+        "memoryGb": 192,
+        "hitRatio": 0.93,
+        "maxOps": 250000,
+        "replicas": 2
+      }
     },
     {
       "id": "posts",
       "type": "nosql",
       "label": "Post Store",
-      "x": 1140, "y": 220,
-      "config": { "vcpu": 16, "storageGb": 10000, "readCapacity": 70000, "writeCapacity": 20000, "readReplicas": 4 }
+      "x": 1190,
+      "y": 380,
+      "config": {
+        "vcpu": 16,
+        "storageGb": 100000,
+        "readCapacity": 70000,
+        "writeCapacity": 20000,
+        "replicationFactor": 3,
+        "iops": 60000
+      }
     },
     {
       "id": "graph",
       "type": "postgresql",
       "label": "Friend Graph",
-      "x": 1140, "y": 380,
-      "config": { "vcpu": 12, "storageGb": 5000, "readCapacity": 35000, "writeCapacity": 6000, "readReplicas": 3 }
+      "x": 1190,
+      "y": 530,
+      "config": {
+        "vcpu": 12,
+        "storageGb": 5000,
+        "readCapacity": 35000,
+        "writeCapacity": 6000,
+        "readReplicas": 1,
+        "iops": 30000
+      }
+    },
+    {
+      "id": "media",
+      "type": "object_storage",
+      "label": "Media Store",
+      "x": 1420,
+      "y": 80,
+      "config": {
+        "capacityTb": 800,
+        "avgObjectKb": 1024,
+        "readRps": 40000,
+        "writeRps": 6000
+      }
     },
     {
       "id": "publish",
       "type": "kafka",
       "label": "Publish",
-      "x": 1140, "y": 540,
-      "config": { "brokers": 8, "partitions": 64, "consumers": 20, "producerThroughput": 60000, "consumerThroughput": 50000 }
+      "x": 1190,
+      "y": 680,
+      "config": {
+        "brokers": 8,
+        "partitions": 64,
+        "consumers": 20,
+        "producerThroughput": 60000,
+        "consumerThroughput": 50000
+      }
+    },
+    {
+      "id": "workers",
+      "type": "worker",
+      "label": "Fan-out Workers",
+      "x": 1420,
+      "y": 680,
+      "config": {
+        "instances": 20,
+        "concurrency": 16,
+        "jobMs": 40,
+        "idempotent": true
+      }
+    },
+    {
+      "id": "push",
+      "type": "notification_gateway",
+      "label": "Push",
+      "x": 1650,
+      "y": 680,
+      "config": {
+        "providerRateLimit": 500,
+        "batchSize": 100,
+        "channel": "push"
+      }
     }
   ],
   "edges": [
-    { "id": "e-users-dns", "source": "users", "target": "dns" },
-    { "id": "e-dns-cdn", "source": "dns", "target": "cdn" },
-    { "id": "e-cdn-lb", "source": "cdn", "target": "lb" },
-    { "id": "e-lb-api", "source": "lb", "target": "api" },
-    { "id": "e-api-feed", "source": "api", "target": "feed" },
-    { "id": "e-api-posts", "source": "api", "target": "posts" },
-    { "id": "e-api-graph", "source": "api", "target": "graph" },
-    { "id": "e-api-publish", "source": "api", "target": "publish" }
+    {
+      "id": "e-users-dns",
+      "source": "users",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-cdn",
+      "source": "dns",
+      "target": "cdn"
+    },
+    {
+      "id": "e-cdn-media",
+      "source": "cdn",
+      "target": "media",
+      "label": "media misses",
+      "weight": 0.4
+    },
+    {
+      "id": "e-cdn-lb",
+      "source": "cdn",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-api",
+      "source": "lb",
+      "target": "api"
+    },
+    {
+      "id": "e-api-ids",
+      "source": "api",
+      "target": "ids"
+    },
+    {
+      "id": "e-api-feed",
+      "source": "api",
+      "target": "feed"
+    },
+    {
+      "id": "e-api-posts",
+      "source": "api",
+      "target": "posts"
+    },
+    {
+      "id": "e-api-graph",
+      "source": "api",
+      "target": "graph",
+      "label": "follows",
+      "weight": 0.1
+    },
+    {
+      "id": "e-api-media",
+      "source": "api",
+      "target": "media",
+      "label": "uploads",
+      "weight": 0.3
+    },
+    {
+      "id": "e-api-publish",
+      "source": "api",
+      "target": "publish"
+    },
+    {
+      "id": "e-publish-workers",
+      "source": "publish",
+      "target": "workers"
+    },
+    {
+      "id": "e-workers-feed",
+      "source": "workers",
+      "target": "feed",
+      "label": "timeline writes",
+      "weight": 1.0
+    },
+    {
+      "id": "e-workers-push",
+      "source": "workers",
+      "target": "push",
+      "label": "mentions",
+      "weight": 0.2
+    }
   ]
 }

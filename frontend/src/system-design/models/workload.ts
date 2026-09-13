@@ -9,7 +9,15 @@ export const DEFAULT_WORKLOAD: WorkloadConfig = {
   avgResponseBytes: 4_000,
   peakMultiplier: 4,
   trafficGrowth: 0.2,
+  avgRecordBytes: 1_000,
 };
+
+export const DEFAULT_RECORD_BYTES = 1_000;
+
+/** Interview rule of thumb: cache the hottest 20% of a day's reads. */
+export const CACHE_WORKING_SET_RATIO = 0.2;
+
+export const GB = 1_000_000_000;
 
 export const DEFAULT_SLO: SloConfig = {
   availability: 0.9999,
@@ -26,6 +34,10 @@ export function deriveWorkload(config: WorkloadConfig): DerivedWorkload {
   const peakRps = avgRps * config.peakMultiplier;
   const readRps = peakRps * config.readRatio;
   const writeRps = peakRps * (1 - config.readRatio);
+  const writesPerDay = dailyRequests * (1 - config.readRatio);
+  const recordBytes = config.avgRecordBytes ?? DEFAULT_RECORD_BYTES;
+  const storageYearGb = (writesPerDay * recordBytes * 365) / GB;
+  const readsPerDay = dailyRequests * config.readRatio;
   return {
     dailyRequests,
     monthlyRequests: dailyRequests * 30,
@@ -35,5 +47,9 @@ export function deriveWorkload(config: WorkloadConfig): DerivedWorkload {
     writeRps,
     ingressBps: peakRps * config.avgRequestBytes,
     egressBps: peakRps * config.avgResponseBytes,
+    writesPerDay,
+    storageYearGb,
+    storageFiveYearGb: storageYearGb * 5,
+    cacheWorkingSetGb: (readsPerDay * CACHE_WORKING_SET_RATIO * config.avgResponseBytes) / GB,
   };
 }

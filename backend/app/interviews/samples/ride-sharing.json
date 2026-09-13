@@ -1,17 +1,18 @@
 {
   "slug": "ride-sharing",
   "name": "Uber",
-  "summary": "Users → DNS → LB → Dispatch API. Redis GEO tracks nearby drivers, Postgres holds the trip state machine, Kafka streams location pings.",
+  "summary": "Riders and drivers hold sockets on a location gateway. Dispatch API queries a geo index of drivers, Postgres holds the trip state machine, Kafka streams pings to workers for ETAs, analytics, and push.",
   "difficulty": "advanced",
   "workload": {
     "dau": 10000000,
-    "concurrent_users": 25000,
+    "concurrent_users": 60000,
     "requests_per_user_day": 4,
     "read_ratio": 0.6,
     "avg_request_bytes": 600,
     "avg_response_bytes": 1500,
     "peak_multiplier": 3,
-    "traffic_growth": 0.2
+    "traffic_growth": 0.2,
+    "avg_record_bytes": 800
   },
   "slo": {
     "availability": 0.999,
@@ -22,20 +23,55 @@
     "rto_seconds": 120
   },
   "nodes": [
-    { "id": "users", "type": "client", "label": "Riders & Drivers", "x": 40, "y": 240 },
-    { "id": "dns", "type": "dns", "label": "DNS", "x": 250, "y": 240, "config": { "latencyMs": 4, "qps": 80000 } },
+    {
+      "id": "users",
+      "type": "client",
+      "label": "Riders & Drivers",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 4,
+        "qps": 80000
+      }
+    },
     {
       "id": "lb",
       "type": "load_balancer",
       "label": "Load Balancer",
-      "x": 500, "y": 240,
-      "config": { "instances": 3, "maxRps": 20000, "algorithm": "least_connections" }
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 3,
+        "maxRps": 20000,
+        "algorithm": "least_connections"
+      }
+    },
+    {
+      "id": "ws",
+      "type": "websocket_gateway",
+      "label": "Location Gateway",
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 6,
+        "maxConnections": 20000,
+        "messagesPerSec": 20000,
+        "heartbeatSec": 15
+      }
     },
     {
       "id": "api",
       "type": "api_server",
       "label": "Dispatch API",
-      "x": 760, "y": 240,
+      "x": 960,
+      "y": 230,
       "config": {
         "instances": 16,
         "vcpu": 4,
@@ -47,33 +83,139 @@
       }
     },
     {
-      "id": "locations",
-      "type": "redis",
-      "label": "Driver GEO",
-      "x": 1060, "y": 80,
-      "config": { "memoryGb": 48, "hitRatio": 0.9, "maxOps": 80000, "ttlSec": 15, "replicas": 1 }
+      "id": "geo",
+      "type": "geo_index",
+      "label": "Driver Geo Index",
+      "x": 1190,
+      "y": 80,
+      "config": {
+        "instances": 4,
+        "cellSizeM": 500,
+        "queryCapacity": 20000,
+        "updateCapacity": 100000,
+        "updatesPerSec": 25000,
+        "queryLatencyMs": 5
+      }
     },
     {
       "id": "trips",
       "type": "postgresql",
       "label": "Trips",
-      "x": 1060, "y": 240,
-      "config": { "vcpu": 8, "storageGb": 1500, "readCapacity": 15000, "writeCapacity": 8000, "readReplicas": 2 }
+      "x": 1190,
+      "y": 230,
+      "config": {
+        "vcpu": 8,
+        "storageGb": 6000,
+        "readCapacity": 15000,
+        "writeCapacity": 8000,
+        "readReplicas": 1
+      }
     },
     {
       "id": "pings",
       "type": "kafka",
       "label": "Location Stream",
-      "x": 1060, "y": 400,
-      "config": { "brokers": 5, "partitions": 36, "consumers": 12, "producerThroughput": 40000, "consumerThroughput": 35000 }
+      "x": 1190,
+      "y": 380,
+      "config": {
+        "brokers": 5,
+        "partitions": 36,
+        "consumers": 12,
+        "producerThroughput": 40000,
+        "consumerThroughput": 35000
+      }
+    },
+    {
+      "id": "workers",
+      "type": "worker",
+      "label": "ETA / Surge Workers",
+      "x": 1420,
+      "y": 380,
+      "config": {
+        "instances": 12,
+        "concurrency": 8,
+        "jobMs": 30,
+        "idempotent": true
+      }
+    },
+    {
+      "id": "analytics",
+      "type": "analytics_store",
+      "label": "Trip Analytics",
+      "x": 1650,
+      "y": 230,
+      "config": {
+        "nodes": 3,
+        "retentionDays": 365,
+        "eventBytes": 250,
+        "eventsPerDay": 2000000000
+      }
+    },
+    {
+      "id": "push",
+      "type": "notification_gateway",
+      "label": "Rider Push",
+      "x": 1650,
+      "y": 530,
+      "config": {
+        "providerRateLimit": 300,
+        "batchSize": 50,
+        "channel": "push"
+      }
     }
   ],
   "edges": [
-    { "id": "e-users-dns", "source": "users", "target": "dns" },
-    { "id": "e-dns-lb", "source": "dns", "target": "lb" },
-    { "id": "e-lb-api", "source": "lb", "target": "api" },
-    { "id": "e-api-geo", "source": "api", "target": "locations" },
-    { "id": "e-api-trips", "source": "api", "target": "trips" },
-    { "id": "e-api-pings", "source": "api", "target": "pings" }
+    {
+      "id": "e-users-dns",
+      "source": "users",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-lb",
+      "source": "dns",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-ws",
+      "source": "lb",
+      "target": "ws"
+    },
+    {
+      "id": "e-ws-api",
+      "source": "ws",
+      "target": "api"
+    },
+    {
+      "id": "e-api-geo",
+      "source": "api",
+      "target": "geo"
+    },
+    {
+      "id": "e-api-trips",
+      "source": "api",
+      "target": "trips"
+    },
+    {
+      "id": "e-api-pings",
+      "source": "api",
+      "target": "pings"
+    },
+    {
+      "id": "e-pings-workers",
+      "source": "pings",
+      "target": "workers"
+    },
+    {
+      "id": "e-workers-analytics",
+      "source": "workers",
+      "target": "analytics"
+    },
+    {
+      "id": "e-workers-push",
+      "source": "workers",
+      "target": "push",
+      "label": "matches & ETAs",
+      "weight": 0.2
+    }
   ]
 }

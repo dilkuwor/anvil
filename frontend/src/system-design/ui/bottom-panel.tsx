@@ -3,18 +3,22 @@
 import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useRef, useState, type PointerEvent } from "react";
 
-import type { ActiveFailure, FailureType, SimulationResult, SloConfig, WorkloadConfig } from "../models/types";
-import { deriveWorkload } from "../models/workload";
+import type { ActiveFailure, DesignNode, FailureType, ReviewArea, ReviewCheck, ReviewStatus, SimulationResult, SloConfig, WorkloadConfig } from "../models/types";
+import { DEFAULT_RECORD_BYTES, deriveWorkload } from "../models/workload";
+import { estimateWorkload } from "../engine/estimate";
 import { formatTimelineClock } from "../engine/timeline";
-import { formatCompact, formatGb, formatMs, formatPct, formatRps, formatUsd } from "../utils/format";
+import { formatBytesPerSec, formatCompact, formatGb, formatMs, formatNines, formatPct, formatRps, formatUsd } from "../utils/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const TABS = ["Workload", "Metrics", "Capacity", "Latency", "Storage", "Cost", "Failures"] as const;
+const TABS = ["Workload", "Estimate", "Metrics", "Review", "Capacity", "Latency", "Storage", "Cost", "Failures"] as const;
 const COLLAPSED_HEIGHT = 36;
 const MIN_OPEN_HEIGHT = 160;
 const DEFAULT_HEIGHT = 240;
+/** Estimate and Review are reading tabs; open them taller so the content is not a two-line peephole. */
+const READING_HEIGHT = 440;
+const READING_TABS = new Set<(typeof TABS)[number]>(["Estimate", "Review"]);
 
 function panelMaxHeight() {
   if (typeof window === "undefined") return 560;
@@ -25,18 +29,19 @@ function clampHeight(value: number) {
   return Math.min(panelMaxHeight(), Math.max(MIN_OPEN_HEIGHT, Math.round(value)));
 }
 
-const FAILURES: { type: FailureType; label: string }[] = [
-  { type: "traffic_spike", label: "Traffic spike 5×" },
-  { type: "kill_api", label: "Kill half the APIs" },
-  { type: "database_down", label: "Database impaired" },
-  { type: "cache_down", label: "Cache down" },
-  { type: "kafka_down", label: "Kafka impaired" },
-  { type: "network_latency", label: "+80ms network" },
+const FAILURES: { type: FailureType; label: string; body: string; ask: string }[] = [
+  { type: "traffic_spike", label: "Traffic spike 5×", body: "Peak multiplier × 5. A launch, a viral post, or a retry storm.", ask: "What sheds load first, and is that graceful?" },
+  { type: "kill_api", label: "Kill half the APIs", body: "Half the instances gone and a 15% failure rate on the rest. A bad deploy or an AZ outage.", ask: "How fast does autoscaling or the load balancer notice?" },
+  { type: "database_down", label: "Database impaired", body: "Primary capacity collapses to nothing. Disk full, failover in progress, or a lock storm.", ask: "Do reads still work from replicas or the cache?" },
+  { type: "cache_down", label: "Cache down", body: "Hit ratio drops to zero and every read falls through to the database.", ask: "Can the database take the full read load cold?" },
+  { type: "kafka_down", label: "Kafka impaired", body: "Producers and consumers stall. Anything async backs up or is lost.", ask: "Is the producer blocking the request path, or fire-and-forget?" },
+  { type: "network_latency", label: "+80ms network", body: "Every hop gets 80ms slower. A cross-region call or a saturated link.", ask: "How many round trips are on the critical path?" },
 ];
 
 export function BottomPanel({
   workload,
   slo,
+  nodes,
   result,
   previous,
   failures,
@@ -52,6 +57,7 @@ export function BottomPanel({
 }: {
   workload: WorkloadConfig;
   slo: SloConfig;
+  nodes: DesignNode[];
   result: SimulationResult | null;
   previous: SimulationResult | null;
   failures: ActiveFailure[];
@@ -155,6 +161,7 @@ export function BottomPanel({
               onClick={() => {
                 setTab(item);
                 if (!open) setOpen(true);
+                if (READING_TABS.has(item)) setHeight((value) => (value < READING_HEIGHT ? clampHeight(READING_HEIGHT) : value));
               }}
             >
               {item}
@@ -191,7 +198,9 @@ export function BottomPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3 text-[13px]">
         {tab === "Workload" ? <WorkloadTab workload={workload} derived={derived} slo={slo} onWorkload={onWorkload} onSlo={onSlo} /> : null}
+        {tab === "Estimate" ? <EstimateTab workload={workload} nodes={nodes} /> : null}
         {tab === "Metrics" ? <MetricsTab result={result} previous={previous} /> : null}
+        {tab === "Review" ? <ReviewTab result={result} /> : null}
         {tab === "Capacity" ? <CapacityTab result={result} /> : null}
         {tab === "Latency" ? <LatencyTab result={result} /> : null}
         {tab === "Storage" ? <StorageTab result={result} /> : null}
@@ -257,6 +266,8 @@ function WorkloadTab({
         <Num label="Peak multiplier" value={workload.peakMultiplier} step={0.1} onChange={(peakMultiplier) => onWorkload({ ...workload, peakMultiplier })} />
         <Num label="Request bytes" value={workload.avgRequestBytes} onChange={(avgRequestBytes) => onWorkload({ ...workload, avgRequestBytes })} />
         <Num label="Response bytes" value={workload.avgResponseBytes} onChange={(avgResponseBytes) => onWorkload({ ...workload, avgResponseBytes })} />
+        <Num label="Stored bytes / write" value={workload.avgRecordBytes ?? DEFAULT_RECORD_BYTES} onChange={(avgRecordBytes) => onWorkload({ ...workload, avgRecordBytes })} />
+        <Num label="Yearly growth" value={workload.trafficGrowth} step={0.05} onChange={(trafficGrowth) => onWorkload({ ...workload, trafficGrowth })} />
       </div>
       <div>
         <h3 className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Derived</h3>
@@ -265,6 +276,8 @@ function WorkloadTab({
           <Pair label="Avg RPS" value={formatRps(derived.avgRps)} />
           <Pair label="Peak RPS" value={formatRps(derived.peakRps)} />
           <Pair label="Read / write" value={`${formatRps(derived.readRps)} / ${formatRps(derived.writeRps)}`} />
+          <Pair label="Egress" value={formatBytesPerSec(derived.egressBps)} />
+          <Pair label="Storage / year" value={formatGb(derived.storageYearGb)} />
         </dl>
         <h3 className="mt-4 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">SLOs</h3>
         <div className="mt-2 grid grid-cols-2 gap-2">
@@ -286,7 +299,10 @@ function MetricsTab({ result, previous }: { result: SimulationResult | null; pre
         <Pair label="Throughput" value={`${formatRps(result.throughput.processedRps)} rps`} />
         <Pair label="p50 / p95 / p99" value={`${formatMs(result.latency.p50)} / ${formatMs(result.latency.p95)} / ${formatMs(result.latency.p99)}`} />
         <Pair label="Errors" value={`${(result.errorRate * 100).toFixed(2)}%`} />
+        {result.throughput.backlogRps > 0 ? <Pair label="Async backlog" value={`${formatRps(result.throughput.backlogRps)} /s`} /> : null}
         <Pair label="Availability" value={`${(result.availability * 100).toFixed(3)}%`} />
+        <Pair label="Review grade" value={`${result.review.grade} · ${result.review.score}/100`} />
+        <Pair label="Cost / month" value={formatUsd(result.cost.total)} />
       </dl>
       <div>
         <h3 className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">SLOs</h3>
@@ -304,7 +320,120 @@ function MetricsTab({ result, previous }: { result: SimulationResult | null; pre
           </p>
         ) : null}
       </div>
+      {result.bottlenecks.length ? (
+        <div className="md:col-span-2">
+          <h3 className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Bottlenecks</h3>
+          <ul className="mt-2 space-y-2">
+            {result.bottlenecks.map((item) => (
+              <li key={item.nodeId} className="rounded-lg border border-steel-800 px-3 py-2">
+                <div className="text-[12px]">
+                  <span className={item.severity === "primary" ? "font-medium text-coral" : "font-medium"}>{item.label}</span>
+                  <span className="text-muted-foreground"> · {formatPct(item.utilization)} on {item.metric}</span>
+                </div>
+                {item.fix ? <p className="mt-1 text-[12px] leading-5">{item.fix}</p> : null}
+                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{item.suggestions.join(" · ")}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function EstimateTab({ workload, nodes }: { workload: WorkloadConfig; nodes: DesignNode[] }) {
+  const steps = estimateWorkload(workload, nodes);
+  return (
+    <div>
+      <p className="text-[12px] leading-5 text-muted-foreground">
+        The back-of-envelope pass an interviewer expects in the first five minutes. Say each line out loud, rounding as you go; the
+        Workload tab feeds every number.
+      </p>
+      <ol className="mt-3 grid gap-2 lg:grid-cols-2">
+        {steps.map((step, index) => (
+          <li key={step.key} className="rounded-lg border border-steel-800 px-3 py-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[12px] font-medium">
+                {index + 1}. {step.label}
+              </span>
+              <span className="shrink-0 text-[12px] font-semibold tabular-nums text-accent">{step.value}</span>
+            </div>
+            <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">{step.formula}</div>
+            {step.note ? <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{step.note}</p> : null}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+const AREA_LABEL: Record<ReviewArea, string> = {
+  requirements: "Requirements",
+  scalability: "Scalability",
+  reliability: "Reliability",
+  performance: "Performance",
+  data: "Data",
+  cost: "Cost",
+};
+
+const AREA_ORDER: ReviewArea[] = ["requirements", "scalability", "reliability", "performance", "data", "cost"];
+
+const STATUS_STYLE: Record<ReviewStatus, string> = {
+  pass: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:border-success/35 dark:bg-success/10 dark:text-success",
+  warn: "border-accent/40 bg-accent/10 text-accent",
+  fail: "border-coral/40 bg-coral/10 text-coral",
+  info: "border-steel-800 bg-background/60 text-muted-foreground",
+};
+
+function ReviewTab({ result }: { result: SimulationResult | null }) {
+  if (!result) return <Empty />;
+  const { review } = result;
+  const grouped = AREA_ORDER.map((area) => ({ area, checks: review.checks.filter((check) => check.area === area) })).filter(
+    (group) => group.checks.length,
+  );
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="text-2xl font-semibold tabular-nums">
+          {review.grade}
+          <span className="ml-1 text-[12px] font-normal text-muted-foreground">{review.score}/100</span>
+        </span>
+        <p className="text-[12px] leading-5 text-muted-foreground">
+          {review.summary} Redundancy math: {formatNines(review.estimatedAvailability)}
+          {review.weakestHop ? `, weakest hop ${review.weakestHop.label}` : ""}. Pass = 1, warn = ½, fail = 0; info lines are
+          talking points and do not count.
+        </p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {grouped.map((group) => (
+          <section key={group.area}>
+            <h3 className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{AREA_LABEL[group.area]}</h3>
+            <ul className="mt-2 space-y-2">
+              {group.checks.map((check) => (
+                <ReviewRow key={check.id} check={check} />
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReviewRow({ check }: { check: ReviewCheck }) {
+  return (
+    <li className="rounded-lg border border-steel-800 px-3 py-2">
+      <div className="flex items-start gap-2">
+        <span className={cn("mt-0.5 shrink-0 rounded border px-1.5 py-px text-[10px] font-medium uppercase tracking-wide", STATUS_STYLE[check.status])}>
+          {check.status}
+        </span>
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium leading-5">{check.title}</div>
+          <p className="text-[12px] leading-5 text-muted-foreground">{check.detail}</p>
+          <p className="mt-1 text-[11px] italic leading-5 text-foreground/80">Interviewer: “{check.interviewer}”</p>
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -314,9 +443,9 @@ function CapacityTab({ result }: { result: SimulationResult | null }) {
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {Object.entries(result.nodes).map(([id, metrics]) => (
         <div key={id} className="rounded-lg border border-steel-800 px-3 py-2">
-          <div className="text-[12px] font-medium">{id}</div>
+          <div className="text-[12px] font-medium">{metrics.label}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            {formatRps(metrics.processedRps)} rps · {metrics.health}
+            {formatRps(metrics.incomingRps)} in · {formatRps(metrics.processedRps)} out · {metrics.health}
           </div>
           <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
             {Object.entries(metrics.utilization).map(([key, amount]) => (
@@ -385,15 +514,25 @@ function CostTab({ result }: { result: SimulationResult | null }) {
 
 function FailuresTab({ failures, onToggle }: { failures: ActiveFailure[]; onToggle: (type: FailureType) => void }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {FAILURES.map((item) => {
-        const on = failures.some((failure) => failure.type === item.type);
-        return (
-          <Button key={item.type} type="button" size="sm" variant={on ? "default" : "secondary"} onClick={() => onToggle(item.type)}>
-            {item.label}
-          </Button>
-        );
-      })}
+    <div>
+      <p className="text-[12px] leading-5 text-muted-foreground">
+        Toggle one or more, then Simulate again. Compare Metrics and Review against the previous run; that delta is the answer to
+        “what happens when…”.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {FAILURES.map((item) => {
+          const on = failures.some((failure) => failure.type === item.type);
+          return (
+            <div key={item.type} className={cn("rounded-lg border px-3 py-2", on ? "border-accent/50 bg-accent/5" : "border-steel-800")}>
+              <Button type="button" size="sm" variant={on ? "default" : "secondary"} onClick={() => onToggle(item.type)}>
+                {item.label}
+              </Button>
+              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{item.body}</p>
+              <p className="text-[11px] italic leading-5 text-foreground/80">Ask: {item.ask}</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

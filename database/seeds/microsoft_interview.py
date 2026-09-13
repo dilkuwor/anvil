@@ -6,6 +6,8 @@ Existing catalog titles (Pair Target, …) are original problems and are not ali
 
 from __future__ import annotations
 
+from database.seeds.problem_meta import enrich
+
 LIST_NAME = "Microsoft Interview"
 LIST_DESCRIPTION = "Coding problems from the Microsoft Interview practice tracker."
 
@@ -60,9 +62,18 @@ def _p(
     hints: list[str] | None = None,
     examples: list[dict] | None = None,
     explanation: str = "",
+    solution: str = "",
+    time: str = "",
+    space: str = "",
 ) -> dict:
+    """Build one problem spec.
+
+    ``solution``/``time``/``space`` carry the reference material inline. When they are left
+    empty the spec is enriched from ``database/seeds/problem_meta.py`` instead, which is how
+    the original Microsoft and LoopTracker catalogs supply theirs.
+    """
     visible = [case for case in tests if not case.get("hidden")]
-    return {
+    spec = {
         "leetcode_id": leetcode_id,
         "title": title,
         "slug": leetcode_slug(leetcode_id),
@@ -82,7 +93,11 @@ def _p(
         "starter_code": _starter(method, params, return_type),
         "function_signature": sig(method, params, return_type, compare),
         "tests": tests,
+        "time_complexity": time,
+        "space_complexity": space,
+        "reference_solution": solution.strip() + "\n" if solution.strip() else "",
     }
+    return spec if solution.strip() else enrich(spec)
 
 
 SLIDING = "sliding-window"

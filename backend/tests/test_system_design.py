@@ -23,11 +23,14 @@ def test_scenarios_are_public(client):
         "rate_limiter",
         "load_balancer",
         "api_server",
+        "id_generator",
         "redis",
         "postgresql",
         "kafka",
+        "analytics_store",
     ]
-    assert len(url["sample"]["edges"]) == 7
+    assert len(url["sample"]["edges"]) == 9
+    assert all(edge.get("weight") is None or 0 < edge["weight"] <= 1 for edge in url["sample"]["edges"])
     assert "interviewer_notes" not in url
     missing = [item["slug"] for item in items if not item.get("sample")]
     assert missing == []

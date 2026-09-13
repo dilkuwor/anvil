@@ -57,6 +57,43 @@ Users implement a `Solution` class. The platform generates `Main.java` from `pro
 
 Before compilation, `app/execution/imports.py` scans the submitted source and injects any missing JDK imports for types that were actually used (`HashMap`, `List`, `PriorityQueue`, `Stream`, `BigInteger`, and other common `java.*` classes). `java.lang` types are left alone. Existing imports and user-defined types of the same name are not duplicated.
 
+## Problem catalog
+
+178 problems live in `database/seeds/`, all authored as Python dicts and seeded into
+PostgreSQL; nothing is hardcoded in the UI.
+
+| Module | Contents |
+|---|---|
+| `problems.py` | The 15 original custom problems, keyed by their own slugs |
+| `microsoft_interview.py` | The 47 Microsoft Interview tracker problems, keyed `lc-{id}` |
+| `looptracker.py` | The 65-problem LoopTracker curriculum, reusing Microsoft specs where they overlap |
+| `fang_extra.py` | 73 problems covering the categories neither tracker reached |
+| `problem_meta.py` | Reference solutions, complexity targets and hints for the two tracker catalogs |
+| `catalog.py` | The de-duplicated union of the three `lc-` modules, plus `validate_catalog()` |
+
+Every problem carries a worked reference solution, a time and space complexity target,
+at least two progressive hints, and at least two test cases. `catalog.py` enforces that at
+import time, and `backend/tests/test_problem_catalog.py` enforces the rest.
+
+`python -m app.seed` writes `problems.py` directly and then calls
+`app/problems/seed_catalog.py` for everything keyed by LeetCode ID. That seeder creates
+missing rows and refreshes authored content on rows that already exist, matching on slug so
+ids, submissions and progress survive. Test cases are rewritten only when they differ, which
+keeps `submission_test_results` intact on a no-op run. Two narrower CLIs remain for their own
+workflows: `app/problems/seed_looptracker.py` (the 65-problem subset) and
+`app/seed_microsoft_interview.py` (the per-user Microsoft list).
+
+Reference solutions are not shipped to the client; they are the ground truth that lets CI
+compile every problem and run it against its own tests:
+
+```
+ANVIL_RUN_JAVA_CATALOG=1 python -m pytest tests/test_problem_catalog.py -k java
+```
+
+The roadmap at `frontend/src/lib/roadmap.ts` maps each node to the catalog tags it counts
+(`relatedTags`) and the tag its Practice link filters on (`filterTag`). Both must be real tag
+slugs, which `src/lib/roadmap.test.ts` checks.
+
 ## Mock interviews
 
 A mock interview is a timed session bound to one problem. The editor stays the same; the left pane becomes the interviewer. Java correctness still comes from the sandbox — the model is not the judge.
@@ -77,6 +114,8 @@ The agent depends only on `LLMProvider`. Concrete backends live under `app/inter
 | Problem workspace | required | `POST /api/v1/interviews` | Full session. One active (unended) session per user per problem is reused. Duration is `INTERVIEW_DURATION_SECONDS` (default 45 minutes). |
 | System design picker | none to browse | `GET /api/v1/interviews/scenarios` | Catalog of design prompts. Auth required to start. |
 | System design workspace | required | `POST /api/v1/interviews/system-design`, `PUT /{id}/architecture` | Timed 3-panel session. One active session per user per scenario. Canvas JSON is persisted; the interviewer reads a summary of it. |
+| Behavioral question bank | none to browse | `GET /api/v1/interviews/behavioral/questions`, `/behavioral/tracks` | One question per competency with probes and "what a strong answer contains"; three tracks of four questions. Auth required to start. |
+| Behavioral workspace | required | `POST /api/v1/interviews/behavioral`, `GET /behavioral/active?track=` | Timed 2-panel session (question card + interviewer). One active session per user per track. STAR stories are saved as Notes with `source_type = BEHAVIORAL`. |
 
 Preview sessions do not expire on the timer and do not write feedback. Authenticated sessions expire when remaining time hits zero; the API then records a `TIMEOUT` event and completes the interview.
 
@@ -104,6 +143,22 @@ REQUIREMENTS → CAPACITY → HIGH_LEVEL → DEEP_DIVE → SCALABILITY → RELIA
 
 The service advances after a minimum number of candidate turns in each phase. High-level design waits for a core canvas (compute + store) before moving on. Architecture updates do not change phase; the next chat turn sees the latest graph.
 
+Behavioral interviews use a third machine, owned by `app/interviews/behavioral.py`. The question plan (opener plus three competency questions from the chosen track) is stored in `session.scenario` with a `current` index:
+
+```text
+QUESTION → PROBE → (next question) … → CLOSING → FEEDBACK
+```
+
+The candidate tells a story (`QUESTION`); the agent asks one probing follow-up about the STAR gap it sees (`PROBE`); the service then moves to the next question deterministically. After the last probe the interviewer asks for the candidate's questions (`CLOSING`), and the next reply completes the session. Signals are STAR-shaped (`situation`, `action`, `result`, `ownership`, `specificity`, `reflection`, `communication`); ownership and specificity come from pronoun and number counts in the candidate's own words, not from the model. Feedback maps the shared score keys to STAR structure, specificity, ownership, results, impact, communication, reflection, and follow-up handling.
+
+### Lesson visualizers
+
+Lesson markdown can mount a step-through visualizer with a one-line directive, `:::viz <id> {json params}`, placed where the concept is explained (usually "How It Works"). The renderer in `frontend/src/components/learn/markdown.tsx` maps the id through `components/learn/viz/registry.ts`; unknown ids render nothing, so old clients and typos never break a lesson. Each visualizer in `components/learn/viz/` is a `VizDefinition`: a `parse()` that normalizes inputs without throwing, a pure `steps(params)` that returns frames, and a `View` that only draws a frame's state. Every frame carries three sentences: what happened, and what the candidate should say at that moment, tagged as an invariant, decision, trade-off, setup, or result. The player (`viz-block.tsx`) is the only stateful piece: it holds the frame index and the editable inputs, steps with buttons, a scrubber, or arrow keys, and never autoplays. Because frames are pure data, the teaching content is unit-tested without a DOM. Shipped: sliding window, binary search (exact and boundary variants), BFS/DFS, cache-aside with LRU, and consistent hashing.
+
+### System design simulator
+
+The simulator at `/system-design/simulator` runs entirely in the browser (`frontend/src/system-design/`, in a web worker when available). `engine/run.ts` pushes the workload's peak RPS through the canvas in topological order; each component kind in `components/library.ts` (request path: clients, DNS, load balancer, CDN, API servers, Redis, SQL/NoSQL, Kafka, object storage, rate limiter) and `components/library-more.ts` (API gateway, WebSocket gateway, worker pool, task queue, search index, geo index, ID generator, analytics store, scheduler, notification gateway) is a small capacity model (saturation, queueing delay, hit ratios, autoscaling, connection limits, provider quotas) and carries interview notes shown in the Inspector. A cache with no outgoing edge still sends its misses to the stores its caller talks to. After the pass the run attaches an estimation worksheet (`engine/estimate.ts`: DAU → QPS → peak → bandwidth → storage → cache → servers, with the arithmetic spelled out) and a design review (`engine/review.ts`: SLO verdicts, single points of failure, redundancy-based availability in series, cache and queue coverage, storage headroom, unit cost), each check paired with the follow-up an interviewer would ask. An edge can carry a `weight` (0–1): the share of the source's flow that takes it, so one API can send every read to a cache and 5% of them to search. The request path ends at a queue (`kafka`, `task_queue`): what drains it is async, its latency stays off the critical path, and its losses are reported as backlog rather than errors. Designs and runs persist in `localStorage`; the catalog of problems and sample graphs (`backend/app/interviews/samples/*.json`, one per catalog problem, each wired with the components its walkthrough calls for) comes from `GET /api/v1/interviews/scenarios`.
+
 ### What the interviewer is allowed to do
 
 The system prompt in `_system_prompt` tells Gemma it is a live interviewer, not a tutor:
@@ -127,6 +182,36 @@ On complete, `_build_feedback` mixes:
 Overall is a weighted blend (correctness 28%, approach 14%, understanding and coding 12% each, the rest 8–10%). Strengths, improvements, and a short interviewer-voiced summary are stored on `interview_sessions.feedback`.
 
 Transcripts keep the last 12 messages when calling Ollama.
+
+## Learn catalog
+
+Seven categories, seeded from `database/seeds/`. `learn.py` holds the category list, the
+shared `_topic`/`L` helpers, and the four compact tracks (Java, CS fundamentals, behavioral,
+plus the legacy helpers). The four full-depth tracks live in their own modules because each is
+a course rather than a glossary:
+
+| Module | Track | Topics / lessons |
+|---|---|---|
+| `learn_dsa.py`, `learn_dsa_patterns.py`, `learn_dsa_problems.py` | Data Structures & Algorithms | 30 / 81 |
+| `learn_system_design.py`, `learn_system_design_cases.py` | System Design | 24 / 60 |
+| `learn_ood.py` | Object-Oriented Design | 36 / 55 |
+| `learn_ai.py` | AI & Machine Learning | 16 / 70 |
+
+Each deep module exports one function (`dsa_core_topics()`, `system_design_topics()`,
+`ood_topics()`, `ai_topics()`) and builds lesson markdown from a lead paragraph plus
+`## heading` sections, raising on a duplicate heading inside a lesson.
+
+Two constraints bind every lesson. `frontend/src/components/learn/markdown.tsx` is a custom
+block renderer, not a markdown library: flat lists only, blockquote lines must each start with
+`> `, a literal `|` breaks a table cell, and a short single line containing `=` renders as a
+formula card. And `app/learn/service.py::_parse_lesson_sections` keys the AI tutor's context off
+exact `## ` headings (`Why It Matters`, `How It Works`, `Example`, `Common Use Cases`,
+`Trade-offs`, `Common Mistakes`, `Interview Tip`), so those headings appear on every lesson.
+
+Topic and lesson slugs are the match key for seeding, progress (`user_learning_progress` is keyed
+by `lesson_id`), deep links and search. Renaming one silently resets a learner's progress, so
+`ood_topics()` asserts that every slug from the original catalog still exists, and
+`backend/tests/test_learn.py` checks the same thing through the API.
 
 ## Ask AI (Learn tutor)
 

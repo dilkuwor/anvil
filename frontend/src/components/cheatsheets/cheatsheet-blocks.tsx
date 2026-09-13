@@ -7,6 +7,40 @@ import { toast } from "sonner";
 import { asStringList, asTable, type CheatSheetBlock } from "@/lib/cheatsheets";
 import { cn } from "@/lib/utils";
 
+/**
+ * Cheat sheet copy is dense reference text, so it uses `inline code` and
+ * **bold** markers. Parsed into React nodes rather than HTML so nothing from
+ * the database is ever interpreted as markup.
+ */
+export function InlineText({ text }: { text: string }) {
+  if (!text) return null;
+  const tokens = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean);
+  return (
+    <>
+      {tokens.map((token, index) => {
+        if (token.startsWith("`") && token.endsWith("`") && token.length > 2) {
+          return (
+            <code
+              key={index}
+              className="rounded bg-steel-800/80 px-1 py-0.5 font-mono text-[0.9em] text-accent-light"
+            >
+              {token.slice(1, -1)}
+            </code>
+          );
+        }
+        if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
+          return (
+            <strong key={index} className="font-semibold text-foreground">
+              {token.slice(2, -2)}
+            </strong>
+          );
+        }
+        return <span key={index}>{token}</span>;
+      })}
+    </>
+  );
+}
+
 export function CheatSheetBlockRenderer({
   block,
   compact = false,
@@ -49,7 +83,7 @@ function TipBlock({ block, compact }: { block: CheatSheetBlock; compact: boolean
         </p>
       </div>
       <p className={cn("mt-2 text-foreground font-medium leading-relaxed", compact ? "text-xs" : "text-sm")}>
-        {block.body}
+        <InlineText text={block.body} />
       </p>
     </div>
   );
@@ -108,7 +142,7 @@ function ExampleBlock({ block, compact }: { block: CheatSheetBlock; compact: boo
       <BlockLabel>{block.title || "Example"}</BlockLabel>
       <div
         className={cn(
-          "rounded-xl border border-steel-800/80 bg-steel-950/50 font-mono text-foreground/90",
+          "whitespace-pre-wrap rounded-xl border border-steel-800/80 bg-steel-950/50 font-mono text-foreground/90",
           compact ? "p-2.5 text-xs leading-5" : "p-3.5 text-xs sm:text-[13px] leading-6",
         )}
       >
@@ -164,7 +198,9 @@ function ChecklistBlock({ block, compact }: { block: CheatSheetBlock; compact: b
                   <Square className="h-4 w-4 text-steel-500 group-hover:text-steel-300" />
                 )}
               </button>
-              <span className="flex-1 leading-relaxed">{item}</span>
+              <span className="flex-1 leading-relaxed">
+                <InlineText text={item} />
+              </span>
             </li>
           );
         })}
@@ -199,7 +235,7 @@ function TableBlock({ block, compact }: { block: CheatSheetBlock; compact: boole
               >
                 {row.map((cell, cIdx) => (
                   <td key={`${cell}-${cIdx}`} className="px-3.5 py-2.5 align-top leading-relaxed text-foreground">
-                    {cell}
+                    <InlineText text={cell} />
                   </td>
                 ))}
               </tr>
@@ -221,7 +257,7 @@ function DefinitionBlock({ block, compact }: { block: CheatSheetBlock; compact: 
           compact ? "p-3 text-xs" : "p-4 text-sm",
         )}
       >
-        {block.body}
+        <InlineText text={block.body} />
       </div>
     </div>
   );

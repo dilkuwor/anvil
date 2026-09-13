@@ -16,6 +16,7 @@ const PRIVATE_PATHS = [
   "/oauth",
   "/system-design/interview",
   "/system-design/history",
+  "/behavioral/interview",
   "/problems/lists",
 ];
 

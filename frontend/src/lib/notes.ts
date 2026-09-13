@@ -1,4 +1,4 @@
-export type NoteSourceType = "LESSON" | "PROBLEM" | "SYSTEM_DESIGN";
+export type NoteSourceType = "LESSON" | "PROBLEM" | "SYSTEM_DESIGN" | "BEHAVIORAL";
 export type NoteKind = "MANUAL" | "AI_RESPONSE";
 
 export type Note = {
@@ -31,6 +31,7 @@ export type NoteCreate = {
 export function sourceLabel(type: NoteSourceType): string {
   if (type === "LESSON") return "Lesson";
   if (type === "PROBLEM") return "Problem";
+  if (type === "BEHAVIORAL") return "STAR Story";
   return "System Design";
 }
 

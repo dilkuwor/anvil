@@ -94,6 +94,16 @@ def resolve_source(db: Session, source_type: NoteSourceType, raw_id: str) -> tup
         title = str(scenario["title"])
         return slug, title, f"/system-design/simulator?problem={slug}"
 
+    if source_type == NoteSourceType.BEHAVIORAL:
+        from app.interviews.behavioral import QUESTION_BANK
+
+        if source_id == "general":
+            return "general", "Behavioral Stories", "/behavioral"
+        match = next((item for item in QUESTION_BANK if item["competency"] == source_id or item["slug"] == source_id), None)
+        if match is None:
+            raise AppError("Unknown behavioral competency.", status_code=422, code="invalid_source")
+        return str(match["competency"]), f"STAR story · {match['competency_title']}", f"/behavioral#{match['competency']}"
+
     raise AppError("Unknown note source.", status_code=422, code="invalid_source")
 
 

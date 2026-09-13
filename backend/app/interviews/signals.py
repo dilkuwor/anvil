@@ -26,6 +26,16 @@ SD_SIGNAL_KEYS = (
     "communication",
 )
 
+BEHAVIORAL_SIGNAL_KEYS = (
+    "situation",
+    "action",
+    "result",
+    "ownership",
+    "specificity",
+    "reflection",
+    "communication",
+)
+
 MISSING = "missing"
 PARTIAL = "partial"
 DEMONSTRATED = "demonstrated"
@@ -113,8 +123,39 @@ _SD_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
 }
 
 
+BEHAVIORAL_FOCUS_BY_PHASE: dict[str, tuple[str, ...]] = {
+    "QUESTION": ("situation", "action", "result"),
+    "PROBE": ("result", "ownership", "specificity", "reflection"),
+    "CLOSING": (),
+    "FEEDBACK": (),
+}
+
+_BEHAVIORAL_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    "situation": (
+        re.compile(r"\b(at the time|last (year|quarter|month)|on my team|we were|the context|the project|when I was|my team was|we had)\b", re.I),
+    ),
+    "action": (
+        re.compile(
+            r"\bI (built|wrote|led|decided|proposed|owned|fixed|set up|convinced|drove|designed|ran|paired|escalated|"
+            r"measured|prototyped|rolled|shipped|asked|pushed|called|took)\b",
+            re.I,
+        ),
+    ),
+    "result": (
+        re.compile(r"\b(result|reduced|increased|cut|improved|shipped|saved|dropped|went from|down to|up to|p99|latency|revenue|on time|\d+\s?%|\d+x)\b", re.I),
+    ),
+    "reflection": (
+        re.compile(r"\b(learned|lesson|next time|do differently|in hindsight|since then|changed how|now I|going forward)\b", re.I),
+    ),
+}
+
+
 def _keys_for(kind: str) -> tuple[str, ...]:
-    return SD_SIGNAL_KEYS if kind == "SYSTEM_DESIGN" else SIGNAL_KEYS
+    if kind == "SYSTEM_DESIGN":
+        return SD_SIGNAL_KEYS
+    if kind == "BEHAVIORAL":
+        return BEHAVIORAL_SIGNAL_KEYS
+    return SIGNAL_KEYS
 
 
 def empty_signals(kind: str = "CODING") -> dict[str, str]:
@@ -155,7 +196,7 @@ def infer_signals(text: str, current: dict[str, str] | None = None, kind: str = 
     updates: dict[str, str] = {}
     if not blob:
         return updates
-    patterns = _SD_PATTERNS if kind == "SYSTEM_DESIGN" else _PATTERNS
+    patterns = _SD_PATTERNS if kind == "SYSTEM_DESIGN" else _BEHAVIORAL_PATTERNS if kind == "BEHAVIORAL" else _PATTERNS
     for key, group in patterns.items():
         if any(pattern.search(blob) for pattern in group):
             updates[key] = DEMONSTRATED if len(blob) >= 80 else PARTIAL
@@ -204,7 +245,7 @@ def infer_from_sandbox(
 
 
 def choose_focus(phase: str, signals: dict[str, str], kind: str = "CODING") -> str | None:
-    table = SD_FOCUS_BY_PHASE if kind == "SYSTEM_DESIGN" else CODING_FOCUS_BY_PHASE
+    table = SD_FOCUS_BY_PHASE if kind == "SYSTEM_DESIGN" else BEHAVIORAL_FOCUS_BY_PHASE if kind == "BEHAVIORAL" else CODING_FOCUS_BY_PHASE
     normalized = normalize_signals(signals, kind)
     for key in table.get(phase, ()):
         if normalized.get(key) != DEMONSTRATED:

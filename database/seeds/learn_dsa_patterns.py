@@ -48,7 +48,9 @@ Memory is the secondary consideration: on a deep narrow graph DFS is cheaper; on
                     ),
                     (
                         "How It Works",
-                        """### DFS template
+                        """:::viz graph-traversal {"edges": ["A-B", "A-C", "B-D", "C-D", "C-E", "D-F", "E-F"], "start": "A", "mode": "bfs"}
+
+### DFS template
 
 ```java
 void dfs(int node, List<List<Integer>> graph, boolean[] visited) {

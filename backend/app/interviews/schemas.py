@@ -89,6 +89,27 @@ class StartSystemDesignRequest(BaseModel):
     scenario_slug: str = Field(min_length=1, max_length=80)
 
 
+class StartBehavioralRequest(BaseModel):
+    track: str = Field(default="general", min_length=1, max_length=40)
+
+
+class BehavioralQuestionOut(BaseModel):
+    slug: str
+    competency: str
+    competency_title: str
+    question: str
+    probes: list[str]
+    looking_for: list[str]
+    learn_slug: str
+
+
+class BehavioralTrackOut(BaseModel):
+    slug: str
+    title: str
+    summary: str
+    questions: list[str]
+
+
 class ArchitectureUpdateRequest(BaseModel):
     architecture: dict
 
@@ -110,10 +131,13 @@ class SimulatorSampleNodeOut(BaseModel):
 
 
 class SimulatorSampleEdgeOut(BaseModel):
+    """`weight` is the share (0-1) of the source's flow that takes this edge; omitted means all of it."""
+
     id: str
     source: str
     target: str
     label: str | None = None
+    weight: float | None = None
 
 
 class SimulatorSampleWorkloadOut(BaseModel):
@@ -125,6 +149,7 @@ class SimulatorSampleWorkloadOut(BaseModel):
     avg_response_bytes: int
     peak_multiplier: float
     traffic_growth: float
+    avg_record_bytes: int | None = None
 
 
 class SimulatorSampleSloOut(BaseModel):

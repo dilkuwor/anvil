@@ -29,6 +29,7 @@ const FILTERS: { id: "ALL" | NoteSourceType; label: string }[] = [
   { id: "LESSON", label: "Lessons" },
   { id: "PROBLEM", label: "Problems" },
   { id: "SYSTEM_DESIGN", label: "System Design" },
+  { id: "BEHAVIORAL", label: "STAR Stories" },
 ];
 
 const PAGE_SIZE = 15;

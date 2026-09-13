@@ -18,6 +18,8 @@ const CATEGORY_ICON: Record<ComponentCategory, string> = {
   messaging: "Radio",
   storage: "HardDrive",
   reliability: "Shield",
+  search: "Search",
+  coordination: "Hash",
 };
 
 export function Palette() {

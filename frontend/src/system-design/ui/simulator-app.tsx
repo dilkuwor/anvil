@@ -4,10 +4,12 @@ import { ReactFlowProvider } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { BookOpen } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import type { SystemDesignScenario } from "@/lib/interview";
 import { applyScenarioWorkload, scenarioBySlug, useSystemDesignCatalog } from "@/lib/system-design-catalog";
 import { simulateAsync } from "../engine/client";
 import { viewAtCursor } from "../engine/timeline";
@@ -16,6 +18,7 @@ import type { ActiveFailure, ConfigValue, DesignEdge, DesignNode, Difficulty, Si
 import { listResults, loadCurrent, newDesign, saveCurrent, saveDesign, saveResult } from "../state/persist";
 import { uid } from "../utils/ids";
 import { BottomPanel } from "./bottom-panel";
+import { BriefPanel } from "./brief-panel";
 import { SimulatorCanvas } from "./canvas";
 import { Inspector } from "./inspector";
 import { Palette } from "./palette";
@@ -37,11 +40,13 @@ function SimulatorWorkspace() {
   const appliedSample = useRef<string | null>(null);
   const [design, setDesign] = useState<SystemDesign>(() => loadCurrent() ?? newDesign());
   const [selectedId, setSelectedId] = useState<string | null>(design.nodes[0]?.id ?? null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [previous, setPrevious] = useState<SimulationResult | null>(null);
   const [failures, setFailures] = useState<ActiveFailure[]>([]);
   const [busy, setBusy] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 1280);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [cursor, setCursor] = useState(1);
@@ -87,9 +92,24 @@ function SimulatorWorkspace() {
     return () => window.clearInterval(tick);
   }, [playing, result, speed]);
 
-  const live = result ? viewAtCursor(result, cursor) : null;
+  // Memoized so child effects keyed on the result do not refire on every unrelated render (which was wiping edge selection).
+  const live = useMemo(() => (result ? viewAtCursor(result, cursor) : null), [result, cursor]);
 
   const selected = design.nodes.find((node) => node.id === selectedId) ?? null;
+  const selectedEdge = selected ? null : (design.edges.find((edge) => edge.id === selectedEdgeId) ?? null);
+  const scenario = scenarioForDesign(catalog.data, design.problemSlug);
+  const samples = (catalog.data ?? []).filter((item) => item.sample);
+
+  function loadSample(slug: string) {
+    const sample = sampleFromCatalog(catalog.data, slug);
+    if (!sample) return;
+    const next = designFromSample(sample);
+    commit(next);
+    setSelectedId(next.nodes[0]?.id ?? null);
+    setResult(null);
+    setBriefOpen(true);
+    toast.success(`Loaded the ${sample.name} sample.`);
+  }
 
   const commit = useCallback((next: SystemDesign) => {
     undo.current = [...undo.current, design].slice(-30);
@@ -125,12 +145,22 @@ function SimulatorWorkspace() {
         setDesign(saved);
         toast.success("Architecture saved.");
       }
+      if ((event.metaKey || event.ctrlKey) && (event.key === "y" || (event.key === "z" && event.shiftKey))) {
+        event.preventDefault();
+        const next = redo.current.pop();
+        if (!next) return;
+        undo.current = [...undo.current, design].slice(-30);
+        setDesign(next);
+        setResult(null);
+        return;
+      }
       if ((event.metaKey || event.ctrlKey) && event.key === "z") {
         event.preventDefault();
         const prior = undo.current.pop();
         if (!prior) return;
         redo.current.push(design);
         setDesign(prior);
+        setResult(null);
       }
       if ((event.metaKey || event.ctrlKey) && event.key === "d" && selected) {
         event.preventDefault();
@@ -170,6 +200,18 @@ function SimulatorWorkspace() {
             }}
           />
           <SimulatorHelpButton expanded={helpOpen} onClick={() => setHelpOpen(true)} />
+          {scenario ? (
+            <button
+              type="button"
+              className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] text-muted-foreground hover:bg-steel-800 hover:text-foreground"
+              aria-pressed={briefOpen}
+              title="Show the problem brief next to the canvas"
+              onClick={() => setBriefOpen((value) => !value)}
+            >
+              <BookOpen className="h-4 w-4" />
+              Brief
+            </button>
+          ) : null}
           <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
             Level
             <select
@@ -184,24 +226,26 @@ function SimulatorWorkspace() {
             </select>
           </label>
           <span className="hidden h-5 w-px bg-steel-800 sm:block" aria-hidden />
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              title="Load the URL Shortener sample architecture"
-              disabled={!sampleFromCatalog(catalog.data, "url-shortener")}
-              onClick={() => {
-                const sample = sampleFromCatalog(catalog.data, "url-shortener");
-                if (!sample) return;
-                const next = designFromSample(sample);
-                commit(next);
-                setSelectedId(next.nodes[0]?.id ?? null);
-                setResult(null);
-                toast.success(`Loaded the ${sample.name} sample.`);
-              }}
-            >
-              Sample
-            </Button>
+          <div className="flex items-center gap-1">
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="sr-only">Load a sample architecture</span>
+              <select
+                className="select-field h-8 w-[10.5rem]"
+                value=""
+                disabled={!samples.length}
+                title="Load a wired sample architecture for a catalog problem"
+                onChange={(event) => {
+                  if (event.target.value) loadSample(event.target.value);
+                }}
+              >
+                <option value="">Load sample…</option>
+                {samples.map((item) => (
+                  <option key={item.slug} value={item.sample_slug ?? item.slug}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+            </label>
             <Button
               variant="ghost"
               size="sm"
@@ -242,10 +286,12 @@ function SimulatorWorkspace() {
         <div className="border-b border-coral/30 bg-coral/5 px-4 py-2 text-[12px] leading-5">
           <span className="font-medium text-coral">Primary bottleneck · {result.bottlenecks[0].label}</span>
           <span className="text-muted-foreground"> — {result.bottlenecks[0].why}</span>
+          {result.bottlenecks[0].fix ? <span className="text-foreground"> {result.bottlenecks[0].fix}</span> : null}
         </div>
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1">
+        {scenario && briefOpen ? <BriefPanel scenario={scenario} onClose={() => setBriefOpen(false)} /> : null}
         <Palette />
         <SimulatorCanvas
           key={design.id}
@@ -254,6 +300,7 @@ function SimulatorWorkspace() {
           result={live}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          onSelectEdge={setSelectedEdgeId}
           onGraph={updateGraph}
           onDuplicate={(id) => {
             const source = design.nodes.find((node) => node.id === id);
@@ -285,6 +332,19 @@ function SimulatorWorkspace() {
         />
         <Inspector
           node={selected}
+          edge={selectedEdge}
+          edgeEnds={
+            selectedEdge
+              ? {
+                  source: design.nodes.find((node) => node.id === selectedEdge.source)?.label ?? selectedEdge.source,
+                  target: design.nodes.find((node) => node.id === selectedEdge.target)?.label ?? selectedEdge.target,
+                }
+              : undefined
+          }
+          edgeMetrics={selectedEdge ? live?.edges[selectedEdge.id] : undefined}
+          onEdgeChange={(patch) =>
+            commit({ ...design, edges: design.edges.map((edge) => (edge.id === selectedEdgeId ? { ...edge, ...patch } : edge)) })
+          }
           metrics={selected ? live?.nodes[selected.id] : undefined}
           difficulty={design.difficulty}
           onRename={(label) =>
@@ -306,6 +366,7 @@ function SimulatorWorkspace() {
       <BottomPanel
         workload={design.workload}
         slo={design.slo}
+        nodes={design.nodes}
         result={live}
         previous={previous ?? history[1] ?? null}
         failures={failures}
@@ -330,4 +391,9 @@ function SimulatorWorkspace() {
       />
     </div>
   );
+}
+
+function scenarioForDesign(items: SystemDesignScenario[] | undefined, slug: string | undefined): SystemDesignScenario | undefined {
+  if (!items || !slug) return undefined;
+  return scenarioBySlug(items, slug) ?? items.find((item) => item.sample_slug === slug);
 }

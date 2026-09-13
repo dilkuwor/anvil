@@ -2,6 +2,10 @@
 
 Inserts any of the 65 catalog problems whose ``lc-{id}`` slug is missing.
 Existing rows (including Microsoft Interview copies) are left unchanged.
+
+This is the standalone CLI for the LoopTracker subset only. ``python -m app.seed`` uses
+``app.problems.seed_catalog`` instead, which covers the whole catalog and also refreshes
+authored content on rows that already exist.
 """
 
 from __future__ import annotations
@@ -78,8 +82,11 @@ def _create_problem(db: Session, spec: dict) -> Problem:
         explanation=spec["explanation"],
         hints=spec["hints"],
         examples=spec["examples"],
+        time_complexity=spec["time_complexity"],
+        space_complexity=spec["space_complexity"],
         starter_code=spec["starter_code"],
         function_signature=spec["function_signature"],
+        reference_solution=spec["reference_solution"],
         is_active=True,
     )
     db.add(problem)

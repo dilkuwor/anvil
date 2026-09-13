@@ -57,15 +57,32 @@ describe("system design simulation engine", () => {
     expect(Math.round(derived.peakRps)).toBe(115741);
   });
 
-  it("sends cache misses to the database", () => {
+  it("sends cache misses plus writes to the database", () => {
     const result = runSimulation({ design: design(), failures: [] });
+    const api = result.nodes.api1;
     const redis = result.nodes.r1;
     const db = result.nodes.db1;
     expect(redis.incomingRps).toBeGreaterThan(0);
-    expect(db.incomingRps).toBeGreaterThan(0);
+    const misses = redis.incomingRps * 0.1;
+    const writes = api.processedRps * 0.1;
+    expect(db.incomingRps).toBeCloseTo(misses + writes, 0);
     expect(db.incomingRps).toBeLessThan(redis.incomingRps);
     expect(result.cost.total).toBeGreaterThan(0);
     expect(result.timeline.length).toBeGreaterThan(2);
+  });
+
+  it("evaluates the store after the cache even when the store edge is drawn first", () => {
+    const reordered = design();
+    reordered.edges = [
+      { id: "e1", source: "c1", target: "lb1" },
+      { id: "e2", source: "lb1", target: "api1" },
+      { id: "e4", source: "api1", target: "db1" },
+      { id: "e3", source: "api1", target: "r1" },
+    ];
+    const result = runSimulation({ design: reordered, failures: [] });
+    const canonical = runSimulation({ design: design(), failures: [] });
+    expect(result.nodes.db1.incomingRps).toBeCloseTo(canonical.nodes.db1.incomingRps, 5);
+    expect(result.nodes.db1.processedRps).toBeCloseTo(canonical.nodes.db1.processedRps, 5);
   });
 
   it("flags an undersized database as a bottleneck", () => {
@@ -90,5 +107,55 @@ describe("system design simulation engine", () => {
     });
     const result = runSimulation({ design: limited, failures: [] });
     expect(result.nodes.rl1.rejectedRps).toBeGreaterThan(1000);
+  });
+
+  it("sends every read to the database when the cache is down", () => {
+    const healthy = runSimulation({ design: design(), failures: [] });
+    const cold = runSimulation({ design: design(), failures: [{ id: "cache_down", type: "cache_down" }] });
+    expect(cold.nodes.db1.incomingRps).toBeGreaterThan(healthy.nodes.db1.incomingRps * 5);
+    expect(cold.nodes.r1.droppedRps).toBeLessThan(1);
+    expect(cold.nodes.r1.notes[0]).toContain("fall through");
+  });
+
+  it("explains an injected failure instead of suggesting shards for it", () => {
+    const dead = runSimulation({ design: design(), failures: [{ id: "database_down", type: "database_down" }] });
+    const db = dead.bottlenecks.find((item) => item.nodeId === "db1");
+    expect(db?.why).toContain("Database impaired");
+    expect(db?.fix).toContain("failure itself");
+  });
+
+  it("stops the critical path at a queue and keeps async losses out of the error rate", () => {
+    const base = design();
+    const kafka = { id: "k1", type: "kafka" as const, label: "Events", x: 0, y: 0, config: { ...getKind("kafka").defaultConfig } };
+    const workers = { id: "w1", type: "worker" as const, label: "Workers", x: 0, y: 0, config: { ...getKind("worker").defaultConfig, instances: 1, concurrency: 1, jobMs: 5000 } };
+    const async = design({
+      nodes: [...base.nodes.map((node) => (node.id === "api1" ? { ...node, config: { ...node.config, instances: 80 } } : node)), kafka, workers],
+      edges: [...base.edges, { id: "e5", source: "api1", target: "k1" }, { id: "e6", source: "k1", target: "w1" }],
+    });
+    const result = runSimulation({ design: async, failures: [] });
+    expect(result.criticalPath.map((hop) => hop.nodeId)).not.toContain("w1");
+    expect(result.latency.p95).toBeLessThan(1000);
+    expect(result.nodes.w1.droppedRps).toBeGreaterThan(100);
+    expect(result.throughput.backlogRps).toBeGreaterThan(100);
+    expect(result.errorRate).toBeLessThan(0.02);
+    expect(result.nodes.k1.notes[0]).toContain("handed to the consumers");
+  });
+
+  it("weights an edge so only that share of the flow takes it", () => {
+    const base = design();
+    const search = { id: "s1", type: "search_index" as const, label: "Search", x: 0, y: 0, config: { ...getKind("search_index").defaultConfig } };
+    const full = design({ nodes: [...base.nodes, search], edges: [...base.edges, { id: "e5", source: "api1", target: "s1" }] });
+    const slice = design({ nodes: [...base.nodes, search], edges: [...base.edges, { id: "e5", source: "api1", target: "s1", weight: 0.05 }] });
+    const all = runSimulation({ design: full, failures: [] });
+    const some = runSimulation({ design: slice, failures: [] });
+    expect(some.nodes.s1.incomingRps).toBeCloseTo(all.nodes.s1.incomingRps * 0.05, 3);
+    expect(some.edges.e5.rps).toBeCloseTo(some.nodes.s1.incomingRps, 5);
+  });
+
+  it("sizes database connections by Little's law rather than raw rps", () => {
+    const result = runSimulation({ design: design(), failures: [] });
+    const db = result.nodes.db1;
+    expect(db.utilization.connections).toBeLessThan(0.2);
+    expect(db.incomingRps).toBeGreaterThan(300);
   });
 });
