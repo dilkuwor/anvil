@@ -143,7 +143,7 @@ export function organizationJsonLd(origin?: string | null) {
     "@id": `${base}/#organization`,
     name: SITE_PUBLISHER,
     url: base,
-    logo: absoluteUrl("/logo-app-v6.png", base),
+    logo: absoluteUrl("/anvil-logo-512.png", base),
     brand: SITE_NAME,
   };
 }

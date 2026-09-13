@@ -69,9 +69,12 @@ export async function generateMetadata(): Promise<Metadata> {
       description: SITE_DESCRIPTION,
     },
     icons: {
-      icon: [{ url: "/logo-app-v6.png", type: "image/png" }],
-      apple: "/logo-app-v6.png",
-      shortcut: "/logo-app-v6.png",
+      icon: [
+        { url: "/anvil-logo.svg", type: "image/svg+xml" },
+        { url: "/anvil-logo-512.png", type: "image/png", sizes: "512x512" },
+      ],
+      apple: "/anvil-logo-maskable-512.png",
+      shortcut: "/anvil-logo-512.png",
     },
     ...(googleVerification ? { verification: { google: googleVerification } } : {}),
   };

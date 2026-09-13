@@ -1,5 +1,4 @@
-import Image from "next/image";
-
+import { AnvilMark } from "@/components/ui/anvil-mark";
 import { cn } from "@/lib/utils";
 
 export function SectionCard({
@@ -43,20 +42,7 @@ export function BrandMark({
 }) {
   return (
     <span className="inline-flex items-center gap-2 font-semibold leading-none tracking-tight">
-      <span
-        className={cn(
-          "relative inline-flex shrink-0 overflow-hidden rounded-[22%]",
-          compact ? "h-6 w-6" : "h-7 w-7",
-        )}
-      >
-        <Image
-          src="/logo-app-v6.png"
-          alt="Anvil logo"
-          width={28}
-          height={28}
-          className="h-full w-full object-cover"
-        />
-      </span>
+      <AnvilMark className={cn("shrink-0", compact ? "h-6 w-6" : "h-7 w-7")} title="Anvil logo" />
       <span className={cn("leading-none", wordmarkClassName)}>{wordmark}</span>
     </span>
   );

@@ -9,21 +9,27 @@ export default function manifest(): MetadataRoute.Manifest {
     description: `${SITE_TAGLINE} ${SITE_DESCRIPTION}`,
     start_url: "/",
     display: "standalone",
-    background_color: "#18181b",
+    background_color: "#0b0b0f",
     theme_color: "#f97316",
     lang: "en",
     icons: [
       {
-        src: "/logo-app-v6.png",
+        src: "/anvil-logo-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/logo-app-v6.png",
-        sizes: "192x192",
+        src: "/anvil-logo-maskable-512.png",
+        sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
+      },
+      {
+        src: "/anvil-logo.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "any",
       },
     ],
   };
