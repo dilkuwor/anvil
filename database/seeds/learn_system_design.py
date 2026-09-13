@@ -2286,7 +2286,9 @@ Most real systems run both: an L4 layer at the edge for volume, an L7 layer behi
                     ),
                     (
                         "How It Works",
-                        """### Algorithms
+                        """:::viz load-balancing {"algorithm": "round_robin", "servers": 2, "durations": [4, 1, 1, 4, 1, 1]}
+
+### Algorithms
 
 | Algorithm | Behaviour | When it is right |
 | --- | --- | --- |
@@ -3946,7 +3948,9 @@ Every design question reduces to two properties:
                     ),
                     (
                         "How It Works",
-                        """### Topologies
+                        """:::viz replication {"mode": "async", "followers": 2}
+
+### Topologies
 
 | Topology | Writes | Strength | Weakness |
 | --- | --- | --- | --- |
@@ -4489,7 +4493,9 @@ Three properties define any messaging system, and you should state all three whe
                     ),
                     (
                         "How It Works",
-                        """### When to go asynchronous
+                        """:::viz queue-backpressure {"producerRate": 1000, "consumerRate": 300, "consumers": 2, "addConsumersAt": 6, "seconds": 12, "bound": 0}
+
+### When to go asynchronous
 
 Move work off the request path when it is:
 
@@ -5057,7 +5063,9 @@ Eventual consistency without any session guarantee is usually a bad user experie
                     ),
                     (
                         "How It Works",
-                        """### The anomalies, named
+                        """:::viz quorum {"n": 3, "w": 2, "r": 2}
+
+### The anomalies, named
 
 Being able to name the specific anomaly is more useful than the model taxonomy:
 
@@ -5761,7 +5769,9 @@ The key insight people miss: the dedup record and the effect must be written **i
                     ),
                     (
                         "How It Works",
-                        """### Where the key comes from
+                        """:::viz idempotency {"mode": "without"}
+
+### Where the key comes from
 
 The **client** generates it, not the server, because the whole point is that the retry must carry the *same* key as the original attempt. A server-generated id changes on every attempt and is useless.
 
@@ -6123,7 +6133,9 @@ A dependency with no timeout and no fallback is a dependency that can take you d
                     ),
                     (
                         "How It Works",
-                        """### Timeouts
+                        """:::viz circuit-breaker {"threshold": 3, "cooldown": 4, "calls": ["ok", "fail", "fail", "fail", "ok", "ok", "wait", "wait", "ok", "ok", "fail"]}
+
+### Timeouts
 
 Set them from the dependency's observed p99, not from a round number. Three separate values matter: connect timeout (short — a healthy TCP connect is milliseconds), read timeout (from p99 plus headroom), and total deadline for the whole operation.
 
@@ -6331,7 +6343,9 @@ Identify → Count → Decide
                     ),
                     (
                         "How It Works",
-                        """### Algorithms
+                        """:::viz token-bucket {"capacity": 3, "refillPerSec": 2, "requests": [0, 0.1, 0.2, 0.3, 0.9, 1.0, 1.1, 1.2, 2.5, 2.6]}
+
+### Algorithms
 
 | Algorithm | State | Bursts | Accuracy | Notes |
 | --- | --- | --- | --- | --- |

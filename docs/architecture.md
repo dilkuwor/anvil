@@ -195,7 +195,7 @@ a course rather than a glossary:
 | `learn_dsa.py`, `learn_dsa_patterns.py`, `learn_dsa_problems.py` | Data Structures & Algorithms | 30 / 81 |
 | `learn_system_design.py`, `learn_system_design_cases.py` | System Design | 24 / 60 |
 | `learn_ood.py` | Object-Oriented Design | 36 / 55 |
-| `learn_ai.py` | AI & Machine Learning | 16 / 70 |
+| `learn_ai.py` | AI & Machine Learning | 22 / 88 |
 
 Each deep module exports one function (`dsa_core_topics()`, `system_design_topics()`,
 `ood_topics()`, `ai_topics()`) and builds lesson markdown from a lead paragraph plus

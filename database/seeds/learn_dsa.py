@@ -3574,7 +3574,9 @@ Three standard uses:
                     ),
                     (
                         "How It Works",
-                        """### Cycle detection
+                        """:::viz fast-slow {"length": 7, "cycleStart": 3}
+
+### Cycle detection
 
 ```java
 boolean hasCycle(ListNode head) {
@@ -4524,7 +4526,9 @@ New element arrives → pop everything it resolves → push it to wait
                     ),
                     (
                         "How It Works",
-                        """### Next greater element
+                        """:::viz monotonic-stack {"array": [2, 1, 5, 6, 2, 3]}
+
+### Next greater element
 
 ```java
 int[] nextGreater(int[] nums) {
@@ -6219,7 +6223,9 @@ Doing these in any other order loses the tail of the list.
                     ),
                     (
                         "How It Works",
-                        """### Reversal, the canonical example
+                        """:::viz linked-list-reverse {"values": [1, 2, 3, 4, 5]}
+
+### Reversal, the canonical example
 
 ```java
 ListNode reverse(ListNode head) {
@@ -6706,7 +6712,9 @@ Iterative forms matter too: interviewers ask for them when the tree may be deep 
                     ),
                     (
                         "How It Works",
-                        """### Recursive traversals
+                        """:::viz tree-traversal {"tree": ["8", "3", "10", "1", "6", "null", "14"], "order": "in"}
+
+### Recursive traversals
 
 ```java
 void preorder(TreeNode node, List<Integer> out) {
@@ -8131,7 +8139,9 @@ Maintain the invariant that the sizes differ by at most one, and that every valu
                     ),
                     (
                         "How It Works",
-                        """### Median of a data stream
+                        """:::viz top-k-heap {"stream": [5, 1, 9, 3, 7, 2, 8, 6], "k": 3}
+
+### Median of a data stream
 
 ```java
 class MedianFinder {
