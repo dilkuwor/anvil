@@ -6,6 +6,23 @@ import { consistentHashingSteps, hashAngle } from "./consistent-hashing";
 import { graphTraversalSteps } from "./graph-traversal";
 import { getViz, listViz, parseVizDirective } from "./registry";
 import { slidingWindowSteps } from "./sliding-window";
+import { monotonicStackSteps } from "./monotonic-stack";
+import { fastSlowSteps } from "./fast-slow";
+import { topKSteps } from "./top-k-heap";
+import { unionFindSteps } from "./union-find";
+import { topologicalSortSteps } from "./topological-sort";
+import { dijkstraSteps } from "./dijkstra";
+import { dp1dSteps } from "./dp-1d";
+import { mergeIntervalsSteps } from "./merge-intervals";
+import { treeTraversalSteps } from "./tree-traversal";
+import { listReverseSteps } from "./linked-list-reverse";
+import { replicationSteps } from "./replication";
+import { loadBalancingSteps } from "./load-balancing";
+import { backpressureSteps } from "./queue-backpressure";
+import { tokenBucketSteps } from "./token-bucket";
+import { idempotencySteps } from "./idempotency";
+import { quorumSteps } from "./quorum";
+import { circuitBreakerSteps } from "./circuit-breaker";
 
 describe("viz registry", () => {
   it("parses the fence info string with optional JSON params", () => {
@@ -18,7 +35,8 @@ describe("viz registry", () => {
 
   it("registers every visualizer with fields, defaults, and a pure step function", () => {
     const ids = listViz().map((definition) => definition.id);
-    expect(ids).toEqual(["sliding-window", "binary-search", "graph-traversal", "cache-aside", "consistent-hashing"]);
+    expect(ids).toHaveLength(22);
+    expect(ids).toEqual(expect.arrayContaining(["sliding-window", "binary-search", "graph-traversal", "cache-aside", "consistent-hashing", "monotonic-stack", "fast-slow", "top-k-heap", "union-find", "topological-sort", "dijkstra", "dp-1d", "merge-intervals", "tree-traversal", "linked-list-reverse", "replication", "load-balancing", "queue-backpressure", "token-bucket", "idempotency", "quorum", "circuit-breaker"]));
     for (const definition of listViz()) {
       const params = definition.parse({});
       expect(params).toEqual(definition.defaults);
@@ -152,5 +170,111 @@ describe("consistent hashing", () => {
     const steps = consistentHashingSteps({ nodes: ["N1", "N2"], keys: ["a", "b", "c"], add: "N3", virtual: 4 });
     expect(steps[0].state.ring).toHaveLength(8);
     expect(steps[steps.length - 1].interview).toContain("virtual nodes");
+  });
+});
+
+describe("DSA visualizers compute the right answers", () => {
+  it("monotonic stack: next greater element", () => {
+    const last = monotonicStackSteps({ array: [2, 1, 5, 6, 2, 3] }).at(-1)!;
+    expect(last.state.result).toEqual([5, 5, 6, null, 3, null]);
+  });
+  it("fast-slow: finds the cycle entry, or reports no cycle", () => {
+    const withCycle = fastSlowSteps({ length: 7, cycleStart: 3 }).at(-1)!;
+    expect(withCycle.state.entry).toBe(3);
+    const none = fastSlowSteps({ length: 5, cycleStart: -1 }).at(-1)!;
+    expect(none.title).toContain("no cycle");
+  });
+  it("top-k: keeps the k largest", () => {
+    const last = topKSteps({ stream: [5, 1, 9, 3, 7, 2, 8, 6], k: 3 }).at(-1)!;
+    expect([...last.state.heap].sort((a, b) => a - b)).toEqual([7, 8, 9]);
+  });
+  it("union-find: components and cycle edges", () => {
+    const steps = unionFindSteps({ n: 7, ops: ["U:0-1", "U:2-3", "U:1-3", "U:4-5", "F:0", "U:5-6", "U:3-6", "U:0-6"] });
+    expect(steps.at(-1)!.state.components).toBe(1);
+    expect(steps.some((s) => s.title.includes("same set"))).toBe(true);
+  });
+  it("topological sort: valid order and cycle detection", () => {
+    const ok = topologicalSortSteps({ edges: ["A>B", "A>C", "B>D", "C>D", "D>E", "F>C"] }).at(-1)!;
+    const pos = Object.fromEntries(ok.state.order.map((n, i) => [n, i]));
+    for (const [a, b] of [["A", "B"], ["A", "C"], ["B", "D"], ["C", "D"], ["D", "E"], ["F", "C"]]) expect(pos[a]).toBeLessThan(pos[b]);
+    const cyc = topologicalSortSteps({ edges: ["A>B", "B>C", "C>A"] }).at(-1)!;
+    expect(cyc.state.cycle).toBe(true);
+    expect(cyc.kind).toBe("tradeoff");
+  });
+  it("dijkstra: distances, and a negative-edge warning", () => {
+    const last = dijkstraSteps({ edges: ["A-B:4", "A-C:1", "C-B:2", "B-D:5", "C-D:8", "D-E:3", "C-E:10"], start: "A" }).at(-1)!;
+    expect(last.state.dist).toEqual({ A: 0, B: 3, C: 1, D: 8, E: 11 });
+    expect(dijkstraSteps({ edges: ["A-B:-1"], start: "A" }).at(-1)!.kind).toBe("tradeoff");
+  });
+  it("dp-1d: house robber value and reconstruction", () => {
+    const last = dp1dSteps({ values: [2, 7, 9, 3, 1] }).at(-1)!;
+    expect(last.state.dp.at(-1)).toBe(12);
+    expect(last.state.chosen).toEqual([0, 2, 4]);
+  });
+  it("merge intervals", () => {
+    const last = mergeIntervalsSteps({ intervals: ["1-3", "8-10", "2-6", "15-18", "17-20", "6-7"] }).at(-1)!;
+    expect(last.state.merged).toEqual([[1, 7], [8, 10], [15, 20]]);
+  });
+  it("tree traversals: all three orders", () => {
+    const tree = ["8", "3", "10", "1", "6", "null", "14"];
+    expect(treeTraversalSteps({ tree, order: "in" }).at(-1)!.state.visited).toEqual(["1", "3", "6", "8", "10", "14"]);
+    expect(treeTraversalSteps({ tree, order: "pre" }).at(-1)!.state.visited).toEqual(["8", "3", "1", "6", "10", "14"]);
+    expect(treeTraversalSteps({ tree, order: "post" }).at(-1)!.state.visited).toEqual(["1", "6", "3", "14", "10", "8"]);
+  });
+  it("linked list reverse", () => {
+    const last = listReverseSteps({ values: [1, 2, 3, 4, 5] }).at(-1)!;
+    expect(last.title).toContain("New head: 5");
+    expect(last.explain).toContain("5 → 4 → 3 → 2 → 1");
+  });
+});
+
+describe("System design visualizers", () => {
+  it("replication: async loses the write on failover, sync does not", () => {
+    const async = replicationSteps({ mode: "async", followers: 2 });
+    expect(async.some((s) => s.kind === "tradeoff" && s.title.startsWith("Promote"))).toBe(true);
+    expect(async.at(-1)!.title).toContain("lost");
+    const sync = replicationSteps({ mode: "sync", followers: 2 });
+    expect(sync.at(-1)!.kind).toBe("result");
+    expect(sync.at(-1)!.title).not.toContain("lost");
+  });
+  it("load balancing: least-connections spreads long requests", () => {
+    const rr = loadBalancingSteps({ algorithm: "round_robin", servers: 2, durations: [4, 1, 1, 4, 1, 1] });
+    const lc = loadBalancingSteps({ algorithm: "least_connections", servers: 2, durations: [4, 1, 1, 4, 1, 1] });
+    const peak = (steps: ReturnType<typeof loadBalancingSteps>) => Math.max(...steps.map((s) => Math.max(...s.state.active.map((a) => a.length))));
+    expect(peak(lc)).toBeLessThanOrEqual(peak(rr));
+  });
+  it("backpressure: backlog grows then drains after scaling", () => {
+    const steps = backpressureSteps({ producerRate: 1000, consumerRate: 300, consumers: 2, addConsumersAt: 6, seconds: 12, bound: 0 });
+    const history = steps.at(-1)!.state.history;
+    expect(Math.max(...history)).toBeGreaterThan(0);
+    expect(history.at(-1)).toBeLessThan(Math.max(...history));
+    const bounded = backpressureSteps({ producerRate: 1000, consumerRate: 300, consumers: 2, addConsumersAt: 0, seconds: 6, bound: 500 });
+    expect(bounded.at(-1)!.state.dropped).toBeGreaterThan(0);
+  });
+  it("token bucket allows a burst up to capacity and the window comparison differs", () => {
+    const last = tokenBucketSteps({ capacity: 3, refillPerSec: 2, requests: [0, 0.1, 0.2, 0.3, 0.9, 1.0, 1.1, 1.2, 2.5, 2.6] }).at(-1)!;
+    expect(last.state.decisions.slice(0, 3)).toEqual(["allow", "allow", "allow"]);
+    expect(last.state.decisions[3]).toBe("deny");
+    expect(last.kind).toBe("result");
+    const steps = tokenBucketSteps({ capacity: 3, refillPerSec: 2, requests: [0, 0.1, 0.2, 0.3, 0.9, 1.0, 1.1, 1.2, 2.5, 2.6] });
+    expect(steps.at(-2)!.kind).toBe("tradeoff");
+  });
+  it("idempotency: one charge with a key, two without", () => {
+    expect(idempotencySteps({ mode: "without" }).at(-1)!.state.ledger).toHaveLength(2);
+    expect(idempotencySteps({ mode: "with" }).at(-1)!.state.ledger).toHaveLength(1);
+  });
+  it("quorum: overlap when W + R > N, stale read otherwise", () => {
+    const good = quorumSteps({ n: 3, w: 2, r: 2 });
+    expect(good.some((s) => s.state.result === 2)).toBe(true);
+    const bad = quorumSteps({ n: 3, w: 1, r: 1 });
+    expect(bad.some((s) => s.state.result === 1 && s.kind === "tradeoff")).toBe(true);
+  });
+  it("circuit breaker: trips, half-opens, closes", () => {
+    const steps = circuitBreakerSteps({ threshold: 3, cooldown: 2, calls: ["ok", "fail", "fail", "fail", "ok", "ok", "wait", "wait", "ok", "ok", "fail"] });
+    const statuses = steps.map((s) => s.state.status);
+    expect(statuses).toContain("open");
+    expect(statuses).toContain("half-open");
+    expect(steps.some((s) => s.state.outcome === "rejected")).toBe(true);
+    expect(steps.at(-1)!.state.status).toBe("closed");
   });
 });

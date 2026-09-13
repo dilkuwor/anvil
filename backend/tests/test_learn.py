@@ -107,8 +107,7 @@ def test_ai_category_is_additive(auth_client, db):
     assert ai.status_code == 200
     body = ai.json()
     assert body["title"] == "AI & Machine Learning"
-    assert body["lesson_count"] >= 60
-    assert body["lesson_count"] <= 80
+    assert body["lesson_count"] == 88
     slugs = {topic["slug"] for topic in body["topics"]}
     assert "ai-rag" in slugs
     assert "ai-agents" in slugs
@@ -123,7 +122,9 @@ def test_ai_category_is_additive(auth_client, db):
     lesson = tokens.json()
     assert lesson["status"] == "IN_PROGRESS"
     assert lesson["next"] is not None
-    assert "20k" in lesson["content"].lower() or "20K" in lesson["content"]
+    body = lesson["content"].lower()
+    assert "prompt caching" in body
+    assert "output" in body and "input" in body
     assert lesson["takeaways"]
     assert lesson["interview_questions"]
 
@@ -155,7 +156,7 @@ def test_learn_seed_is_idempotent(db):
     )
     assert first == second
     assert first[0] == 7
-    assert first[2] == 314
+    assert first[2] == 332
 
 
 def test_system_design_problems_topic(auth_client, db):
@@ -418,6 +419,94 @@ def test_system_design_curriculum_depth(auth_client, db):
         assert detail["takeaways"], slug
         assert detail["interview_questions"], slug
         assert "```" not in detail["content"], slug
+
+
+def test_ai_curriculum_depth(auth_client, db):
+    """The AI track is an applied course covering classical ML through LLM systems."""
+    _seed_catalog(db)
+
+    category = auth_client.get("/api/v1/learn/categories/ai-ml").json()
+    assert category["lesson_count"] == 88
+    slugs = [topic["slug"] for topic in category["topics"]]
+    assert len(slugs) == 22
+
+    # Progression: classical ML, deep learning, LLMs, applications, operations, case studies.
+    assert slugs[0] == "ai-ml-fundamentals"
+    assert slugs[-1] == "ai-design-problems"
+    assert slugs.index("ai-deep-learning") < slugs.index("ai-transformers-llms")
+    assert slugs.index("ai-transformers-llms") < slugs.index("ai-rag")
+    assert slugs.index("ai-rag") < slugs.index("ai-design-problems")
+
+    # Gaps the original catalog never covered.
+    for expected in (
+        "ai-statistics-experimentation",
+        "ai-reasoning-test-time-compute",
+        "ai-finetuning-alignment",
+        "ai-multimodal",
+        "ai-responsible-ai",
+        "ai-design-problems",
+    ):
+        assert expected in slugs, expected
+
+    # Every original topic slug survives: progress and deep links match on slug.
+    for original in (
+        "ai-ml-fundamentals", "ai-ml-algorithms", "ai-model-evaluation", "ai-deep-learning",
+        "ai-transformers-llms", "ai-context-tokens", "ai-prompt-engineering", "ai-rag",
+        "ai-agents", "ai-memory", "ai-tools-mcp", "ai-llm-evaluation", "ai-security",
+        "ai-system-design", "ai-inference", "ai-mlops",
+    ):
+        assert original in slugs, original
+
+    # Concept lessons teach reasoning, with code and interview follow-ups.
+    attention = auth_client.get("/api/v1/learn/lessons/ai-attention-self-mha").json()
+    for heading in (
+        "## Why It Matters",
+        "## Mental Model",
+        "## How It Works",
+        "## Trade-offs",
+        "## Interviewer Follow-up Questions",
+        "## Common Mistakes",
+    ):
+        assert heading in attention["content"], heading
+    assert "softmax" in attention["content"].lower()
+    assert "kv cache" in attention["content"].lower()
+    assert len(attention["content"]) > 5000
+
+    # New topics are attached to the right modules.
+    dpo = auth_client.get("/api/v1/learn/lessons/ai-alignment-rlhf-dpo").json()
+    assert dpo["topic_slug"] == "ai-finetuning-alignment"
+    ab = auth_client.get("/api/v1/learn/lessons/ai-ab-testing").json()
+    assert ab["topic_slug"] == "ai-statistics-experimentation"
+
+    # Case studies are worked designs with requirements and follow-ups.
+    recommender = auth_client.get("/api/v1/learn/lessons/ai-design-recommender").json()
+    assert "## Requirements & Scope" in recommender["content"]
+    assert "## Interviewer Follow-up Questions" in recommender["content"]
+    assert len(recommender["content"]) > 4000
+
+
+def test_ai_lessons_render_cleanly():
+    """Guard the renderer constraints the custom markdown component imposes."""
+    from database.seeds.learn_ai import ai_topics
+
+    for topic in ai_topics():
+        for lesson in topic["lessons"]:
+            content = lesson["content"]
+            slug = lesson["slug"]
+            assert content.count("```") % 2 == 0, f"{slug}: unbalanced code fence"
+            for line in content.split("\n"):
+                assert not line.startswith("  - "), f"{slug}: nested list item"
+                assert not line.startswith("    - "), f"{slug}: nested list item"
+            headings = [
+                line[3:].strip().lower()
+                for line in content.split("\n")
+                if line.startswith("## ")
+            ]
+            assert len(headings) == len(set(headings)), f"{slug}: duplicate heading"
+            for required in ("why it matters", "how it works", "trade-offs", "interview tip"):
+                assert required in headings, f"{slug}: missing {required}"
+            assert lesson["takeaways"], slug
+            assert lesson["questions"], slug
 
 
 def test_ood_curriculum_depth(auth_client, db):

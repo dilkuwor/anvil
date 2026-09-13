@@ -582,7 +582,9 @@ Together the amortised cost per operation is the inverse Ackermann function, whi
                     ),
                     (
                         "How It Works",
-                        """### Implementation
+                        """:::viz union-find {"n": 7, "ops": ["U:0-1", "U:2-3", "U:1-3", "U:4-5", "F:0", "U:5-6", "U:3-6", "F:6"]}
+
+### Implementation
 
 ```java
 class UnionFind {
@@ -817,7 +819,9 @@ Both are O(V + E). Kahn's is easier to reason about and naturally detects cycles
                     ),
                     (
                         "How It Works",
-                        """### Kahn's algorithm
+                        """:::viz topological-sort {"edges": ["A>B", "A>C", "B>D", "C>D", "D>E", "F>C"]}
+
+### Kahn's algorithm
 
 ```java
 int[] topologicalSort(int n, int[][] edges) {
@@ -1046,7 +1050,9 @@ The choice between the algorithms is the second. Each has a specific condition a
                     ),
                     (
                         "How It Works",
-                        """### Dijkstra
+                        """:::viz dijkstra {"edges": ["A-B:4", "A-C:1", "C-B:2", "B-D:5", "C-D:8", "D-E:3", "C-E:10"], "start": "A"}
+
+### Dijkstra
 
 ```java
 int[] dijkstra(int n, List<int[]>[] graph, int source) {
@@ -2521,7 +2527,9 @@ The first is O(n); the second is O(n) with O(1) space; the third is O(n^2) and o
                     ),
                     (
                         "How It Works",
-                        """### Extend or restart: maximum subarray
+                        """:::viz dp-1d {"values": [2, 7, 9, 3, 1]}
+
+### Extend or restart: maximum subarray
 
 ```java
 int maxSubArray(int[] nums) {
@@ -4042,7 +4050,9 @@ Sort → scan → extend or start new
                     ),
                     (
                         "How It Works",
-                        """### Merging
+                        """:::viz merge-intervals {"intervals": ["1-3", "8-10", "2-6", "15-18", "17-20", "6-7"]}
+
+### Merging
 
 ```java
 int[][] merge(int[][] intervals) {
