@@ -157,18 +157,20 @@ function LessonHeading({ title }: { title: string }) {
   const numbered = title.match(/^(\d+)\.\s+(.*)$/);
   if (numbered) {
     return (
-      <h2 id={id} className="flex items-center gap-2.5 pt-2 text-[15px] font-semibold tracking-tight scroll-mt-20">
+      <h2 id={id} className="flex items-start gap-2.5 pt-2 text-[15px] font-semibold tracking-tight scroll-mt-20">
         <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg bg-accent px-1.5 text-[12px] font-bold tabular-nums text-primary-foreground">
           {numbered[1]}
         </span>
-        {numbered[2]}
+        <span className="min-w-0 self-center">{numbered[2]}</span>
       </h2>
     );
   }
   return (
-    <h2 id={id} className="flex items-center gap-2 pt-2 text-[15px] font-semibold tracking-tight scroll-mt-20">
-      <HeadingIcon title={title} />
-      {title}
+    <h2 id={id} className="flex items-start gap-2 pt-2 text-[15px] font-semibold tracking-tight scroll-mt-20">
+      <span className="mt-0.5 shrink-0">
+        <HeadingIcon title={title} />
+      </span>
+      <span className="min-w-0">{title}</span>
     </h2>
   );
 }
@@ -344,7 +346,7 @@ function ArrowFlow({ parts }: { parts: string[] }) {
               →
             </span>
           ) : null}
-          <span className="rounded-lg border border-accent/20 bg-accent/[0.08] px-2.5 py-1 text-[12px] font-semibold tracking-wide text-accent">
+          <span className="max-w-full break-words rounded-lg border border-accent/20 bg-accent/[0.08] px-2.5 py-1 text-[12px] font-semibold tracking-wide text-accent">
             {part}
           </span>
         </span>
@@ -376,7 +378,7 @@ function QuoteCallout({ lines }: { lines: string[] }) {
   return (
     <div className={cn("flex gap-2.5 rounded-xl border px-3.5 py-3", wrap)}>
       <Icon {...iconProps} />
-      <p className="text-[13px] leading-6 text-foreground/90" dangerouslySetInnerHTML={{ __html: inline(body) }} />
+      <p className="min-w-0 text-[13px] leading-6 text-foreground/90" dangerouslySetInnerHTML={{ __html: inline(body) }} />
     </div>
   );
 }
@@ -387,7 +389,7 @@ function FormulaCard({ text }: { text: string }) {
   return (
     <div className="rounded-xl border border-accent/20 bg-steel-950 px-3.5 py-3">
       <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-accent">Formula</p>
-      <p className="mt-1.5 font-mono text-[13px] leading-6 text-foreground">
+      <p className="mt-1.5 break-words font-mono text-[13px] leading-6 text-foreground">
         <span className="font-semibold text-accent" dangerouslySetInnerHTML={{ __html: inline(left) }} />
         <span className="px-1.5 text-muted-foreground">{operator}</span>
         <span dangerouslySetInnerHTML={{ __html: inline(right || "") }} />
@@ -416,7 +418,7 @@ function ExampleCard({ text }: { text: string }) {
   return (
     <div className="flex gap-2.5 rounded-xl border border-teal/20 bg-teal-dim/50 px-3.5 py-3">
       <Code2 className="mt-0.5 h-4 w-4 shrink-0 text-teal" strokeWidth={2.25} aria-hidden />
-      <p className="text-[13px] leading-6 text-foreground/90">
+      <p className="min-w-0 text-[13px] leading-6 text-foreground/90">
         <span className="mr-1.5 font-semibold text-teal">Example</span>
         <span dangerouslySetInnerHTML={{ __html: inline(body) }} />
       </p>
@@ -430,7 +432,7 @@ function StatGrid({ items }: { items: string[] }) {
       {items.map((item) => (
         <div
           key={item}
-          className="rounded-xl border border-accent/20 bg-accent/[0.06] px-3 py-2 text-[13px] leading-6 text-foreground"
+          className="min-w-0 rounded-xl border border-accent/20 bg-accent/[0.06] px-3 py-2 text-[13px] leading-6 text-foreground"
           dangerouslySetInnerHTML={{ __html: inline(item) }}
         />
       ))}
@@ -444,7 +446,7 @@ function MarkdownTable({ block }: { block: string }) {
   const rows = lines.slice(2).map(splitTableRow);
   const pillHeaders = headers.map((header) => /bucket|memory tip|latency/i.test(header));
   return (
-    <div className="overflow-x-auto rounded-xl border border-accent/20">
+    <div className="max-w-full overflow-x-auto rounded-xl border border-accent/20">
       <table className="w-full min-w-[28rem] border-collapse text-left text-[13px] leading-6">
         <thead>
           <tr className="border-b border-accent/15 bg-accent/[0.12]">
@@ -507,7 +509,7 @@ export function LessonMarkdown({
     return !isSpecialBlock(block);
   });
   return (
-    <div className={cn("w-full space-y-5 text-sm leading-7 text-foreground", className)}>
+    <div className={cn("w-full min-w-0 space-y-5 break-words text-sm leading-7 text-foreground", className)}>
       {blocks.map((block, index) => {
         if (index === 0 && skipFirstTitle) return null;
         if (isVizBlock(block)) {
@@ -530,9 +532,11 @@ export function LessonMarkdown({
         }
         if (lines[0].startsWith("### ")) {
           return (
-            <h3 key={index} className="flex items-center gap-2 text-[13px] font-semibold tracking-tight">
-              <HeadingIcon title={lines[0].slice(4)} />
-              {lines[0].slice(4)}
+            <h3 key={index} className="flex items-start gap-2 text-[13px] font-semibold tracking-tight">
+              <span className="mt-0.5 shrink-0">
+                <HeadingIcon title={lines[0].slice(4)} />
+              </span>
+              <span className="min-w-0">{lines[0].slice(4)}</span>
             </h3>
           );
         }
@@ -568,7 +572,7 @@ export function LessonMarkdown({
                     <span className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full border border-steel-700 bg-steel-950 px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
                       {n}
                     </span>
-                    <span className="text-foreground/90" dangerouslySetInnerHTML={{ __html: inline(text) }} />
+                    <span className="min-w-0 text-foreground/90" dangerouslySetInnerHTML={{ __html: inline(text) }} />
                   </li>
                 );
               })}
@@ -640,7 +644,7 @@ function splitTutorBlocks(content: string): string[] {
 export function TutorMarkdown({ content }: { content: string }) {
   const blocks = splitTutorBlocks(content.trim());
   return (
-    <div className="space-y-3 text-sm leading-6 text-foreground">
+    <div className="min-w-0 space-y-3 break-words text-sm leading-6 text-foreground">
       {blocks.map((block, index) => {
         if (block.startsWith("```")) {
           const lines = block.split("\n");

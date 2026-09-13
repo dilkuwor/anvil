@@ -211,7 +211,7 @@ export function LessonView({ slug }: { slug: string }) {
                 <span className="flex h-5 w-3.5 shrink-0 items-center justify-center">
                   <CircleCheck className="block h-3.5 w-3.5 text-emerald-400" strokeWidth={2.25} aria-hidden />
                 </span>
-                <span className="text-foreground/90 font-medium">{item}</span>
+                <span className="min-w-0 break-words text-foreground/90 font-medium">{item}</span>
               </li>
             ))}
           </ul>
@@ -227,7 +227,7 @@ export function LessonView({ slug }: { slug: string }) {
                 <span className="flex h-5 w-3.5 shrink-0 items-center justify-center">
                   <CircleHelp className="block h-3.5 w-3.5 text-accent" aria-hidden />
                 </span>
-                <span className="text-foreground/90 font-medium">{item}</span>
+                <span className="min-w-0 break-words text-foreground/90 font-medium">{item}</span>
               </li>
             ))}
           </ul>
@@ -345,13 +345,17 @@ export function LessonView({ slug }: { slug: string }) {
           <div className="sticky bottom-3 z-10 rounded-2xl border border-steel-800/90 bg-steel-900/95 px-4 py-3 shadow-xl backdrop-blur-xl">
             <div className="flex flex-wrap items-center justify-between gap-3">
               {data.previous ? (
-                <Button asChild variant="ghost" size="sm" className="max-w-[34%] justify-start truncate text-xs">
-                  <Link href={data.previous.href} className="truncate">
-                    ← {data.previous.title} <kbd className="ml-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">[</kbd>
+                <Button asChild variant="ghost" size="sm" className="shrink-0 justify-start text-xs">
+                  <Link
+                    href={data.previous.href}
+                    title={data.previous.title}
+                    aria-label={`Previous lesson: ${data.previous.title}`}
+                  >
+                    ← Previous <kbd className="ml-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">[</kbd>
                   </Link>
                 </Button>
               ) : (
-                <span className="px-2 text-xs text-muted-foreground">First lesson</span>
+                <span className="shrink-0 px-2 text-xs text-muted-foreground">First lesson</span>
               )}
 
               <div className="flex items-center gap-2">
@@ -399,16 +403,20 @@ export function LessonView({ slug }: { slug: string }) {
                   variant={isCompleted ? "default" : "ghost"}
                   size="sm"
                   className={cn(
-                    "max-w-[34%] justify-end truncate text-xs font-semibold",
+                    "shrink-0 justify-end text-xs font-semibold",
                     isCompleted && "bg-accent text-white hover:bg-accent-light shadow-2xs font-bold",
                   )}
                 >
-                  <Link href={data.next.href} className="truncate">
-                    <kbd className="mr-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">]</kbd> {data.next.title} →
+                  <Link
+                    href={data.next.href}
+                    title={data.next.title}
+                    aria-label={`Next lesson: ${data.next.title}`}
+                  >
+                    <kbd className="mr-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">]</kbd> Next →
                   </Link>
                 </Button>
               ) : (
-                <span className="px-2 text-xs text-muted-foreground">Last lesson</span>
+                <span className="shrink-0 px-2 text-xs text-muted-foreground">Last lesson</span>
               )}
             </div>
           </div>
