@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   CircleCheck,
   CircleHelp,
@@ -345,13 +347,15 @@ export function LessonView({ slug }: { slug: string }) {
           <div className="sticky bottom-3 z-10 rounded-2xl border border-steel-800/90 bg-steel-900/95 px-4 py-3 shadow-xl backdrop-blur-xl">
             <div className="flex flex-wrap items-center justify-between gap-3">
               {data.previous ? (
-                <Button asChild variant="ghost" size="sm" className="shrink-0 justify-start text-xs">
+                <Button asChild variant="ghost" size="sm" className="shrink-0 justify-start text-xs gap-1.5">
                   <Link
                     href={data.previous.href}
                     title={data.previous.title}
                     aria-label={`Previous lesson: ${data.previous.title}`}
+                    className="inline-flex items-center gap-1.5"
                   >
-                    ← Previous <kbd className="ml-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">[</kbd>
+                    <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+                    <span>Previous</span>
                   </Link>
                 </Button>
               ) : (
@@ -403,7 +407,7 @@ export function LessonView({ slug }: { slug: string }) {
                   variant={isCompleted ? "default" : "ghost"}
                   size="sm"
                   className={cn(
-                    "shrink-0 justify-end text-xs font-semibold",
+                    "shrink-0 justify-end text-xs font-semibold gap-1.5",
                     isCompleted && "bg-accent text-white hover:bg-accent-light shadow-2xs font-bold",
                   )}
                 >
@@ -411,8 +415,10 @@ export function LessonView({ slug }: { slug: string }) {
                     href={data.next.href}
                     title={data.next.title}
                     aria-label={`Next lesson: ${data.next.title}`}
+                    className="inline-flex items-center gap-1.5"
                   >
-                    <kbd className="mr-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">]</kbd> Next →
+                    <span>Next</span>
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </Link>
                 </Button>
               ) : (
