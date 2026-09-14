@@ -10,11 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Code2,
-  ExternalLink,
-  Layers,
   Network,
   Search,
-  Sparkles,
   SlidersHorizontal,
 } from "lucide-react";
 
@@ -25,7 +22,6 @@ import { VizBlock } from "@/components/learn/viz/viz-block";
 import {
   listVizCatalog,
   getViz,
-  type VizCatalogItem,
   type VizCategory,
 } from "@/components/learn/viz/registry";
 import { cn } from "@/lib/utils";
@@ -33,18 +29,26 @@ import { cn } from "@/lib/utils";
 export function VisualizationsView() {
   const searchParams = useSearchParams();
   const initialParam = searchParams.get("viz") || searchParams.get("id");
+  const validUrlViz = initialParam && getViz(initialParam) ? initialParam.toLowerCase() : null;
 
   const catalog = useMemo(() => listVizCatalog(), []);
   const dsaCount = useMemo(() => catalog.filter((c) => c.category === "dsa").length, [catalog]);
   const sdCount = useMemo(() => catalog.filter((c) => c.category === "system-design").length, [catalog]);
 
-  // Selected visualizer state
-  const [selectedId, setSelectedId] = useState<string>(() => {
-    if (initialParam && getViz(initialParam)) {
-      return initialParam.toLowerCase();
-    }
-    return catalog[0]?.definition.id ?? "sliding-window";
-  });
+  // Selected visualizer state with support for URL sync without useEffect setState
+  const [selectedOverride, setSelectedOverride] = useState<string | null>(null);
+  const [lastUrlViz, setLastUrlViz] = useState<string | null>(validUrlViz);
+
+  if (validUrlViz !== lastUrlViz) {
+    setLastUrlViz(validUrlViz);
+    setSelectedOverride(null);
+  }
+
+  const activeId =
+    (selectedOverride && getViz(selectedOverride) ? selectedOverride : null) ??
+    validUrlViz ??
+    catalog[0]?.definition.id ??
+    "sliding-window";
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,16 +56,9 @@ export function VisualizationsView() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
 
-  // Sync state if URL query param changes
-  useEffect(() => {
-    if (initialParam && getViz(initialParam) && initialParam.toLowerCase() !== selectedId) {
-      setSelectedId(initialParam.toLowerCase());
-    }
-  }, [initialParam, selectedId]);
-
   // Update URL param when selected visualizer changes
   function selectVisualizer(id: string, shouldScroll = false) {
-    setSelectedId(id);
+    setSelectedOverride(id);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("viz", id);
@@ -110,8 +107,8 @@ export function VisualizationsView() {
   }, [catalog, searchQuery, selectedCategory]);
 
   const activeItem = useMemo(() => {
-    return catalog.find((c) => c.definition.id === selectedId) ?? catalog[0];
-  }, [catalog, selectedId]);
+    return catalog.find((c) => c.definition.id === activeId) ?? catalog[0];
+  }, [catalog, activeId]);
 
   const currentIndex = catalog.findIndex((c) => c.definition.id === activeItem.definition.id);
   const prevItem = catalog[(currentIndex - 1 + catalog.length) % catalog.length];
