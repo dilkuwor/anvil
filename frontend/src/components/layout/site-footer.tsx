@@ -10,6 +10,7 @@ const FOOTER_NAV = [
   { href: "/behavioral", label: "Behavioral" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
+  { href: "/visualizations", label: "Visualizations" },
   { href: "/notes", label: "Notes" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
 ];

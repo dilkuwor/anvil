@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Sparkles } from "lucide-react";
 
 import { CategoryIcon } from "@/components/learn/category-icon";
 import { api } from "@/lib/api";
@@ -65,6 +65,17 @@ export function LearnCategoryNav({ activeCategorySlug }: { activeCategorySlug?: 
             </Link>
           );
         })}
+
+        <Link
+          href="/visualizations"
+          className="group inline-flex h-8 items-center gap-1.5 rounded-full border border-steel-800/80 bg-steel-900/60 px-3 text-xs font-medium text-muted-foreground transition-all hover:border-accent/40 hover:bg-steel-800 hover:text-accent"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-accent" />
+          <span>Visualizers</span>
+          <span className="rounded-full bg-accent/20 px-1.5 py-0.2 text-[10px] font-semibold tabular-nums text-accent">
+            22
+          </span>
+        </Link>
       </div>
     </nav>
   );

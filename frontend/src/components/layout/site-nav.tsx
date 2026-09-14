@@ -15,6 +15,7 @@ export const SITE_NAV = [
   { href: "/behavioral", label: "Behavioral" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/learn", label: "Learn" },
+  { href: "/visualizations", label: "Visualizations" },
   { href: "/notes", label: "Notes" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
 ];
@@ -45,7 +46,7 @@ function NavLink({
       href={href}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center rounded-lg px-3 py-1 text-[13px] font-medium transition-all duration-150 select-none",
+        "inline-flex items-center rounded-lg px-2.5 xl:px-3 py-1 text-[12.5px] xl:text-[13px] font-medium transition-all duration-150 select-none whitespace-nowrap",
         active
           ? "border border-steel-700/70 bg-steel-800/90 font-semibold text-foreground shadow-2xs"
           : "border border-transparent text-muted-foreground hover:bg-steel-800/60 hover:text-foreground",
@@ -59,7 +60,7 @@ function NavLink({
 
 export function DesktopNav({ pathname }: { pathname: string }) {
   return (
-    <nav className="hidden h-8 items-center gap-1 md:flex" aria-label="Primary">
+    <nav className="hidden h-8 items-center gap-0.5 xl:gap-1 md:flex" aria-label="Primary">
       {SITE_NAV.map((item) => (
         <NavLink key={item.href} href={item.href} label={item.label} pathname={pathname} className="h-7" />
       ))}
