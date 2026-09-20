@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlayCircle, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -25,9 +25,10 @@ import { api, ApiError, type ProblemListItem, type ProblemListResponse, type Pro
 import type { ProblemListCard } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
+import { useKeystoneProgress } from "@/lib/use-keystone-progress";
 
 const PAGE_SIZE = 15;
-// Every problem slug that has a Visual Story, for the "Visual Story" filter.
+// Every problem slug that has a Visual Story, for the "Visual Story" view.
 const STORY_SLUGS = listStories()
   .flatMap((story) => story.slugs)
   .join(",");
@@ -40,6 +41,8 @@ export function ProblemList() {
   const [creating, setCreating] = useState(false);
   const [auth, setAuth] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const { progress: keystoneProgress } = useKeystoneProgress();
+
   const create = useMutation({
     mutationFn: (payload: { name: string; description: string }) => api.post<ProblemListCard>("/api/v1/problem-lists", payload),
     onSuccess: () => {
@@ -63,7 +66,8 @@ export function ProblemList() {
   const tag = params.get("tag") ?? "";
   const status = params.get("status") ?? "";
   const sort = params.get("sort") ?? "title";
-  const story = params.get("story") === "1";
+  const view = params.get("view") ?? (params.get("story") === "1" ? "stories" : "all");
+  const isStories = view === "stories";
   const page = Number(params.get("page") ?? "1");
 
   const search = useMemo(() => {
@@ -72,15 +76,15 @@ export function ProblemList() {
     if (difficulty) next.set("difficulty", difficulty);
     if (tag) next.set("tag", tag);
     if (status) next.set("status", status);
-    if (story) next.set("slugs", STORY_SLUGS);
+    if (isStories) next.set("slugs", STORY_SLUGS);
     if (sort) next.set("sort", sort);
     next.set("page", String(page));
     next.set("page_size", String(PAGE_SIZE));
     return `?${next.toString()}`;
-  }, [q, difficulty, tag, status, story, sort, page]);
+  }, [q, difficulty, tag, status, isStories, sort, page]);
 
   const problems = useQuery({
-    queryKey: queryKeys.problems({ q, difficulty, tag, status, story: story ? 1 : 0, sort, page }),
+    queryKey: queryKeys.problems({ q, difficulty, tag, status, view: isStories ? "stories" : "all", sort, page }),
     queryFn: () => api.get<ProblemListResponse>(`/api/v1/problems${search}`),
   });
   const tags = useQuery({
@@ -98,6 +102,10 @@ export function ProblemList() {
       if (value) merged.set(key, value);
       else merged.delete(key);
     }
+    if (isStories) {
+      merged.set("view", "stories");
+      merged.delete("story");
+    }
     if (!("page" in next)) merged.set("page", "1");
     router.push(`/problems?${merged.toString()}`);
   }
@@ -108,17 +116,46 @@ export function ProblemList() {
   const catalogTotal = progress.data?.total_problems ?? filteredTotal;
   const solved = progress.data?.total_solved ?? 0;
   const remaining = Math.max(catalogTotal - solved, 0);
-  const filtered = Boolean(q || difficulty || tag || status || story);
+  const filtered = Boolean(q || difficulty || tag || status);
   const from = items.length ? (page - 1) * PAGE_SIZE + 1 : 0;
   const to = (page - 1) * PAGE_SIZE + items.length;
+
+  const recalledCount = Object.values(keystoneProgress).filter((p) => p.recalled).length;
+  const watchedCount = Object.values(keystoneProgress).filter((p) => p.watched && !p.recalled).length;
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Problems"
-        description="Java catalog by difficulty, topic, and status."
-        meta={<CatalogStats total={catalogTotal} solved={solved} remaining={remaining} />}
-        actions={<ProblemsTabs onCreate={requestCreate} />}
+        title={isStories ? "Visual Stories" : "Problems"}
+        description={
+          isStories
+            ? "21 foundational problem archetypes with interactive 5-scene mental models."
+            : "Java catalog by difficulty, topic, and status."
+        }
+        meta={
+          isStories ? (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13px] tabular-nums text-muted-foreground">
+              <span>
+                <span className="font-semibold text-foreground">21</span> keystones
+              </span>
+              <span className="text-steel-700">·</span>
+              <span>
+                <span className="font-semibold text-success">{recalledCount}</span> recalled
+              </span>
+              <span className="text-steel-700">·</span>
+              <span>
+                <span className="font-semibold text-accent">{watchedCount}</span> watched
+              </span>
+              <span className="text-steel-700">·</span>
+              <span>
+                <span className="font-semibold text-foreground">{21 - recalledCount - watchedCount}</span> unstarted
+              </span>
+            </div>
+          ) : (
+            <CatalogStats total={catalogTotal} solved={solved} remaining={remaining} />
+          )
+        }
+        actions={<ProblemsTabs onCreate={requestCreate} activeTab={isStories ? "stories" : "all"} />}
       />
 
       <SectionCard className="p-0">
@@ -136,23 +173,11 @@ export function ProblemList() {
               name="q"
               key={q}
               defaultValue={q}
-              placeholder="Search problems…"
+              placeholder={isStories ? "Search visual stories…" : "Search problems…"}
               aria-label="Search problems"
               className="pl-9"
             />
           </form>
-          <button
-            type="button"
-            aria-pressed={story}
-            title="Show only problems that have a Visual Story"
-            className={`inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors lg:self-auto ${
-              story ? "border-accent bg-accent/15 text-foreground" : "border-steel-800 text-muted-foreground hover:border-accent/50 hover:text-foreground"
-            }`}
-            onClick={() => update({ story: story ? "" : "1" })}
-          >
-            <PlayCircle className="h-4 w-4" aria-hidden />
-            Visual Story
-          </button>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:contents">
             <select
               className="select-field w-full lg:!w-[10rem]"
@@ -205,7 +230,7 @@ export function ProblemList() {
             <button
               type="button"
               className="shrink-0 self-start whitespace-nowrap rounded-lg border border-steel-800 px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground lg:self-auto"
-              onClick={() => router.push("/problems")}
+              onClick={() => router.push(isStories ? "/problems?view=stories" : "/problems")}
             >
               Clear
             </button>
@@ -223,7 +248,9 @@ export function ProblemList() {
           </div>
         ) : null}
         {problems.data && items.length === 0 ? (
-          <p className="px-4 py-12 text-center text-sm text-muted-foreground">No problems match those filters.</p>
+          <p className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {isStories ? "No visual stories match those filters." : "No problems match those filters."}
+          </p>
         ) : null}
 
         {items.length ? (

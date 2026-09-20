@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -74,6 +73,8 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     if (typeof window === "undefined") return "problem";
     return new URLSearchParams(window.location.search).get("tab") === "story" && getStory(problem.slug) ? "story" : "problem";
   });
+  // Arriving through a "Story" link means the reader came for the story: give it the whole screen.
+  const [openedOnStory, setOpenedOnStory] = useState(() => tab === "story");
   const [collapsed, setCollapsed] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -287,10 +288,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   const prompt = (
     <section className="flex h-full min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-steel-800/90 bg-steel-900 shadow-xs xl:min-h-0">
       <div className="shrink-0 border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
-        <Link href="/problems" className="text-[12px] font-medium text-muted-foreground hover:text-accent transition-colors">
-          ← Problems
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <h1 className="text-lg font-bold tracking-tight text-foreground">{problem.title}</h1>
           <DifficultyBadge difficulty={problem.difficulty} />
           <StatusPip status={problem.status} />
@@ -325,7 +323,11 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
             role="tab"
             aria-selected={tab === item.id}
             className={`shrink-0 px-3 py-2 text-[13px] font-medium transition-colors ${tab === item.id ? "border-b-2 border-accent text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
-            onClick={() => setTab(item.id)}
+            onClick={() => {
+              setTab(item.id);
+              // Only the first arrival opens full screen; coming back to the tab later stays in the pane.
+              setOpenedOnStory(false);
+            }}
           >
             {item.label}
           </button>
@@ -333,7 +335,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-5 py-4 text-sm leading-7 text-foreground">
         {tab === "problem" ? <ProblemBody problem={problem} /> : null}
-        {tab === "story" && story ? <StoryPlayer story={story} slug={problem.slug} /> : null}
+        {tab === "story" && story ? <StoryPlayer story={story} slug={problem.slug} startFocused={openedOnStory} /> : null}
         {tab === "examples" ? <ExamplesBody problem={problem} /> : null}
         {tab === "constraints" ? <ConstraintsBody problem={problem} /> : null}
         {tab === "hints" ? <HintsBody problem={problem} /> : null}

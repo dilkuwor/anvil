@@ -10,12 +10,12 @@ import type { ComponentType } from "react";
 
 export type SceneId = "picture" | "slow" | "insight" | "solution" | "card";
 
-export const SCENES: { id: SceneId; label: string }[] = [
-  { id: "picture", label: "The problem" },
-  { id: "slow", label: "The slow way" },
-  { id: "insight", label: "Key insight" },
-  { id: "solution", label: "The solution" },
-  { id: "card", label: "Remember it" },
+export const SCENES: { id: SceneId; label: string; short: string }[] = [
+  { id: "picture", label: "The problem", short: "Problem" },
+  { id: "slow", label: "The slow way", short: "Slow" },
+  { id: "insight", label: "Key insight", short: "Insight" },
+  { id: "solution", label: "The solution", short: "Solution" },
+  { id: "card", label: "Remember it", short: "Remember" },
 ];
 
 type QuizBase = {

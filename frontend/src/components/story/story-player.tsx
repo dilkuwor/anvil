@@ -1,8 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Maximize2, Minimize2, RotateCcw, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Sparkles,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,10 +28,11 @@ export type StoryProgress = {
 type Saved = {
   example: number;
   index: number;
-  large: boolean;
   done: boolean;
   watched?: boolean;
   recalled?: boolean;
+  /** Scenes the reader has read to their last step. */
+  read?: string[];
 };
 
 function storageKey(slug: string) {
@@ -28,7 +40,7 @@ function storageKey(slug: string) {
 }
 
 export function loadSavedStory(slug: string): Saved {
-  const fallback: Saved = { example: 0, index: 0, large: false, done: false, watched: false, recalled: false };
+  const fallback: Saved = { example: 0, index: 0, done: false, watched: false, recalled: false };
   if (typeof window === "undefined") return fallback;
   try {
     const raw = localStorage.getItem(storageKey(slug));
@@ -66,23 +78,257 @@ export function getStoryProgress(slug: string): StoryProgress {
   };
 }
 
+// Text sizes: [in the problem pane, in focus mode]. Focus has the room, so it reads larger.
+const SIZES = {
+  body: ["text-[13.5px]", "text-[16px]"],
+  caption: ["text-[15px]", "text-[18px]"],
+  heading: ["text-[14.5px]", "text-[17px]"],
+  code: ["text-[12px]", "text-[14px]"],
+  small: ["text-[11.5px]", "text-[13px]"],
+} as const;
+
+/**
+ * 5-Act progression stepper: clear numbered stages with act labels,
+ * completion checkmarks, active highlighting, and per-act micro-progress.
+ */
+function ActStepper({
+  frames,
+  current,
+  readScenes,
+  watched,
+  onJump,
+}: {
+  frames: { scene: string }[];
+  current: number;
+  readScenes: string[];
+  watched: boolean;
+  onJump: (index: number) => void;
+}) {
+  const present = SCENES.map((scene, position) => {
+    const first = frames.findIndex((item) => item.scene === scene.id);
+    const count = frames.filter((item) => item.scene === scene.id).length;
+    return { ...scene, position, first, count };
+  }).filter((scene) => scene.first >= 0);
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Story acts"
+      className="grid grid-cols-5 gap-1 rounded-xl border border-steel-800/80 bg-steel-950/70 p-1 backdrop-blur-sm shadow-inner"
+    >
+      {present.map((scene, index) => {
+        const end = scene.first + scene.count - 1;
+        const here = current >= scene.first && current <= end;
+        const read = watched || readScenes.includes(scene.id) || current > end;
+        const progress = here
+          ? Math.min(1, Math.max(0, (current - scene.first + 1) / scene.count))
+          : read
+            ? 1
+            : 0;
+
+        return (
+          <button
+            key={scene.id}
+            type="button"
+            role="tab"
+            aria-selected={here}
+            aria-label={`${index + 1}. ${scene.label}`}
+            title={`${index + 1}. ${scene.label} (${scene.count} step${scene.count === 1 ? "" : "s"})`}
+            onClick={() => onJump(scene.first)}
+            className={cn(
+              "group relative flex flex-col items-center justify-center gap-1 rounded-lg py-1.5 px-1 sm:px-2 transition-all duration-200 outline-none select-none cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+              here
+                ? "bg-accent/15 border border-accent/50 text-foreground font-semibold shadow-xs"
+                : read
+                  ? "bg-steel-900/60 border border-steel-800/60 text-foreground/85 hover:bg-steel-850 hover:text-foreground hover:border-steel-750"
+                  : "bg-transparent border border-transparent text-muted-foreground/60 hover:bg-steel-900/40 hover:text-muted-foreground"
+            )}
+          >
+            <div className="flex w-full items-center justify-center gap-1.5 min-w-0">
+              {read && !here ? (
+                <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal/20 text-teal transition-colors">
+                  <Check className="h-2.5 w-2.5 stroke-[2.5]" />
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-colors",
+                    here
+                      ? "bg-accent text-steel-950 shadow-xs"
+                      : "bg-steel-800 text-muted-foreground/80 group-hover:text-muted-foreground"
+                  )}
+                >
+                  {index + 1}
+                </div>
+              )}
+              <span className="truncate text-xs font-medium tracking-tight hidden lg:inline">
+                {scene.label}
+              </span>
+              <span className="truncate text-[11px] font-medium tracking-tight lg:hidden">
+                {scene.short}
+              </span>
+            </div>
+
+            {/* Progress track at bottom of each segment */}
+            <div className="w-full h-1 rounded-full bg-steel-800/60 overflow-hidden mt-0.5">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-300 ease-out motion-reduce:transition-none",
+                  here ? "bg-accent" : read ? "bg-teal/70" : "bg-transparent"
+                )}
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Interactive example selector with input preview and notes, or static pill when single example.
+ */
+function ExampleSelector({
+  examples,
+  selected,
+  onSelect,
+  compact = false,
+}: {
+  examples: { label: string; input: string; expected: string; note?: string }[];
+  selected: number;
+  onSelect: (index: number) => void;
+  compact?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  const currentExample = examples[selected] ?? examples[0];
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Choose dataset example"
+        title={
+          currentExample.note
+            ? `Data: ${currentExample.label} — ${currentExample.note}`
+            : `Data: ${currentExample.label}`
+        }
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "inline-flex h-8 items-center justify-center rounded-lg border transition-colors cursor-pointer",
+          compact
+            ? "w-8 p-0"
+            : "gap-1.5 px-2.5 font-mono text-[11px]",
+          open
+            ? "border-accent/50 bg-steel-850 text-accent shadow-xs"
+            : "border-steel-800 bg-steel-900/80 text-muted-foreground hover:border-steel-750 hover:bg-steel-850 hover:text-foreground"
+        )}
+      >
+        <Filter className="h-3.5 w-3.5 shrink-0" />
+        {!compact ? (
+          <>
+            <span className="truncate max-w-[120px] font-medium">{currentExample.label}</span>
+            <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
+          </>
+        ) : null}
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Story examples"
+          className="absolute right-0 top-full mt-1.5 z-40 w-72 max-w-[90vw] rounded-xl border border-steel-750 bg-steel-900/98 p-1.5 shadow-2xl backdrop-blur-md"
+        >
+          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {examples.length > 1 ? "Select Dataset / Example" : "Dataset Details"}
+          </div>
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+            {examples.map((item, index) => {
+              const isSelected = index === selected;
+              return (
+                <button
+                  key={item.input}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    onSelect(index);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex flex-col items-start gap-1 rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer",
+                    isSelected
+                      ? "bg-accent/15 border border-accent/30 text-foreground"
+                      : "border border-transparent text-muted-foreground hover:bg-steel-800/80 hover:text-foreground"
+                  )}
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {item.label}
+                    </span>
+                    {isSelected && <Check className="h-3.5 w-3.5 text-accent shrink-0" />}
+                  </div>
+                  <div className="font-mono text-[11px] text-muted-foreground/80 truncate w-full">
+                    {item.input}
+                  </div>
+                  {item.note ? (
+                    <p className="text-[11px] text-muted-foreground/90 leading-tight line-clamp-2 mt-0.5">
+                      {item.note}
+                    </p>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * User-paced on purpose: nothing moves until the reader asks for the next step,
  * and the place is remembered so a session can be picked up later.
  */
-export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: string }) {
+export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyProblemStory; slug: string; startFocused?: boolean }) {
   const [saved] = useState(() => loadSavedStory(slug));
   const [example, setExample] = useState(() => Math.min(saved.example, story.examples.length - 1));
   const [index, setIndex] = useState(saved.index);
-  const [large, setLarge] = useState(saved.large);
+  const [readScenes, setReadScenes] = useState<string[]>(() => saved.read ?? []);
   const [done, setDone] = useState(saved.done);
   const [watched, setWatched] = useState(() => saved.watched ?? saved.done ?? false);
   const [recalled, setRecalled] = useState(() => saved.recalled ?? false);
   const [picked, setPicked] = useState<Record<number, number>>({});
   const [rejected, setRejected] = useState<Record<number, number[]>>({});
   const [revealed, setRevealed] = useState(false);
-  // Full screen puts the picture beside the code and quiz, so nothing needs scrolling.
-  const [full, setFull] = useState(false);
+  // Focus mode takes the story out of the problem pane: two columns, larger type.
+  const [focus, setFocus] = useState(startFocused);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const frames = useMemo(() => story.frames(story.examples[example].input), [story, example]);
   const current = Math.min(index, frames.length - 1);
@@ -103,10 +349,10 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
         JSON.stringify({
           example,
           index: current,
-          large,
           done,
           watched,
           recalled,
+          read: readScenes,
         })
       );
       if (typeof window !== "undefined") {
@@ -123,11 +369,25 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
     } catch {
       // Private mode: the story still works, it just will not remember the place.
     }
-  }, [slug, example, current, large, done, watched, recalled]);
+  }, [slug, example, current, done, watched, recalled, readScenes]);
+
+  useEffect(() => {
+    if (!focus) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    rootRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [focus]);
 
   function go(next: number) {
     const target = Math.max(0, Math.min(frames.length - 1, next));
     setIndex(target);
+    const landed = frames[target];
+    if (landed && frames[target + 1]?.scene !== landed.scene) {
+      setReadScenes((value) => (value.includes(landed.scene) ? value : [...value, landed.scene]));
+    }
     const targetFrame = frames[target];
     if (targetFrame?.scene === "card" && !watched) {
       setWatched(true);
@@ -170,16 +430,21 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
     }
   }
 
-  const body = large ? "text-[16px]" : "text-[13.5px]";
+  const step = focus ? 1 : 0;
+  const body = SIZES.body[step];
+  const caption = SIZES.caption[step];
+  const heading = SIZES.heading[step];
+  // The right column exists only when this step has something to put in it.
+  const hasSide = quiz?.kind === "choice" || frame.scene === "solution" || frame.scene === "card";
 
   const controls = (
     <div
       className={cn(
         "flex items-center gap-2",
-        full ? "border-t border-steel-800 bg-background px-6 py-3" : "-mx-1 bg-steel-900/95 px-1 py-2 backdrop-blur"
+        focus ? "border-t border-steel-800 bg-background px-6 py-3" : "-mx-5 border-t border-steel-800/80 bg-steel-900 px-5 py-2.5"
       )}
     >
-      <div className={cn("flex items-center gap-2 w-full", full && "mx-auto max-w-6xl")}>
+      <div className={cn("flex items-center gap-2 w-full", focus && "mx-auto max-w-6xl")}>
         <Button variant="secondary" disabled={current === 0} onClick={() => go(current - 1)}>
           <ChevronLeft className="h-4 w-4" aria-hidden />
           Back
@@ -205,15 +470,33 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
 
   return (
     <div
+      ref={rootRef}
       className={cn(
         "outline-none",
-        full
+        focus
           ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-background"
           : "flex flex-col gap-4"
       )}
       tabIndex={0}
       onKeyDown={(event) => {
-        if (event.key === "Escape") setFull(false);
+        const tag = (event.target as HTMLElement)?.tagName;
+        const typing = tag === "INPUT" || tag === "TEXTAREA" || (event.target as HTMLElement)?.isContentEditable;
+        if (event.key === "Escape" && focus) {
+          event.preventDefault();
+          setFocus(false);
+          return;
+        }
+        if (
+          !typing &&
+          (event.key === "f" || event.key === "F") &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.altKey
+        ) {
+          event.preventDefault();
+          setFocus((value) => !value);
+          return;
+        }
         if (quiz?.kind === "cell" && quiz.numbered && !solved && /^[0-9]$/.test(event.key)) {
           const cell = Number(event.key);
           if (cell < quiz.cells) {
@@ -227,96 +510,92 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
         if (event.key === "ArrowLeft") go(current - 1);
       }}
     >
-      {/* Top Bar: Stepper & Toolbar */}
-      <div className={cn("shrink-0", full ? "border-b border-steel-800 px-6 py-3" : "")}>
-        <div className={cn("flex flex-col gap-2.5", full && "mx-auto max-w-6xl w-full")}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ol className="flex flex-wrap items-center gap-1.5">
-              {SCENES.map((scene, position) => {
-                const first = frames.findIndex((item) => item.scene === scene.id);
-                if (first < 0) return null;
-                return (
-                  <li key={scene.id}>
-                    <button
-                      type="button"
-                      aria-current={position === sceneIndex ? "step" : undefined}
-                      className={cn(
-                        "rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
-                        position === sceneIndex
-                          ? "border-accent bg-accent/15 text-foreground"
-                          : position < sceneIndex
-                            ? "border-steel-800 text-foreground/80 hover:border-accent/50"
-                            : "border-steel-800 text-muted-foreground hover:border-accent/50"
-                      )}
-                      onClick={() => go(first)}
-                    >
-                      {position + 1}. {scene.label}
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-pressed={large}
-                className={cn(
-                  "rounded-md border px-2.5 py-1 text-[12px] transition-colors",
-                  large
-                    ? "border-accent bg-accent/10 text-foreground"
-                    : "border-steel-800 text-muted-foreground hover:border-accent/50 hover:text-foreground"
-                )}
-                onClick={() => setLarge((value) => !value)}
-              >
-                Larger text
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-steel-800 px-2.5 py-1 text-[12px] text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground"
-                onClick={() => setFull((value) => !value)}
-              >
-                {full ? <Minimize2 className="h-3.5 w-3.5" aria-hidden /> : <Maximize2 className="h-3.5 w-3.5" aria-hidden />}
-                {full ? "Exit full screen" : "Full screen"}
-              </button>
+      {/* Top Bar: single streamlined row with stepper and controls */}
+      <div className={cn("shrink-0", focus ? "border-b border-steel-800/80 bg-steel-950/60 backdrop-blur-md px-6 py-2.5" : "pb-1")}>
+        <div className={cn("flex items-center gap-2", focus && "mx-auto max-w-6xl w-full justify-between")}>
+          {focus ? (
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 border border-accent/25 text-accent shadow-xs">
+                <Sparkles className="h-3.5 w-3.5" />
+              </div>
+              <span className="font-semibold text-sm text-foreground tracking-tight">
+                {story.metaphor.name}
+              </span>
+              {recalled ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-semibold text-teal border border-teal/30">
+                  <Check className="h-2.5 w-2.5 stroke-[2.5]" /> Recalled
+                </span>
+              ) : watched ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent border border-accent/30">
+                  Watched
+                </span>
+              ) : null}
             </div>
+          ) : null}
+
+          {/* Stepper takes main space */}
+          <div className={cn("min-w-0 flex-1", focus && "max-w-2xl mx-auto")}>
+            <ActStepper
+              frames={frames}
+              current={current}
+              readScenes={readScenes}
+              watched={watched}
+              onJump={go}
+            />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
-            <span className="font-medium text-foreground/80">Example:</span>
-            {story.examples.map((item, position) => (
-              <button
-                key={item.input}
-                type="button"
-                title={item.note}
-                className={cn(
-                  "rounded-md border px-2 py-0.5 font-mono text-[12px] transition-colors",
-                  position === example
-                    ? "border-accent bg-accent/10 text-foreground"
-                    : "border-steel-800 hover:border-accent/50 hover:text-foreground"
-                )}
-                onClick={() => pickExample(position)}
-              >
-                {item.label}
-              </button>
-            ))}
-            {story.examples[example].note ? (
-              <span className="ml-1 text-[12px] text-muted-foreground">
-                ({story.examples[example].note})
-              </span>
-            ) : null}
+          {/* Controls: Data Dropdown (Funnel) + Fullscreen Toggle */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <ExampleSelector
+              examples={story.examples}
+              selected={example}
+              onSelect={pickExample}
+              compact={!focus}
+            />
+            <button
+              type="button"
+              aria-expanded={focus}
+              aria-label={focus ? "Exit fullscreen (Esc)" : "Fullscreen (F)"}
+              title={focus ? "Exit fullscreen (Esc)" : "Fullscreen (F)"}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-steel-800 bg-steel-900/80 text-muted-foreground transition-colors hover:border-steel-750 hover:bg-steel-850 hover:text-foreground cursor-pointer"
+              onClick={() => setFocus((value) => !value)}
+            >
+              {focus ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Main Viewport */}
-      <div className={cn("flex-1", full ? "overflow-y-auto px-6 py-6" : "")}>
-        <div className={cn("w-full", full && "mx-auto max-w-6xl")}>
-          <div className={cn("grid gap-6 items-start", full ? "grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]" : "grid-cols-1")}>
+      <div className={cn("flex-1", focus ? "overflow-y-auto px-6 py-6" : "")}>
+        <div className={cn("w-full", focus && "mx-auto max-w-6xl")}>
+          <div
+            className={cn(
+              "grid items-start gap-6",
+              focus && hasSide ? "grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]" : "grid-cols-1",
+              // No code and no question on this step: the picture gets the stage to itself.
+              focus && !hasSide && "mx-auto max-w-[56rem]",
+            )}
+          >
             {/* Left Column: Visual Canvas & Step Captions */}
             <div className="flex min-w-0 flex-col gap-4">
-              <div className="rounded-xl border border-steel-800/80 bg-steel-950/60 p-4 min-h-[4.25rem] flex items-center">
-                <p aria-live="polite" className={cn("font-medium leading-relaxed text-foreground", large ? "text-[18px]" : "text-[15px]")}>
+              <div className="rounded-xl border border-steel-800/80 bg-steel-950/60 p-3.5 min-h-[4rem] flex flex-col justify-center">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent">
+                    <Sparkles className="h-3 w-3" />
+                    {story.metaphor.name}
+                  </span>
+                  {recalled ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal">
+                      <Check className="h-2.5 w-2.5 stroke-[2.5]" /> Recalled
+                    </span>
+                  ) : watched ? (
+                    <span className="text-[10px] font-semibold text-accent/80">
+                      Watched
+                    </span>
+                  ) : null}
+                </div>
+                <p aria-live="polite" className={cn("font-medium leading-relaxed text-foreground", caption)}>
                   {frame.caption}
                 </p>
               </div>
@@ -324,7 +603,7 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
               {quiz?.kind === "cell" ? (
                 <div className={cn("min-h-[7rem] rounded-xl border px-4 py-3.5 transition-colors", solved ? "border-teal/50 bg-teal/10" : "border-accent/50 bg-accent/10")}>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Your turn</div>
-                  <p className={cn("mt-1 font-semibold text-foreground", large ? "text-[17px]" : "text-[14.5px]")}>{quiz.question}</p>
+                  <p className={cn("mt-1 font-semibold text-foreground", heading)}>{quiz.question}</p>
                   {choice !== undefined ? (
                     <p aria-live="polite" className={cn("mt-2 flex items-start gap-2 text-foreground/90", body)}>
                       {solved ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden /> : <X className="mt-0.5 h-4 w-4 shrink-0 text-coral" aria-hidden />}
@@ -334,7 +613,13 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
                 </div>
               ) : null}
 
-              <div className="flex flex-col items-center justify-center rounded-xl border border-steel-800/80 bg-steel-950/40 p-4">
+              {/* Pictures cap themselves at 320px; here the stage decides, so the picture fits the room it has. */}
+              <div
+                className={cn(
+                  "flex flex-col items-center justify-center rounded-xl border border-steel-800/80 bg-steel-950/40 p-4",
+                  focus ? (hasSide ? "[&_svg]:!max-h-[min(52vh,30rem)]" : "[&_svg]:!max-h-[min(58vh,36rem)]") : "[&_svg]:!max-h-[min(40vh,20rem)]",
+                )}
+              >
                 <View
                   state={frame.state}
                   pick={
@@ -349,14 +634,14 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
                   }
                 />
                 {sceneIndex >= 2 ? (
-                  <p className="mt-2 text-center text-[11.5px] font-medium text-muted-foreground">
+                  <p className={cn("mt-2 text-center font-medium text-muted-foreground", SIZES.small[step])}>
                     {story.metaphor.legend}
                   </p>
                 ) : null}
               </div>
 
               {frame.scene === "insight" ? (
-                <div className={cn("rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 font-semibold text-foreground", large ? "text-[17px]" : "text-[14px]")}>
+                <div className={cn("rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 font-semibold text-foreground", heading)}>
                   Remember: {story.insight}
                 </div>
               ) : null}
@@ -367,7 +652,7 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
               {quiz?.kind === "choice" ? (
                 <div className="rounded-xl border border-steel-800 bg-steel-950/60 p-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Your turn — what happens next?</div>
-                  <p className={cn("mt-1.5 font-medium text-foreground", large ? "text-[17px]" : "text-[14px]")}>{quiz.question}</p>
+                  <p className={cn("mt-1.5 font-medium text-foreground", heading)}>{quiz.question}</p>
                   <div className="mt-3 flex flex-col gap-2">
                     {quiz.options.map((option, position) => {
                       const right = position === quiz.answer;
@@ -408,7 +693,7 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     Algorithm Execution
                   </div>
-                  <pre className={cn("overflow-x-auto rounded-xl border border-steel-800/80 bg-steel-950/60 py-2.5 font-mono leading-6", large ? "text-[14px]" : "text-[12px]")}>
+                  <pre className={cn("overflow-x-auto rounded-xl border border-steel-800/80 bg-steel-950/60 py-2.5 font-mono leading-6", SIZES.code[step])}>
                     {story.code.map((line, position) => (
                       <div
                         key={position}
@@ -430,7 +715,7 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
               {frame.scene === "card" && !last ? (
                 <div className="rounded-xl border border-accent/40 bg-accent/5 p-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Practice run · your turn</div>
-                  <p className={cn("mt-2 font-semibold text-foreground", large ? "text-[18px]" : "text-[15px]")}>A new example. You make the moves.</p>
+                  <p className={cn("mt-2 font-semibold text-foreground", caption)}>A new example. You make the moves.</p>
                   <p className={cn("mt-1.5 text-muted-foreground", body)}>
                     When a question appears, answer it by clicking in the picture.
                   </p>
@@ -440,12 +725,12 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
               {frame.scene === "card" && last ? (
                 <div className="rounded-xl border border-teal/40 bg-teal/5 p-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-teal">Memory card · {story.pattern}</div>
-                  <p className={cn("mt-2 text-foreground", large ? "text-[18px]" : "text-[15px]")}>
+                  <p className={cn("mt-2 text-foreground", caption)}>
                     You see: <span className="font-semibold">{story.trigger}</span>
                   </p>
                   {revealed ? (
                     <>
-                      <p className={cn("mt-3 font-semibold text-foreground", large ? "text-[19px]" : "text-[15px]")}>
+                      <p className={cn("mt-3 font-semibold text-foreground", caption)}>
                         {story.metaphor.name}: {story.insight}
                       </p>
                       <dl className={cn("mt-3 space-y-1.5 text-foreground/90", body)}>
@@ -467,7 +752,7 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
                         </div>
                       </dl>
                       <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">The same skeleton every time</div>
-                      <pre className={cn("mt-1.5 overflow-x-auto rounded-lg border border-steel-800/80 bg-steel-950/60 p-3 font-mono leading-6 text-foreground/90", large ? "text-[13px]" : "text-[11.5px]")}>
+                      <pre className={cn("mt-1.5 overflow-x-auto rounded-lg border border-steel-800/80 bg-steel-950/60 p-3 font-mono leading-6 text-foreground/90", SIZES.small[step])}>
                         {story.template.join("\n")}
                       </pre>
                       {story.siblings.length ? (
@@ -500,7 +785,7 @@ export function StoryPlayer({ story, slug }: { story: AnyProblemStory; slug: str
       </div>
 
       {/* Sticky Bottom Controls Bar */}
-      <div className={cn("shrink-0", !full && "sticky bottom-0")}>{controls}</div>
+      <div className={cn("shrink-0", !focus && "sticky -bottom-4 z-10")}>{controls}</div>
     </div>
   );
 }
