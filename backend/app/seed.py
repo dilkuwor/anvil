@@ -18,6 +18,7 @@ from app.common.models import Problem, ProblemTag, Tag, TestCase  # noqa: E402
 from app.cheatsheets.seed import seed_cheatsheets  # noqa: E402
 from app.learn.seed import seed_learning  # noqa: E402
 from app.problems.seed_catalog import seed_problem_catalog  # noqa: E402
+from app.problems.seed_solutions import seed_solutions  # noqa: E402
 
 
 def seed() -> None:
@@ -72,6 +73,8 @@ def seed() -> None:
                 )
 
         catalog = seed_problem_catalog(db)
+        # After the catalog: solutions attach to problems by slug.
+        seed_solutions(db)
         categories, topics, lessons = seed_learning(db)
         sheets, sections, blocks = seed_cheatsheets(db)
         db.commit()

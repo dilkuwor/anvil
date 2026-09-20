@@ -6,6 +6,7 @@ export const queryKeys = {
   tags: ["tags"] as const,
   problems: (params: Record<string, string | number | undefined>) => ["problems", params] as const,
   problem: (slug: string) => ["problem", slug] as const,
+  problemSolution: (slug: string) => ["problem", slug, "solution"] as const,
   submissions: (problemId?: string) => ["submissions", problemId ?? "all"] as const,
   submission: (id: string) => ["submission", id] as const,
   progress: ["progress"] as const,

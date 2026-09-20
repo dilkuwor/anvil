@@ -215,6 +215,37 @@ export type ProblemDetail = {
   visible_tests: VisibleTest[];
   status: string;
   created_at: string;
+  has_solution?: boolean;
+};
+
+export type SolutionApproach = {
+  position: number;
+  name: string;
+  idea: string;
+  steps: string[];
+  language: string;
+  code: string;
+  time_complexity: string;
+  time_why: string;
+  space_complexity: string;
+  space_why: string;
+  when_to_use: string;
+  is_optimal: boolean;
+};
+
+/** The written reference for a problem. Fetched only when the reader reveals it. */
+export type ProblemSolution = {
+  summary: string;
+  pattern: string;
+  trigger: string;
+  approaches: SolutionApproach[];
+  walkthrough: { input: string; columns: string[]; rows: string[][]; result: string };
+  mistakes: { name: string; wrong: string; right: string }[];
+  edge_cases: { input: string; expected: string; why: string }[];
+  interview_script: string[];
+  follow_ups: { question: string; answer: string }[];
+  related: { slug: string; title: string; difficulty: string }[];
+  updated_at: string | null;
 };
 
 export type TestResult = {

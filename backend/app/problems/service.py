@@ -4,8 +4,10 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.common.enums import ProgressStatus
-from app.common.errors import NotFoundError
-from app.problems.models import Problem, Tag
+from app.common.enums import InterviewKind
+from app.common.errors import ForbiddenError, NotFoundError
+from app.interviews.models import InterviewSession
+from app.problems.models import Problem, ProblemSolution, Tag
 from app.progress.models import UserProblemProgress
 
 
@@ -95,6 +97,39 @@ def get_problem_by_slug(db: Session, slug: str) -> Problem:
     if problem is None:
         raise NotFoundError("Problem not found.")
     return problem
+
+
+def has_solution(db: Session, problem_id: UUID) -> bool:
+    return db.scalar(select(ProblemSolution.id).where(ProblemSolution.problem_id == problem_id)) is not None
+
+
+def get_solution(db: Session, slug: str, user_id: UUID | None) -> tuple[ProblemSolution, list[Problem]]:
+    """The written solution and its related problems. Locked while the user is in a mock interview on it."""
+    problem = get_problem_by_slug(db, slug)
+    if user_id is not None:
+        interviewing = db.scalar(
+            select(InterviewSession.id).where(
+                InterviewSession.user_id == user_id,
+                InterviewSession.problem_id == problem.id,
+                InterviewSession.kind == InterviewKind.CODING.value,
+                InterviewSession.ended_at.is_(None),
+            )
+        )
+        if interviewing is not None:
+            raise ForbiddenError("The solution is hidden while your mock interview on this problem is running.")
+    solution = db.scalar(
+        select(ProblemSolution)
+        .options(selectinload(ProblemSolution.approaches))
+        .where(ProblemSolution.problem_id == problem.id)
+    )
+    if solution is None:
+        raise NotFoundError("No written solution for this problem yet.")
+    slugs = [str(item) for item in (solution.related_slugs or [])]
+    found = {
+        item.slug: item
+        for item in db.scalars(select(Problem).where(Problem.slug.in_(slugs), Problem.is_active.is_(True))).all()
+    }
+    return solution, [found[item] for item in slugs if item in found]
 
 
 def get_problem_by_id(db: Session, problem_id: UUID) -> Problem:

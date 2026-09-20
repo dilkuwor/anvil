@@ -12,7 +12,7 @@ from app.learn.models import (
     LearningTopic,
     UserLearningProgress,
 )
-from app.problems.models import Problem, ProblemTag, Tag, TestCase
+from app.problems.models import Problem, ProblemSolution, ProblemSolutionApproach, ProblemTag, Tag, TestCase
 from app.progress.models import Activity, UserProblemProgress
 from app.submissions.models import Submission, SubmissionTestResult
 from app.mcp.models import McpAccessLog, McpToken
@@ -37,6 +37,8 @@ __all__ = [
     "ProblemList",
     "ProblemListItem",
     "Problem",
+    "ProblemSolution",
+    "ProblemSolutionApproach",
     "ProblemTag",
     "Submission",
     "SubmissionTestResult",

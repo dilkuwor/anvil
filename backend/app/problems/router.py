@@ -12,7 +12,10 @@ from app.problems.schemas import (
     ProblemDetail,
     ProblemListItem,
     ProblemListResponse,
+    ProblemSolutionOut,
+    RelatedProblemOut,
     RunRequest,
+    SolutionApproachOut,
     SubmitRequest,
     TagOut,
     VisibleTestCaseOut,
@@ -105,6 +108,29 @@ def get_problem(
         visible_tests=visible,
         status=service.get_user_status(db, current_user.id if current_user else None, problem.id),
         created_at=problem.created_at,
+        has_solution=service.has_solution(db, problem.id),
+    )
+
+
+@router.get("/problems/{slug}/solution", response_model=ProblemSolutionOut)
+def get_problem_solution(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user),
+) -> ProblemSolutionOut:
+    solution, related = service.get_solution(db, slug, current_user.id if current_user else None)
+    return ProblemSolutionOut(
+        summary=solution.summary,
+        pattern=solution.pattern,
+        trigger=solution.trigger,
+        approaches=[SolutionApproachOut.model_validate(item) for item in solution.approaches],
+        walkthrough=solution.walkthrough or {},
+        mistakes=list(solution.mistakes or []),
+        edge_cases=list(solution.edge_cases or []),
+        interview_script=[str(item) for item in (solution.interview_script or [])],
+        follow_ups=list(solution.follow_ups or []),
+        related=[RelatedProblemOut(slug=item.slug, title=item.title, difficulty=item.difficulty) for item in related],
+        updated_at=solution.updated_at,
     )
 
 

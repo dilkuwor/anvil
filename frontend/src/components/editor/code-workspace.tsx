@@ -15,6 +15,7 @@ import { InterviewerPanel } from "@/components/interview/interviewer-panel";
 import { getStory } from "@/components/story/registry";
 import { isStoryRecalled, isStoryWatched, StoryPlayer } from "@/components/story/story-player";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
+import { SolutionPanel } from "@/components/problems/solution-panel";
 import { StatusPip } from "@/components/problems/status-pip";
 import { SubmissionHistory } from "@/components/submissions/submission-history";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ function storageKey(slug: string) {
   return `ia:code:${slug}`;
 }
 
-type ProblemTab = "problem" | "story" | "examples" | "constraints" | "hints" | "history";
+type ProblemTab = "problem" | "story" | "examples" | "constraints" | "hints" | "solution" | "history";
 
 function interviewStorageKey(slug: string) {
   return `ia:interview:${slug}`;
@@ -282,6 +283,8 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     { id: "examples", label: "Examples" },
     { id: "constraints", label: "Constraints" },
     { id: "hints", label: "Hints" },
+    // Like the story, the written solution has no place in a live interview. The API refuses it too.
+    ...(problem.has_solution && !interviewLive ? [{ id: "solution" as const, label: "Solution" }] : []),
     { id: "history", label: "History" },
   ];
 
@@ -339,6 +342,17 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
         {tab === "examples" ? <ExamplesBody problem={problem} /> : null}
         {tab === "constraints" ? <ConstraintsBody problem={problem} /> : null}
         {tab === "hints" ? <HintsBody problem={problem} /> : null}
+        {tab === "solution" && problem.has_solution && !interviewLive ? (
+          <SolutionPanel
+            problem={problem}
+            hasStory={Boolean(story)}
+            onOpenStory={() => setTab("story")}
+            onLoadCode={(source) => {
+              setCode(source);
+              toast.message("Loaded the solution into the editor.");
+            }}
+          />
+        ) : null}
         {tab === "history" ? (
           signedIn ? (
             <SubmissionHistory

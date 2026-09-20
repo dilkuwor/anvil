@@ -1,0 +1,281 @@
+[
+  {
+    "slugs": [
+      "lc-3",
+      "longest-unique-window"
+    ],
+    "pattern": "Sliding window",
+    "trigger": "“longest substring” with a rule about its letters",
+    "insight": "A caterpillar that only crawls forward. When the head eats a letter already in the body, the tail snaps just past the old copy.",
+    "metaphor": "The caterpillar",
+    "trap": "The Ghost Trap",
+    "trap_rule": "An old letter behind the tail is a ghost. The tail never moves backwards: check last.get(c) >= left.",
+    "time": "O(n)",
+    "space": "O(k)"
+  },
+  {
+    "slugs": [
+      "lc-11",
+      "widest-water-basin"
+    ],
+    "pattern": "Two pointers",
+    "trigger": "“pick two lines that hold the most water”, or any best pair where width fights height",
+    "insight": "Start with the widest tank. The water stops at the shorter wall, so only the shorter wall steps inward.",
+    "metaphor": "The sliding tank walls",
+    "trap": "The Taller Wall Trap",
+    "trap_rule": "Never move the taller wall. The tank gets narrower and the water still stops at the shorter wall, so it can only hold less.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-141",
+      "cycle-in-a-chain"
+    ],
+    "pattern": "Fast and slow pointers",
+    "trigger": "“does this linked list loop back on itself?”, with no extra memory allowed",
+    "insight": "A tortoise and a hare race along the arrows. If the track ends, the hare finds null first. If it loops, the hare comes round and lands on the tortoise.",
+    "metaphor": "The tortoise and the hare",
+    "trap": "The Null Pointer Void",
+    "trap_rule": "Before every jump check both fast != null and fast.next != null. On a track that ends, a hare that jumps from null crashes the program.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-739"
+    ],
+    "pattern": "Monotonic stack",
+    "trigger": "“for each item, how far away is the next bigger one?”",
+    "insight": "A waiting room. Every day waits there for a warmer day, and the last one in sits nearest the door. A warmer day lets them out from the door inwards.",
+    "metaphor": "The Waiting Room",
+    "trap": "The Equal Day Trap",
+    "trap_rule": "Equal is not warmer. Let a day out only with a strict >, or days with the same temperature get a wrong wait.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-200"
+    ],
+    "pattern": "Grid search: count and sink",
+    "trigger": "a grid of land and water, and “how many separate groups?”",
+    "insight": "Read the map like a page. Each time you step on land, count one island and sink the whole island at once, so it can never be counted again.",
+    "metaphor": "The sinking island",
+    "trap": "The Infinite Bounce Trap",
+    "trap_rule": "Turn a box to water BEFORE looking at its neighbours: grid[r][c] = '0' comes first in sink. Otherwise two land boxes send the search back and forth for ever.",
+    "time": "O(m·n)",
+    "space": "O(m·n)"
+  },
+  {
+    "slugs": [
+      "lc-42",
+      "valley-rain"
+    ],
+    "pattern": "Two pointers",
+    "trigger": "“how much water stays” on uneven ground, or any amount that is held in from both sides",
+    "insight": "Two walls close in from the ends. The side with the lower wall is safe to fill, because water only ever stands as high as the lower wall.",
+    "metaphor": "Two walls closing in",
+    "trap": "The Spill Trap",
+    "trap_rule": "Never fill from the side with the higher wall: water that high could spill over the lower wall. Always move the side whose wall is lower.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-33"
+    ],
+    "pattern": "Binary search on a rotated row",
+    "trigger": "a sorted row that was rotated, and you must find a value in it fast",
+    "insight": "Cut at the middle bar: one side is always a smooth ramp. If the target is between that ramp's two end bars, keep the ramp. If not, keep the other side.",
+    "metaphor": "The ramp and the cliff",
+    "trap": "The Cliff Trap",
+    "trap_rule": "Never pick a side just because the target is smaller or bigger than nums[mid]. First find the sorted half (nums[low] <= nums[mid]?), then check if the target is inside it.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-146"
+    ],
+    "pattern": "Design: hash map + doubly linked list",
+    "trigger": "a store of limited size where get and put must each take one step, and the key unused the longest is thrown out",
+    "insight": "A line of guests plus a guest list. Just used goes to the front of the line, the back of the line leaves first, and the guest list finds any seat in one step.",
+    "metaphor": "The VIP queue",
+    "trap": "The One-Way Trap",
+    "trap_rule": "With links in one direction only, a guest cannot unhook itself: finding the neighbour in front means walking from the head, O(n). Keep prev and next, plus head and tail guards.",
+    "time": "O(1)",
+    "space": "O(capacity)"
+  },
+  {
+    "slugs": [
+      "lc-322"
+    ],
+    "pattern": "Dynamic programming (1D)",
+    "trigger": "“fewest coins” (or fewest steps) to reach an exact total, with pieces you may reuse",
+    "insight": "Stepping stones, one per amount. A stone costs the cheapest stone one coin-hop behind it, plus 1. Fill the bridge from stone 0 forward.",
+    "metaphor": "The stepping stones",
+    "trap": "The Greedy Trap",
+    "trap_rule": "Biggest coin first can be wrong: with coins 1, 3, 4 it pays 6 as 4 + 1 + 1, but 3 + 3 is fewer. Try every coin at every stone.",
+    "time": "O(amount × coins)",
+    "space": "O(amount)"
+  },
+  {
+    "slugs": [
+      "lc-15"
+    ],
+    "pattern": "Sort + two pointers",
+    "trigger": "“all different triplets that add up to a target” in a list that may hold repeats",
+    "insight": "Sort first. Push a peg into one number, then squeeze two calipers over the rest: too small, the left caliper steps right; too big, the right caliper steps left.",
+    "metaphor": "The peg and the calipers",
+    "trap": "The Duplicate Triplet Trap",
+    "trap_rule": "Never start the peg, or a caliper after a find, on a value it has just used. A triplet may still use the same value twice, like [-1, -1, 2].",
+    "time": "O(n²)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-875"
+    ],
+    "pattern": "Binary search on the answer",
+    "trigger": "“the smallest speed (or size, or capacity) that still finishes in time”, where checking one candidate is easy",
+    "insight": "Lay all speeds on a dial. Too slow stays too slow below, works stays works above. Try the middle, throw half the dial away, and close in on the first speed that works.",
+    "metaphor": "The speed dial",
+    "trap": "The Fractional Speed Trap",
+    "trap_rule": "Koko never shares an hour between two piles. Round each pile up on its own: (p + k - 1) / k. Never divide the sum of all piles by k.",
+    "time": "O(n log m)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-56"
+    ],
+    "pattern": "Sort by start, then sweep",
+    "trigger": "a list of ranges (meetings, bookings) in any order, where the overlapping ones must be joined or counted",
+    "insight": "Sort the meetings by start. Then each one can only overlap the latest busy block: if it starts before that block ends, the block takes the later of the two ends. If not, a new block opens.",
+    "metaphor": "The calendar",
+    "trap": "The Enclosed Interval Trap",
+    "trap_rule": "A meeting can sit inside the block, like [2,4] inside [1,6]. Never copy its end: last[1] = Math.max(last[1], cur[1]).",
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-206"
+    ],
+    "pattern": "Linked list: turn the links round",
+    "trigger": "“reverse a singly linked list”, or any task that must turn one-way links round without a second list",
+    "insight": "A train of one-way couplings. Hold one car: plant a flag on the car ahead, swing the coupling to the hook behind, then step to the flag.",
+    "metaphor": "The train couplings",
+    "trap": "The Orphan Train Trap",
+    "trap_rule": "Save next = curr.next before curr.next = prev. Swing the coupling first and nothing holds the rest of the train.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-25"
+    ],
+    "pattern": "Linked list: turn the links round, group by group",
+    "trigger": "“reverse the nodes of a linked list k at a time”, where a short last group must stay as it is",
+    "insight": "A scout checks that k cars are left. Then the group is turned coupling by coupling, its old first car holds the rest of the train, and the anchor hooks onto the group's new first car.",
+    "metaphor": "The train yard",
+    "trap": "The Leftover Reversal Trap",
+    "trap_rule": "Count k cars ahead before touching a group. If the scout reaches null first, the last cars stay exactly as they are.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-76"
+    ],
+    "pattern": "Sliding window with need counts",
+    "trigger": "“shortest substring that contains all the letters of another string”",
+    "insight": "A shopper with a list. The right edge fills the basket until every letter is ticked, then the left edge drops letters while the list stays complete.",
+    "metaphor": "The Grocery Checklist",
+    "trap": "The Spare Copy Trap",
+    "trap_rule": "Dropping a needed letter only unticks it when the basket falls below the need. A spare copy keeps the list complete: check basket.get(d) < need.get(d).",
+    "time": "O(n + m)",
+    "space": "O(k)"
+  },
+  {
+    "slugs": [
+      "lc-84"
+    ],
+    "pattern": "Monotonic stack",
+    "trigger": "“largest rectangle under a row of bars”, or any “how far can this one stretch before something smaller stops it?”",
+    "insight": "Every bar starts a rectangle that keeps growing to the right. A shorter bar blocks the taller ones, and a blocked rectangle is finished, so it can be measured.",
+    "metaphor": "The Growing Rectangles",
+    "trap": "The Left Reach Trap",
+    "trap_rule": "A blocked bar's rectangle does not start at the bar. It reaches left over every taller bar, to just after the growing bar below it, or to bar 0 if none is left: width = i - leftWall - 1.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-102",
+      "level-walk"
+    ],
+    "pattern": "Level-by-level walk with a waiting line (queue)",
+    "trigger": "a tree, and the answer is wanted “level by level” or “row by row”",
+    "insight": "Keep a waiting line. Count it before each row: exactly that many leave the front, while their children join the back for the next row.",
+    "metaphor": "The waiting line",
+    "trap": "The Growing Line Trap",
+    "trap_rule": "Read line.size() into count once, before the inner loop. If the loop re-reads the size while children are joining, two levels leak into one row.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-236",
+      "shared-ancestor"
+    ],
+    "pattern": "One search down the tree, reports passed back up (recursion that returns what it found)",
+    "trigger": "a tree and two of its nodes, and you are asked for the lowest node that sits above both",
+    "insight": "Search down once. A marked node reports itself up. One report is passed along; the node where two reports meet is the answer.",
+    "metaphor": "Reports climbing the tree",
+    "trap": "The Look Below Trap",
+    "trap_rule": "A marked node reports itself at once; never search below it. If the other marked node hides down there, this one is the answer anyway.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-994"
+    ],
+    "pattern": "Spreading from many starts at once, wave by wave",
+    "trigger": "something spreads through a grid step by step, and you are asked “how long until it is everywhere?”",
+    "insight": "All rotten oranges push one wave outwards together. Fix the front, let only the front spread, and count one minute per wave.",
+    "metaphor": "The wave",
+    "trap": "The Sequential Infection Trap",
+    "trap_rule": "Fix the front before spreading: int front = queue.size(). An orange that rots in this minute must wait for the next one, or rot runs through a whole chain in a single minute.",
+    "time": "O(m·n)",
+    "space": "O(m·n)"
+  },
+  {
+    "slugs": [
+      "lc-207"
+    ],
+    "pattern": "Topological order: keep taking what nothing blocks",
+    "trigger": "tasks or courses with “this one must come before that one”, and the question “can they all be done?”",
+    "insight": "Dominoes. Write on each course how many others still block it. Whatever is blocked by 0 falls, and each fall takes one blocker off the courses it points to. If some never fall, there is a circle.",
+    "metaphor": "The domino chain",
+    "trap": "The Cycle Deadlock Trap",
+    "trap_rule": "Courses that wait for each other in a circle are never blocked by 0, so they never enter the free line. Do not loop for ever waiting for them: count the falls and compare with numCourses.",
+    "time": "O(V+E)",
+    "space": "O(V+E)"
+  },
+  {
+    "slugs": [
+      "lc-1143"
+    ],
+    "pattern": "Dynamic programming on a table (two words)",
+    "trigger": "two words or lists, and the “longest” thing they share with the order kept",
+    "insight": "A table of small answers. Letters match: step diagonally and add 1. Letters differ: copy the bigger neighbour, top or left. The answer sits in the corner.",
+    "metaphor": "The diagonal path",
+    "trap": "The Off-By-One Trap",
+    "trap_rule": "The table has an extra row 0 and column 0 for the empty word. So the table is (m + 1) × (n + 1), and row i reads letter i − 1.",
+    "time": "O(m × n)",
+    "space": "O(m × n)"
+  }
+]

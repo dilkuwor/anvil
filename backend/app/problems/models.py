@@ -38,6 +38,7 @@ class Problem(Base):
     test_cases = relationship("TestCase", back_populates="problem", cascade="all, delete-orphan")
     submissions = relationship("Submission", back_populates="problem")
     progress = relationship("UserProblemProgress", back_populates="problem")
+    solution = relationship("ProblemSolution", back_populates="problem", uselist=False, cascade="all, delete-orphan")
 
 
 class Tag(Base):
@@ -77,3 +78,69 @@ class TestCase(Base):
 
     problem = relationship("Problem", back_populates="test_cases")
     results = relationship("SubmissionTestResult", back_populates="test_case")
+
+
+class ProblemSolution(Base):
+    """The written reference for a problem: what the Solution tab shows. One row per problem."""
+
+    __tablename__ = "problem_solutions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    problem_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("problems.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    # The one or two sentences to remember. Same words as the Visual Story's card when there is one.
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    pattern: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    # How to recognise this kind of problem: "when you see ...".
+    trigger: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # {"input": str, "columns": [str], "rows": [[str]], "result": str}
+    walkthrough: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    # [{"name": str, "wrong": str, "right": str}]
+    mistakes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    # [{"input": str, "expected": str, "why": str}]
+    edge_cases: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    # What to say out loud, one short line per step.
+    interview_script: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    # [{"question": str, "answer": str}]
+    follow_ups: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    related_slugs: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    problem = relationship("Problem", back_populates="solution")
+    approaches = relationship(
+        "ProblemSolutionApproach",
+        back_populates="solution",
+        cascade="all, delete-orphan",
+        order_by="ProblemSolutionApproach.position",
+    )
+
+
+class ProblemSolutionApproach(Base):
+    """One way to solve it, ordered from the obvious way to the best one."""
+
+    __tablename__ = "problem_solution_approaches"
+    __table_args__ = (UniqueConstraint("solution_id", "position", name="uq_solution_approach_position"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    solution_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("problem_solutions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    idea: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    steps: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    language: Mapped[str] = mapped_column(String(20), nullable=False, default="JAVA")
+    code: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    time_complexity: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    time_why: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    space_complexity: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    space_why: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # When you would mention this one in an interview.
+    when_to_use: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    is_optimal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    solution = relationship("ProblemSolution", back_populates="approaches")
