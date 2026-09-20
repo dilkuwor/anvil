@@ -25,6 +25,12 @@ class UserLlmKey(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+    @property
+    def readable(self) -> bool:
+        from app.common.secrets import can_decrypt
+
+        return can_decrypt(self.api_key_encrypted)
+
     user = relationship("User", back_populates="llm_keys")
 
 

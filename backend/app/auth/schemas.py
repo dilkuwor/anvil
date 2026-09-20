@@ -33,6 +33,7 @@ class LlmKeyOut(BaseModel):
     provider: str
     hint: str = Field(validation_alias="api_key_hint", serialization_alias="hint")
     model: str | None = None
+    readable: bool = True
 
 
 class UserOut(BaseModel):

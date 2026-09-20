@@ -49,8 +49,8 @@ def get_llm_provider(name: str | None = None, *, api_key: str | None = None, mod
 
 
 UNREADABLE_KEY_MESSAGE = (
-    "The saved API key cannot be decrypted. Paste the key again in Settings and save. "
-    "This usually happens after JWT_SECRET changes on the server."
+    "The saved API key cannot be decrypted on this server. Paste the key again in Settings and save. "
+    "This happens when the key was saved before the database password changed."
 )
 
 

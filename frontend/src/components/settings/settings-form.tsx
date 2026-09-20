@@ -599,7 +599,9 @@ function LlmSettings({ user }: { user: User }) {
             <Field
               label="API key"
               hint={
-                savedKey
+                savedKey && savedKey.readable === false
+                  ? `Saved key ${savedKey.hint} can no longer be read. Paste it again to fix it.`
+                  : savedKey
                   ? `Saved key ${savedKey.hint}. Leave blank to keep it.`
                   : "Required for this provider. The full key is never shown again."
               }
