@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -15,7 +16,7 @@ from app.interviews import ollama
 from app.interviews.agent import InterviewContext, MockInterviewAgent, ProblemSnapshot, SandboxSnapshot
 from app.interviews.providers import get_llm_provider_for_user
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession
-from app.interviews.signals import empty_signals, normalize_signals
+from app.interviews.signals import empty_signals, infer_signals, normalize_signals
 from app.interviews.schemas import (
     InterviewFeedbackOut,
     InterviewObjectiveOut,
@@ -46,6 +47,19 @@ PHASE_LABELS = {
 
 PREVIEW_PROBLEM_SLUG = "pair-target"
 PREVIEW_TURN_LIMIT = 4
+
+INTERVIEWER_NAMES = ("Maya", "Daniel", "Priya", "Marcus", "Elena", "Kenji", "Sarah", "Omar")
+MAX_CODE_CHARS = 12000
+_READY_ONLY = re.compile(
+    r"^\W*(ok(ay)?|yes|yep|yeah|sure|alright|got it|done|i'?m ready|i am ready|ready|let'?s (go|start|begin))"
+    r"(\W+(ok(ay)?|i'?m ready|ready|let'?s (go|start|begin)|i('?ve| have) read it))*\W*$",
+    re.I,
+)
+
+
+def interviewer_name(session: InterviewSession) -> str:
+    """Stable per session, no column needed."""
+    return INTERVIEWER_NAMES[session.id.int % len(INTERVIEWER_NAMES)] if session.id else INTERVIEWER_NAMES[0]
 
 
 def start_session(db: Session, user_id: UUID, problem_id: UUID) -> InterviewSession:
@@ -80,14 +94,17 @@ def add_preview_message(db: Session, session_id: UUID, content: str) -> Intervie
     session.candidate_turns += 1
     _add_event(session, InterviewEventType.MESSAGE, {"role": "CANDIDATE", "preview": True})
     current = session.phase
+    session.phase_turns += 1
+    advancing = _will_advance(session, current, text)
     reply = _reply_after_candidate(
         problem,
         session,
         text,
-        event_note=f"Candidate just spoke. Current phase: {current}. This is a short public preview.",
+        event_note=_candidate_note(current, advancing) + " This is a short public preview.",
+        will_advance=advancing,
     )
     _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
-    _advance_after_candidate(session, current)
+    _advance_after_candidate(session, current, advancing)
     db.commit()
     db.refresh(session)
     return session
@@ -118,7 +135,13 @@ def get_session(db: Session, session_id: UUID, user_id: UUID) -> InterviewSessio
     return session
 
 
-def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content: str) -> InterviewSession:
+def add_candidate_message(
+    db: Session,
+    session_id: UUID,
+    user_id: UUID,
+    content: str,
+    source_code: str | None = None,
+) -> InterviewSession:
     session = get_session(db, session_id, user_id)
     _ensure_open(session)
     if _is_system_design(session):
@@ -133,31 +156,54 @@ def add_candidate_message(db: Session, session_id: UUID, user_id: UUID, content:
     text = content.strip()
     _add_message(session, InterviewMessageRole.CANDIDATE, text)
     session.candidate_turns += 1
-    _add_event(session, InterviewEventType.MESSAGE, {"role": "CANDIDATE"})
+    _add_event(session, InterviewEventType.MESSAGE, _with_code({"role": "CANDIDATE"}, source_code))
 
     current = session.phase
-    if current == InterviewPhase.FOLLOW_UP.value and session.followups_asked >= 2:
+    session.phase_turns += 1
+    if current == InterviewPhase.CLOSING.value:
         reply = _ask_interviewer(
             problem,
             session,
-            event_note="They answered your last follow-up. Close briefly; feedback is next.",
-            fallback="That's a solid wrap-up. I'll share feedback now.",
+            event_note=(
+                "They replied to your invitation to ask questions. If they asked something, answer briefly as yourself. "
+                "Then thank them for their time and say goodbye. Do not ask another question."
+            ),
+            fallback=CLOSING_GOODBYE,
             last_candidate_text=text,
         )
         _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
         _complete(db, session, problem)
         return session
+    if current == InterviewPhase.FOLLOW_UP.value and session.followups_asked >= 2:
+        reply = _ask_interviewer(
+            problem,
+            session,
+            event_note=(
+                "They answered your last technical follow-up. Acknowledge it in a few words, say that is everything "
+                "you wanted to cover technically, and ask what questions they have for you."
+            ),
+            fallback=CLOSING_INVITE,
+            last_candidate_text=text,
+            will_advance=True,
+        )
+        _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
+        _set_phase(session, InterviewPhase.CLOSING.value)
+        db.commit()
+        db.refresh(session)
+        return session
 
+    advancing = _will_advance(session, current, text)
     reply = _reply_after_candidate(
         problem,
         session,
         text,
-        event_note=f"Candidate just spoke. Current phase: {current}.",
+        event_note=_candidate_note(current, advancing),
+        will_advance=advancing,
     )
     _add_message(session, InterviewMessageRole.INTERVIEWER, reply)
     if current == InterviewPhase.FOLLOW_UP.value:
         session.followups_asked += 1
-    _advance_after_candidate(session, current)
+    _advance_after_candidate(session, current, advancing)
     db.commit()
     db.refresh(session)
     return session
@@ -209,6 +255,7 @@ def record_execution_event(
     total: int,
     runtime_ms: int | None,
     memory_kb: int | None,
+    source_code: str | None = None,
 ) -> InterviewSession:
     session = get_session(db, session_id, user_id)
     _ensure_open(session)
@@ -223,27 +270,39 @@ def record_execution_event(
     session.last_runtime_ms = runtime_ms
     session.last_memory_kb = memory_kb
 
+    # They started running code, so the talking phases are over.
+    if session.phase in {InterviewPhase.UNDERSTANDING.value, InterviewPhase.APPROACH.value}:
+        _set_phase(session, InterviewPhase.CODING.value)
+
     if event_type == InterviewEventType.RUN.value:
         session.run_count += 1
         if passed == total and total > 0 and session.phase == InterviewPhase.CODING.value:
-            session.phase = InterviewPhase.TESTING.value
+            _set_phase(session, InterviewPhase.TESTING.value)
         note = (
-            f"AUTHORITATIVE run result: {status}. {passed}/{total} visible tests passed. "
-            f"Runtime {runtime_ms}ms. Do not contradict this. Do not invent hidden tests."
+            f"They just ran their code. AUTHORITATIVE run result: {status}. {passed}/{total} visible tests passed. "
+            f"Runtime {runtime_ms}ms. Do not contradict this. Do not invent hidden tests. "
+            "React like an interviewer watching the run: if it failed, ask what they think went wrong; "
+            "if it passed, ask about an edge case or have them trace an input."
         )
         fallback = _fallback_after_run(passed, total)
     elif event_type == InterviewEventType.SUBMIT.value:
         session.submit_count += 1
         if accepted:
             session.accepted = 1
-            session.phase = InterviewPhase.FOLLOW_UP.value
+            if session.phase != InterviewPhase.CLOSING.value:
+                _set_phase(session, InterviewPhase.FOLLOW_UP.value)
         else:
             session.wrong_attempts += 1
             if session.phase == InterviewPhase.TESTING.value:
-                session.phase = InterviewPhase.CODING.value
+                _set_phase(session, InterviewPhase.CODING.value)
         note = (
-            f"AUTHORITATIVE submit result: {status}. {passed}/{total} tests passed. "
-            "Do not reveal hidden test details. Do not rewrite their code."
+            f"They just submitted. AUTHORITATIVE submit result: {status}. {passed}/{total} tests passed. "
+            "Do not reveal hidden test details. Do not rewrite their code. "
+            + (
+                "Tell them it passed, then start the follow-up discussion with one question about their solution."
+                if accepted
+                else "Tell them some cases are failing and ask what kind of input their code might not handle."
+            )
         )
         fallback = _fallback_after_submit(accepted)
     else:
@@ -252,7 +311,10 @@ def record_execution_event(
     _add_event(
         session,
         InterviewEventType(event_type),
-        {"status": status, "passed": passed, "total": total, "runtime_ms": runtime_ms, "memory_kb": memory_kb},
+        _with_code(
+            {"status": status, "passed": passed, "total": total, "runtime_ms": runtime_ms, "memory_kb": memory_kb},
+            source_code,
+        ),
     )
     reply = _ask_interviewer(
         problem,
@@ -340,6 +402,7 @@ def to_out(session: InterviewSession, problem: Problem | None = None) -> Intervi
         started_at=session.started_at,
         ended_at=session.ended_at,
         completed=session.ended_at is not None or session.phase == InterviewPhase.FEEDBACK.value,
+        interviewer_name=interviewer_name(session),
         messages=messages,
         feedback=_feedback_out(session.feedback) if session.feedback else None,
     )
@@ -399,16 +462,71 @@ def _expire_if_needed(db: Session, session: InterviewSession) -> None:
         return
     problem = _get_problem(db, session.problem_id) if session.problem_id else None
     _add_event(session, InterviewEventType.TIMEOUT, {})
-    _add_message(session, InterviewMessageRole.INTERVIEWER, "Interview time has ended.")
+    _add_message(session, InterviewMessageRole.INTERVIEWER, TIME_UP_MESSAGE)
     _complete(db, session, problem)
 
 
-def _advance_after_candidate(session: InterviewSession, phase_before: str) -> None:
-    # First candidate turn stays on requirements; the problem was just handed over.
-    if phase_before == InterviewPhase.UNDERSTANDING.value and session.candidate_turns >= 2:
-        session.phase = InterviewPhase.APPROACH.value
+def _will_advance(session: InterviewSession, phase: str, text: str) -> bool:
+    """Decide the phase change before the interviewer speaks, so the reply can hand off naturally."""
+    if phase == InterviewPhase.UNDERSTANDING.value:
+        # First candidate turn stays on requirements; the problem was just handed over.
+        if session.candidate_turns < 2:
+            return False
+        # Keep answering clarifying questions, within reason.
+        still_asking = text.rstrip().endswith("?") and session.candidate_turns < 4
+        return not still_asking
+    if phase == InterviewPhase.APPROACH.value:
+        return "approach" in infer_signals(text) or session.phase_turns >= 3
+    return False
+
+
+def _candidate_note(phase: str, advancing: bool) -> str:
+    note = f"Candidate just spoke. Current phase: {phase}."
+    if not advancing:
+        return note
+    if phase == InterviewPhase.UNDERSTANDING.value:
+        return note + " Requirements are settled: answer anything pending, then ask how they would approach it."
+    if phase == InterviewPhase.APPROACH.value:
+        return note + (
+            " Coding is next. Unless the approach is plain brute force and worth one 'can you do better?' probe, "
+            "tell them to go ahead and implement it."
+        )
+    return note
+
+
+def _advance_after_candidate(session: InterviewSession, phase_before: str, advancing: bool) -> None:
+    if not advancing:
+        return
+    if phase_before == InterviewPhase.UNDERSTANDING.value:
+        _set_phase(session, InterviewPhase.APPROACH.value)
     elif phase_before == InterviewPhase.APPROACH.value:
-        session.phase = InterviewPhase.CODING.value
+        _set_phase(session, InterviewPhase.CODING.value)
+
+
+def _set_phase(session: InterviewSession, phase: str) -> None:
+    if session.phase != phase:
+        session.phase = phase
+        session.phase_turns = 0
+
+
+def _with_code(payload: dict, source_code: str | None) -> dict:
+    code = (source_code or "").strip("\n")
+    if code.strip():
+        payload["code"] = code[:MAX_CODE_CHARS]
+    return payload
+
+
+def _latest_code(problem: Problem, session: InterviewSession) -> str:
+    """Most recent editor snapshot, numbered like the candidate's editor. Empty until they change the starter."""
+    events = sorted(session.events, key=lambda item: _aware(item.created_at) if item.created_at else _now())
+    for event in reversed(events):
+        code = (event.payload or {}).get("code")
+        if not code:
+            continue
+        if code.strip() == (problem.starter_code or "").strip():
+            return ""
+        return "\n".join(f"{index:>3}  {line}" for index, line in enumerate(code.split("\n"), start=1))
+    return ""
 
 
 def _agent(session: InterviewSession) -> MockInterviewAgent:
@@ -437,6 +555,7 @@ def _interview_context(
     last_candidate_text: str = "",
     allow_hint_nudge: bool = False,
     last_event: str | None = None,
+    will_advance: bool | None = None,
 ) -> InterviewContext:
     return InterviewContext(
         kind=InterviewKind.SYSTEM_DESIGN if _is_system_design(session) else InterviewKind.CODING,
@@ -475,6 +594,10 @@ def _interview_context(
         fallback=fallback,
         last_candidate_text=last_candidate_text,
         allow_hint_nudge=allow_hint_nudge,
+        phase_turns=session.phase_turns,
+        interviewer_name=interviewer_name(session),
+        candidate_code=_latest_code(problem, session),
+        will_advance=will_advance,
     )
 
 
@@ -487,6 +610,7 @@ def _ask_interviewer(
     last_candidate_text: str = "",
     allow_hint_nudge: bool = False,
     last_event: str | None = None,
+    will_advance: bool | None = None,
 ) -> str:
     turn = _agent(session).respond(
         _interview_context(
@@ -497,6 +621,7 @@ def _ask_interviewer(
             last_candidate_text=last_candidate_text,
             allow_hint_nudge=allow_hint_nudge,
             last_event=last_event,
+            will_advance=will_advance,
         )
     )
     session.signals = turn.signals
@@ -506,7 +631,7 @@ def _ask_interviewer(
 def _transcript(session: InterviewSession) -> list[dict[str, str]]:
     messages = _sorted_messages(session)
     mapped: list[dict[str, str]] = []
-    for message in messages[-12:]:
+    for message in messages[-30:]:
         role = "assistant" if message.role == InterviewMessageRole.INTERVIEWER.value else "user"
         mapped.append({"role": role, "content": message.content})
     return mapped
@@ -587,6 +712,7 @@ def _ai_scores(problem: Problem, session: InterviewSession, objective: dict) -> 
         hints_used=session.hints_used,
         candidate_turns=session.candidate_turns,
         followups_asked=session.followups_asked,
+        final_code=_latest_code(problem, session),
     )
     return {
         "understanding": _clamp(scored.get("understanding"), fallback["understanding"]),
@@ -698,23 +824,52 @@ def _progressive_hint(problem: Problem, n: int) -> str | None:
 
 
 READY_REQUIREMENTS_PROMPT = (
-    "Great. What questions do you have about the requirements or constraints?"
+    "Great. Before you get into a solution — any clarifying questions about the inputs, outputs, or constraints?"
+)
+CLOSING_INVITE = (
+    "Okay, that's everything I wanted to cover on the technical side. "
+    "We have a few minutes left — what questions do you have for me?"
+)
+CLOSING_GOODBYE = (
+    "Thanks — and thanks for your time today. I enjoyed working through this with you. "
+    "I'll write up my feedback now."
+)
+TIME_UP_MESSAGE = (
+    "We're at time, so let's stop here. Thanks for working through this with me — I'll write up my feedback now."
 )
 
 
-def build_opening_messages(problem: Problem) -> list[str]:
+def build_opening_messages(problem: Problem, name: str = INTERVIEWER_NAMES[0]) -> list[str]:
     """Deterministic opening. The problem is shown in the workspace, not pasted into chat."""
     del problem  # title is visible in the problem pane
     return [
         (
-            "Today we'll work through a coding problem. I'll give you the problem first. "
-            "Take a moment to read it, and let me know when you're ready."
-        )
+            f"Hi, I'm {name} — I'm a senior software engineer, and I'll be your interviewer today. "
+            "We have about 45 minutes: one coding problem, some follow-up discussion, "
+            "and I'll leave a few minutes at the end for your questions."
+        ),
+        (
+            "I care more about how you think than how fast you type, so please think out loud. "
+            "Ask me clarifying questions whenever you need to, and talk me through your approach before you start coding. "
+            "The problem is up in your workspace now — take a minute to read it, and let me know when you're ready."
+        ),
     ]
 
 
-def _reply_after_candidate(problem: Problem, session: InterviewSession, text: str, *, event_note: str) -> str:
-    if session.phase == InterviewPhase.UNDERSTANDING.value and session.candidate_turns == 1:
+def _reply_after_candidate(
+    problem: Problem,
+    session: InterviewSession,
+    text: str,
+    *,
+    event_note: str,
+    will_advance: bool | None = None,
+) -> str:
+    # A bare "I'm ready" gets the standard handoff; anything substantive gets a real reply.
+    if (
+        session.phase == InterviewPhase.UNDERSTANDING.value
+        and session.candidate_turns == 1
+        and _READY_ONLY.match(text)
+    ):
         return READY_REQUIREMENTS_PROMPT
     return _ask_interviewer(
         problem,
@@ -722,6 +877,7 @@ def _reply_after_candidate(problem: Problem, session: InterviewSession, text: st
         event_note=event_note,
         fallback=_fallback_after_message(problem, session.phase),
         last_candidate_text=text,
+        will_advance=will_advance,
     )
 
 
@@ -869,7 +1025,7 @@ def _open_new_session(
     db.add(session)
     db.flush()
     _add_event(session, InterviewEventType.MESSAGE, {"kind": "start", "preview": is_preview})
-    for text in build_opening_messages(problem):
+    for text in build_opening_messages(problem, interviewer_name(session)):
         _add_message(session, InterviewMessageRole.INTERVIEWER, text)
     session.phase = InterviewPhase.UNDERSTANDING.value
     db.commit()

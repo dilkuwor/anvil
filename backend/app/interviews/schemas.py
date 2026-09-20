@@ -73,6 +73,7 @@ class InterviewSessionOut(BaseModel):
     started_at: datetime
     ended_at: datetime | None
     completed: bool
+    interviewer_name: str = ""
     messages: list[InterviewMessageOut]
     feedback: InterviewFeedbackOut | None = None
 
@@ -190,6 +191,7 @@ class SystemDesignScenarioOut(BaseModel):
 
 class InterviewMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
+    source_code: str | None = Field(default=None, max_length=50000)
 
 
 class InterviewEventRequest(BaseModel):
@@ -199,3 +201,4 @@ class InterviewEventRequest(BaseModel):
     total: int = 0
     runtime_ms: int | None = None
     memory_kb: int | None = None
+    source_code: str | None = Field(default=None, max_length=50000)

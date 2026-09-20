@@ -164,7 +164,9 @@ def send_interview_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> InterviewSessionOut:
-    session = service.add_candidate_message(db, session_id, current_user.id, payload.content)
+    session = service.add_candidate_message(
+        db, session_id, current_user.id, payload.content, source_code=payload.source_code
+    )
     return service.serialize(db, session)
 
 
@@ -195,6 +197,7 @@ def record_interview_event(
         total=payload.total,
         runtime_ms=payload.runtime_ms,
         memory_kb=payload.memory_kb,
+        source_code=payload.source_code,
     )
     return service.serialize(db, session)
 

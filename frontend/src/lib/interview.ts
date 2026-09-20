@@ -114,6 +114,7 @@ export type InterviewSession = {
   started_at: string;
   ended_at: string | null;
   completed: boolean;
+  interviewer_name?: string;
   messages: InterviewMessage[];
   feedback: InterviewFeedback | null;
 };

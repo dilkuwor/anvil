@@ -161,7 +161,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
 
   const sendMessage = useMutation({
     mutationFn: (content: string) =>
-      api.post<InterviewSession>(`/api/v1/interviews/${sessionId}/messages`, { content }),
+      api.post<InterviewSession>(`/api/v1/interviews/${sessionId}/messages`, { content, source_code: code }),
     onSuccess: cacheSession,
     onError: () => toast.error("Unable to send your response."),
   });
@@ -180,6 +180,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       total: number;
       runtime_ms: number | null;
       memory_kb: number | null;
+      source_code: string;
     }) => api.post<InterviewSession>(`/api/v1/interviews/${sessionId}/events`, payload),
     onSuccess: cacheSession,
   });
@@ -212,6 +213,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       total: data.total,
       runtime_ms: data.runtime_ms,
       memory_kb: data.memory_kb,
+      source_code: code,
     });
   }
 
@@ -248,6 +250,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     startInterview.isPending ||
     sendMessage.isPending ||
     requestHint.isPending ||
+    notifyEvent.isPending ||
     endInterview.isPending ||
     retryInterview.isPending;
   const interviewLive = interviewMode && Boolean(session) && !session?.completed;

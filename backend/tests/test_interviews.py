@@ -66,10 +66,12 @@ def test_start_message_run_submit_end_flow(auth_client, db, monkeypatch):
     assert body["phase_label"] == "Understanding"
     assert body["remaining_seconds"] > 2600
     assert body["messages"][0]["role"] == "INTERVIEWER"
+    assert body["interviewer_name"]
+    assert f"I'm {body['interviewer_name']}" in body["messages"][0]["content"]
     assert "coding problem" in body["messages"][0]["content"]
-    assert "let me know when you're ready" in body["messages"][0]["content"]
-    assert len(body["messages"]) == 1
-    assert "Group strings" not in body["messages"][0]["content"]
+    assert "let me know when you're ready" in body["messages"][1]["content"]
+    assert len(body["messages"]) == 2
+    assert all("Group strings" not in item["content"] for item in body["messages"])
     session_id = body["id"]
 
     again = auth_client.post("/api/v1/interviews", json={"problem_id": str(problem.id)})
@@ -81,9 +83,13 @@ def test_start_message_run_submit_end_flow(auth_client, db, monkeypatch):
     )
     assert ready.status_code == 200
     assert ready.json()["phase"] == "UNDERSTANDING"
-    assert ready.json()["messages"][-1]["content"] == (
-        "Great. What questions do you have about the requirements or constraints?"
+    assert ready.json()["messages"][-1]["content"] == service.READY_REQUIREMENTS_PROMPT
+
+    clarifying = auth_client.post(
+        f"/api/v1/interviews/{session_id}/messages",
+        json={"content": "Can the list contain empty strings?"},
     )
+    assert clarifying.json()["phase"] == "UNDERSTANDING"
 
     understanding = auth_client.post(
         f"/api/v1/interviews/{session_id}/messages",
@@ -127,6 +133,13 @@ def test_start_message_run_submit_end_flow(auth_client, db, monkeypatch):
     )
     assert follow.json()["phase"] == "FOLLOW_UP"
 
+    second = auth_client.post(
+        f"/api/v1/interviews/{session_id}/messages",
+        json={"content": "With a count array key it drops to O(n k)."},
+    )
+    assert second.json()["phase"] == "CLOSING"
+    assert second.json()["completed"] is False
+
     ended = auth_client.post(f"/api/v1/interviews/{session_id}/end")
     assert ended.status_code == 200
     payload = ended.json()
@@ -166,10 +179,9 @@ def test_problem_context_omits_secret_solution():
     assert "DO_NOT_LEAK" not in context
     assert "hidden" not in context.lower()
     opening = build_opening_messages(problem)
-    assert len(opening) == 1
-    assert "let me know when you're ready" in opening[0]
-    assert "Public statement" not in opening[0]
-    assert "DO_NOT_LEAK" not in opening[0]
+    assert len(opening) == 2
+    assert "let me know when you're ready" in opening[-1]
+    assert all("Public statement" not in text and "DO_NOT_LEAK" not in text for text in opening)
 
 
 def _seed_pair_target(db) -> Problem:
@@ -278,7 +290,7 @@ def test_timer_uses_backend_start_time(auth_client, db, monkeypatch):
     assert expired.status_code == 200
     assert expired.json()["phase"] == "FEEDBACK"
     assert expired.json()["remaining_seconds"] == 0
-    assert expired.json()["messages"][-1]["content"] == "Interview time has ended."
+    assert expired.json()["messages"][-1]["content"] == service.TIME_UP_MESSAGE
     assert expired.json()["feedback"] is not None
 
 
@@ -293,3 +305,51 @@ def test_cannot_read_another_users_interview(auth_client, client, db, monkeypatc
     )
     response = client.get(f"/api/v1/interviews/{session_id}")
     assert response.status_code == 403
+
+
+def test_closing_question_completes_interview(auth_client, db, monkeypatch):
+    problem = _seed_problem(db)
+    monkeypatch.setattr(service.ollama, "interviewer_reply", lambda *args, **kwargs: "Thanks for your time today.")
+    monkeypatch.setattr(service.ollama, "evaluate_interview", lambda *args, **kwargs: {})
+    started = auth_client.post("/api/v1/interviews", json={"problem_id": str(problem.id)}).json()
+    session = db.get(InterviewSession, UUID(started["id"]))
+    session.phase = "CLOSING"
+    db.commit()
+    done = auth_client.post(
+        f"/api/v1/interviews/{started['id']}/messages",
+        json={"content": "What does your team work on?"},
+    ).json()
+    assert done["completed"] is True
+    assert done["phase"] == "FEEDBACK"
+
+
+def test_interviewer_sees_candidate_code(auth_client, db, monkeypatch):
+    problem = _seed_problem(db)
+    prompts: list[str] = []
+
+    def reply(system, *args, **kwargs):
+        prompts.append(system)
+        return "What happens when the list is empty?"
+
+    monkeypatch.setattr(service.ollama, "interviewer_reply", reply)
+    started = auth_client.post("/api/v1/interviews", json={"problem_id": str(problem.id)}).json()
+    url = f"/api/v1/interviews/{started['id']}/messages"
+    auth_client.post(url, json={"content": "What about empty input?", "source_code": problem.starter_code})
+    assert "has not written any code yet" in prompts[-1]
+    auth_client.post(
+        url,
+        json={"content": "I started on the map.", "source_code": "class Solution {\n  Map<String, List<String>> groups;\n}"},
+    )
+    assert "Map<String, List<String>> groups;" in prompts[-1]
+    assert "SECRET_SOLUTION" not in prompts[-1]
+
+
+def test_running_code_early_moves_to_coding(auth_client, db, monkeypatch):
+    problem = _seed_problem(db)
+    monkeypatch.setattr(service.ollama, "interviewer_reply", lambda *args, **kwargs: "What went wrong there?")
+    started = auth_client.post("/api/v1/interviews", json={"problem_id": str(problem.id)}).json()
+    run = auth_client.post(
+        f"/api/v1/interviews/{started['id']}/events",
+        json={"type": "RUN", "status": "WRONG_ANSWER", "passed": 1, "total": 4, "runtime_ms": 9},
+    )
+    assert run.json()["phase"] == "CODING"

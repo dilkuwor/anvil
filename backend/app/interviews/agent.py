@@ -98,6 +98,9 @@ class InterviewContext:
     scenario: ScenarioSnapshot | None = None
     architecture: ArchitectureSnapshot | None = None
     phase_turns: int = 0
+    interviewer_name: str = "Alex"
+    candidate_code: str = ""
+    will_advance: bool | None = None
 
 
 @dataclass
@@ -221,7 +224,9 @@ class MockInterviewAgent:
         lifts = {key: value for key, value in lifts.items() if value != "missing"}
         merged = helper.record_signals(lifts)
         focus = choose_focus(snapshot.phase, merged, kind)
-        will_advance = helper.service_permits_advance()
+        will_advance = (
+            snapshot.will_advance if snapshot.will_advance is not None else helper.service_permits_advance()
+        )
         used_fallback = False
         try:
             reply = self.provider.complete(
@@ -264,6 +269,7 @@ class MockInterviewAgent:
         followups_asked: int,
         kind: InterviewKind | str = InterviewKind.CODING,
         architecture_summary: str = "",
+        final_code: str = "",
     ) -> dict:
         kind_value = kind.value if isinstance(kind, InterviewKind) else str(kind)
         coverage = coverage_score(signals, kind_value)
@@ -315,7 +321,8 @@ class MockInterviewAgent:
                 f"Objective: accepted={accepted}, last_tests={last_run_passed}/{last_run_total}, "
                 f"submissions={submissions}, wrong_attempts={wrong_attempts}, hints={hints_used}, "
                 f"candidate_turns={candidate_turns}, followups={followups_asked}.\n"
-                f"Transcript:\n{transcript}"
+                + (f"Final code:\n{final_code}\n" if final_code else "")
+                + f"Transcript:\n{transcript}"
             )
         try:
             data = self.provider.complete_json(
@@ -420,28 +427,53 @@ class MockInterviewAgent:
         nudge = (
             "They requested a hint. Give a small conceptual nudge only. No algorithm, no code."
             if context.allow_hint_nudge
-            else "Never provide the solution, optimal algorithm, or any code."
+            else "Never provide the solution, the optimal algorithm, or any code."
+        )
+        code = (
+            f"Candidate's current editor contents (you are watching their screen):\n{context.candidate_code}"
+            if context.candidate_code
+            else "The candidate has not written any code yet."
         )
         return (
-            "You are a live Microsoft-style technical interviewer for a CODING interview at InterviewAnvil. "
-            "Speak like a senior engineer in the room — not a chatbot, tutor, or coding copilot.\n"
+            f"You are {context.interviewer_name}, a senior software engineer running a 45-minute coding interview "
+            "for a software engineer role, in the style of a Microsoft or FAANG onsite loop. "
+            "You are a real person on a call with the candidate, watching their shared editor — "
+            "not a chatbot, tutor, or coding copilot.\n"
             "The candidate can read the problem in the workspace. Never paste the title, statement, or constraints into chat.\n"
-            "If they just said they are ready, ask about requirements or constraints — not the approach yet.\n"
-            "Rules:\n"
-            "- Ask exactly one concise question.\n"
-            "- Keep replies to 1–3 short sentences.\n"
-            "- Challenge assumptions, edge cases, complexity, tradeoffs, and reasoning.\n"
+            "How you talk:\n"
+            "- Plain spoken English, 1–3 short sentences. No markdown, lists, headings, or emoji.\n"
+            "- React to what they actually said or wrote before anything else. Refer to their specifics, not generic prompts.\n"
+            "- Neutral acknowledgements only (\"Okay.\", \"Makes sense.\", \"Sure.\"). No cheerleading or praise padding, "
+            "and never reveal how they are scoring.\n"
+            "- Ask at most one question per turn. You do not have to ask a question every turn — "
+            "sometimes the right reply is just \"Sounds good, go ahead and code that up.\"\n"
+            "- When they ask a clarifying question, answer it directly and briefly from the problem statement. "
+            "If the statement does not say, make a sensible ruling the way an interviewer would "
+            "(\"You can assume the input fits in memory.\") and stay consistent with it. Never contradict the statement or examples.\n"
+            "How you run the interview:\n"
+            "- UNDERSTANDING: answer clarifying questions. If they have none, ask them to restate the problem or "
+            "probe one input/edge case they skipped.\n"
+            "- APPROACH: get an approach and its time/space complexity before any code. If they propose brute force, "
+            "ask for its complexity and whether they can do better — do not tell them how. "
+            "Once the approach is reasonable, tell them to go ahead and implement it.\n"
+            "- CODING: stay mostly out of the way. Keep replies short. If something in their code looks off, "
+            "point at the area with a question (\"What happens in your inner loop when the list is empty?\") — never give the fix.\n"
+            "- TESTING: have them trace their code on a concrete input, or ask about an edge case their code may miss.\n"
+            "- FOLLOW_UP: probe complexity, then a realistic variation (larger scale, streaming input, a changed constraint) "
+            "or a tradeoff in the code they actually wrote.\n"
+            "- CLOSING: answer their question about the team or role briefly and plausibly as yourself, then wrap up.\n"
             f"- {nudge}\n"
-            "- Never invent constraints or hidden tests.\n"
             "- Never reveal hidden tests or expected outputs that were not already shown.\n"
             "- Do not decide whether code is correct. Trust the authoritative sandbox result when given.\n"
             f"- {advance}\n"
-            f"Current phase: {context.phase}. Focus next on: {focus or 'a deeper follow-up'}.\n"
+            f"Current phase: {context.phase}. Focus next on: "
+            f"{'wrapping up' if context.phase == InterviewPhase.CLOSING.value else focus or 'a deeper follow-up'}.\n"
             f"Recorded signals: {signals}. Still missing or partial: {gaps}.\n"
             f"Hints used: {context.hints_used}. Wrong attempts: {context.wrong_attempts}. "
-            f"Remaining seconds: {context.remaining_seconds}.{preview}\n\n"
+            f"{_pacing(context)}{preview}\n\n"
             "Problem (public statement only):\n"
-            f"{context.problem.public_context}"
+            f"{context.problem.public_context}\n\n"
+            f"{code}"
         )
 
     def _user_turn(self, context: InterviewContext, sandbox: SandboxSnapshot, focus: str | None) -> str:
@@ -457,7 +489,10 @@ class MockInterviewAgent:
         if focus:
             parts.append(f"If they have not covered it, probe {focus.replace('_', ' ')}.")
         if context.last_candidate_text:
-            parts.append("Respond to their latest answer. Ask one question.")
+            if kind == InterviewKind.CODING.value:
+                parts.append("Respond to what they just said, the way a real interviewer would.")
+            else:
+                parts.append("Respond to their latest answer. Ask one question.")
         return " ".join(part for part in parts if part)
 
     def _sanitize(self, reply: str, context: InterviewContext, sandbox: SandboxSnapshot) -> str:
@@ -483,6 +518,17 @@ class MockInterviewAgent:
         if sandbox.accepted and _FAILURE_CLAIM.search(text) and not _SUCCESS_CLAIM.search(text):
             return context.fallback
         return _first_question_block(text)
+
+
+def _pacing(context: InterviewContext) -> str:
+    minutes = max(0, context.remaining_seconds // 60)
+    line = f"About {minutes} minutes remain."
+    early = context.phase in {InterviewPhase.UNDERSTANDING.value, InterviewPhase.APPROACH.value}
+    if minutes <= 5 and context.phase != InterviewPhase.CLOSING.value:
+        return line + " You are nearly out of time: say so and ask them to wrap up what they have."
+    if minutes <= 15 and early:
+        return line + " Time is getting short: steer them to start coding now."
+    return line
 
 
 def _looks_like_problem_dump(text: str, title: str, description: str) -> bool:

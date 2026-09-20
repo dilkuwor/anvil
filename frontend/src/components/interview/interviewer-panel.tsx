@@ -35,6 +35,7 @@ export function InterviewerPanel({
 }) {
   const [draft, setDraft] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
+  const name = session.interviewer_name || "Interviewer";
 
   useEffect(() => {
     const node = scroller.current;
@@ -57,14 +58,16 @@ export function InterviewerPanel({
       )}
     >
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-steel-800/80 bg-steel-950/30 px-5 py-3.5">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Interviewer</div>
-          <div className="mt-1 flex items-center gap-2 text-[12px] text-muted-foreground font-medium">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-40" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            Active
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-steel-800 bg-steel-950 text-sm font-semibold text-foreground">
+            {name.charAt(0)}
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-steel-900 bg-emerald-500" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold tracking-tight text-foreground">{name}</div>
+            <div className="text-[12px] text-muted-foreground">
+              {session.interviewer_name ? "Senior Software Engineer · Interviewer" : "In the interview"}
+            </div>
           </div>
         </div>
         {compact || (!showProblemButton && !showEndButton) ? null : (
@@ -102,19 +105,29 @@ export function InterviewerPanel({
                   interviewer ? "text-muted-foreground" : "text-accent",
                 )}
               >
-                {interviewer ? "Interviewer" : "You"}
+                {interviewer ? name : "You"}
               </div>
-              {interviewer ? (
-                <blockquote className="mt-1 text-sm leading-relaxed text-foreground">
-                  “{message.content.replace(/^["“]|["”]$/g, "")}”
-                </blockquote>
-              ) : (
-                <p className="mt-1 text-sm leading-relaxed text-foreground/90">{message.content}</p>
-              )}
+              <p
+                className={cn(
+                  "mt-1 whitespace-pre-wrap text-sm leading-relaxed",
+                  interviewer ? "text-foreground" : "text-foreground/90",
+                )}
+              >
+                {interviewer ? message.content.replace(/^["“]|["”]$/g, "") : message.content}
+              </p>
             </article>
           );
         })}
-        {busy ? <p className="text-[12px] italic text-muted-foreground animate-pulse">The interviewer is listening…</p> : null}
+        {busy ? (
+          <p className="flex items-center gap-2 text-[12px] text-muted-foreground" aria-live="polite">
+            <span className="flex gap-1" aria-hidden>
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
+            </span>
+            {name} is typing…
+          </p>
+        ) : null}
       </div>
 
       <div className="shrink-0 border-t border-steel-800/80 bg-steel-950/30 p-3.5">
@@ -130,7 +143,7 @@ export function InterviewerPanel({
               rows={compact ? 2 : 3}
               value={draft}
               disabled={busy}
-              placeholder="Type your response..."
+              placeholder="Think out loud — say it the way you would to the interviewer…"
               className="w-full resize-none rounded-xl border border-steel-800/80 bg-background px-3.5 py-2.5 text-sm leading-6 text-foreground placeholder:text-muted-foreground/60 focus:border-accent/50 focus:ring-1 focus:ring-accent/50 outline-none transition-colors"
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
