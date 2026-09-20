@@ -403,6 +403,7 @@ def to_out(session: InterviewSession, problem: Problem | None = None) -> Intervi
         ended_at=session.ended_at,
         completed=session.ended_at is not None or session.phase == InterviewPhase.FEEDBACK.value,
         interviewer_name=interviewer_name(session),
+        interviewer_warning=getattr(session, "interviewer_warning", None),
         messages=messages,
         feedback=_feedback_out(session.feedback) if session.feedback else None,
     )
@@ -625,6 +626,12 @@ def _ask_interviewer(
         )
     )
     session.signals = turn.signals
+    if turn.error:
+        # Transient, not a column: lets the UI say the line was canned instead of pretending.
+        session.interviewer_warning = (
+            f"The AI interviewer could not be reached ({turn.error[:200]}). "
+            "That reply was a stock line — check your AI provider in Settings."
+        )
     return turn.reply
 
 

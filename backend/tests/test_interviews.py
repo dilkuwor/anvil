@@ -353,3 +353,19 @@ def test_running_code_early_moves_to_coding(auth_client, db, monkeypatch):
         json={"type": "RUN", "status": "WRONG_ANSWER", "passed": 1, "total": 4, "runtime_ms": 9},
     )
     assert run.json()["phase"] == "CODING"
+
+
+def test_llm_failure_is_reported_not_hidden(auth_client, db, monkeypatch):
+    problem = _seed_problem(db)
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("401 invalid api key")
+
+    monkeypatch.setattr(service.ollama, "interviewer_reply", boom)
+    started = auth_client.post("/api/v1/interviews", json={"problem_id": str(problem.id)}).json()
+    assert started["interviewer_warning"] is None
+    reply = auth_client.post(
+        f"/api/v1/interviews/{started['id']}/messages",
+        json={"content": "So we return the grouped anagrams, is that correct?"},
+    ).json()
+    assert "401 invalid api key" in reply["interviewer_warning"]

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from app.common.enums import InterviewKind, InterviewPhase
+from app.common.logging import get_logger
 from app.interviews.providers.base import LLMProvider
 from app.interviews.signals import (
     DEMONSTRATED,
@@ -23,6 +24,8 @@ from app.interviews.signals import (
     missing_signals,
     normalize_signals,
 )
+
+logger = get_logger(__name__)
 
 _CODE_FENCE = re.compile(r"```")
 _SOLUTION_LEAK = re.compile(r"\b(class Solution|public static void main|optimal (algorithm|solution))\b", re.I)
@@ -111,6 +114,7 @@ class AgentTurn:
     focus: str | None
     used_fallback: bool
     service_will_advance: bool
+    error: str | None = None
 
 
 class InterviewTools(Protocol):
@@ -228,13 +232,25 @@ class MockInterviewAgent:
             snapshot.will_advance if snapshot.will_advance is not None else helper.service_permits_advance()
         )
         used_fallback = False
-        try:
-            reply = self.provider.complete(
-                self._system_prompt(snapshot, merged, focus, sandbox, will_advance),
-                snapshot.transcript,
-                self._user_turn(snapshot, sandbox, focus),
-            )
-        except Exception:
+        error: str | None = None
+        system = self._system_prompt(snapshot, merged, focus, sandbox, will_advance)
+        user_turn = self._user_turn(snapshot, sandbox, focus)
+        reply = ""
+        # One retry: free-tier providers drop requests often, and a canned line breaks the interview.
+        for attempt in range(2):
+            try:
+                reply = self.provider.complete(system, snapshot.transcript, user_turn)
+                error = None
+                break
+            except Exception as exc:
+                error = str(exc) or type(exc).__name__
+                logger.warning(
+                    "interviewer_llm_failed",
+                    provider=getattr(self.provider, "name", None),
+                    attempt=attempt + 1,
+                    error=error[:500],
+                )
+        if error is not None:
             reply = snapshot.fallback
             used_fallback = True
         cleaned = self._sanitize(reply, snapshot, sandbox)
@@ -248,6 +264,7 @@ class MockInterviewAgent:
             focus=focus,
             used_fallback=used_fallback or reply == snapshot.fallback,
             service_will_advance=will_advance,
+            error=error,
         )
 
     def evaluate(
@@ -490,7 +507,13 @@ class MockInterviewAgent:
             parts.append(f"If they have not covered it, probe {focus.replace('_', ' ')}.")
         if context.last_candidate_text:
             if kind == InterviewKind.CODING.value:
-                parts.append("Respond to what they just said, the way a real interviewer would.")
+                if "?" in context.last_candidate_text:
+                    parts.append(
+                        "They asked you a question. Answer it first — open with yes or no if it is a yes/no question — "
+                        "then continue the interview."
+                    )
+                else:
+                    parts.append("Respond to what they just said, the way a real interviewer would.")
             else:
                 parts.append("Respond to their latest answer. Ask one question.")
         return " ".join(part for part in parts if part)

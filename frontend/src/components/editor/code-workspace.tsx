@@ -133,6 +133,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     setSessionId(next.id);
     queryClient.setQueryData(queryKeys.interview(next.id), next);
     sessionStorage.setItem(interviewStorageKey(problem.slug), next.id);
+    if (next.interviewer_warning) toast.error(next.interviewer_warning);
   }
 
   function leaveInterview() {

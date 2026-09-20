@@ -74,6 +74,7 @@ class InterviewSessionOut(BaseModel):
     ended_at: datetime | None
     completed: bool
     interviewer_name: str = ""
+    interviewer_warning: str | None = None
     messages: list[InterviewMessageOut]
     feedback: InterviewFeedbackOut | None = None
 
