@@ -18,15 +18,15 @@ Match its tone, length and level of detail. When unsure, do what it does.
 | Field | What to write |
 |---|---|
 | `slugs` | `["lc-11", "widest-water-basin"]` |
-| `pattern` | The pattern's usual name: "Two pointers", "Sliding window", "Tree BFS". |
+| `pattern` | The pattern's usual **short** name, 32 characters at most: "Two pointers", "Sliding window", "Tree BFS". Never a sentence. |
 | `trigger` | How to recognise the problem: the words in the statement that give it away. One sentence. |
 | `summary` | The idea in 1–3 sentences, 40–280 characters. What you would want to remember in a year. |
 | `approaches` | 2 or 3, ordered from the obvious way to the best. See below. |
 | `walkthrough` | The best approach on ONE small example, as a table. See below. |
-| `mistakes` | 2–4 items: `name`, `wrong` (what people do), `right` (what to do instead). |
-| `edge_cases` | 3–6 items: `input`, `expected`, `why` it is worth testing. Use the problem's input style. |
+| `mistakes` | 3–4 items: `name`, `wrong` (what people do), `right` (what to do instead). |
+| `edge_cases` | 4–6 items: `input`, `expected`, `why` it is worth testing. Use the problem's input style. |
 | `interview_script` | 4–6 lines, spoken in the first person: restate → obvious way + cost → key point → better way + cost → what I would test. |
-| `follow_ups` | 2–4 real interviewer follow-ups, each with a short `answer`. |
+| `follow_ups` | 3–4 real interviewer follow-ups, each with a short `answer`. |
 | `related_slugs` | 2–4 slugs of problems that use the same idea. They must exist in the catalog. |
 
 ### An approach
@@ -36,7 +36,13 @@ Match its tone, length and level of detail. When unsure, do what it does.
 in an interview), `is_optimal`.
 
 - Exactly one approach has `is_optimal: True`, and it is the **last** one.
-- The first approach is the way most people think of first, even if slow. Say its cost honestly.
+- The first approach is the way most people think of first, and it must **really cost more** than the
+  best one, in time or in space (the tests compare them). For recursion problems that is usually plain
+  recursion with its true, often exponential, cost — not the same algorithm with a cache added.
+  If the honest first idea has the same cost as the best, pick the version that uses more memory
+  (for example, building a full copy or a parent map) and say so.
+- `steps` are whole sentences a person could follow with no code in front of them: "Put each letter
+  in a set as you read it." Not clipped notes like "Populate set, scan right".
 - Add a third approach only if it is a genuinely different idea people really use.
 - `code` is a **complete Java file**: `import java.util.*;` if needed, then `class Solution` with the
   problem's exact method (see the problem's `function_signature` and `starter_code`), plus any
@@ -50,7 +56,9 @@ in an interview), `is_optimal`.
 
 `input` (the example), `columns` (3–7 short headers), `rows` (3–9 rows, every cell a **string**),
 `result` (one sentence ending with the answer). Choose the smallest example that shows the key
-moment — ideally the one that triggers the first mistake in `mistakes`.
+moment: **the example must reach the situation described in `mistakes[0]`** and one row must show it.
+An example where nothing interesting happens (the two targets are the root's children; the array is
+already sorted) teaches nothing.
 
 ## Problems that have a Visual Story
 
@@ -65,7 +73,14 @@ moment — ideally the one that triggers the first mistake in `mistakes`.
 ## Writing rules
 
 - At most 3 sentences and 260 characters per text field. No exclamation marks.
-- Plain words. Banned: invariant, amortized, sentinel, trivial(ly), simply, naive, straightforward, WLOG.
+- Plain words. Banned: invariant, amortized, sentinel, trivial(ly), simply, naive, straightforward, WLOG,
+  and the shop talk memo/memoize, base case, subproblem, populate, traverse/traversal, iterate/iteration.
+  Say what happens instead: "remember answers we already worked out", "visit every node", "go through
+  the list". (An approach's `name` may keep its usual label, e.g. "Iterative, with a stack".)
+- The interview script is what a person would really say. It must give the cost of the obvious way
+  **and** of the better way (two lines with `O(...)`), and end with what you would test. No filler
+  such as "In my analysis…" or "I keep in mind…".
+- Do not mention the Visual Story in the text.
   Standard interview terms (BFS, DFS, heap, hash map) are fine — the learner needs them — but say
   what they do the first time ("a queue, so nodes leave in the order they arrived").
 - Code and identifiers go in `backticks`. Text in backticks is exempt from the word rules.

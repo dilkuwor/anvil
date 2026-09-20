@@ -1,5 +1,14 @@
 # Task: write the "Solution" tab content for 90 coding problems (Grok)
 
+> **Update — the rules were tightened after the first review. Re-read `SOLUTION_GUIDE.md` and
+> `backend/tests/test_solution_content.py` before you continue, and bring the entries you have
+> already written up to the new rules.** In short: `pattern` is a short name (≤ 32 characters); the
+> first approach must really cost more than the best one; steps are whole sentences; 3–4 mistakes,
+> 4–6 test inputs, 3–4 follow-ups; no shop talk (memo, base case, subproblem, populate, traverse,
+> iterate); the interview script states the cost of the obvious way AND the better way and ends with
+> what you would test, with no filler like "In my analysis…"; the walkthrough example must reach the
+> first mistake. The approved `lc-3` entry passes all of this — keep copying it.
+
 You are working in the **Anvil** repository (an interview-prep app). Each coding problem page has a
 **Solution** tab: a short written reference with the idea, the approaches with Java code, a
 walkthrough, common mistakes, test inputs, an interview script and follow-ups. The content lives in

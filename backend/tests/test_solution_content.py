@@ -21,7 +21,20 @@ STORIES = json.loads((ROOT / "database/seeds/solutions/_stories.json").read_text
 STORY_BY_SLUG = {slug: story for story in STORIES for slug in story["slugs"]}
 
 # Words that talk over the reader's head. Text inside `backticks` is exempt.
-JARGON = re.compile(r"\b(invariant|amorti[sz]ed|sentinel|trivial\w*|simply|naive|straightforward|w\.?l\.?o\.?g)\b", re.I)
+JARGON = re.compile(
+    r"\b(invariant|amorti[sz]ed|sentinel|trivial\w*|simply|naive|straightforward|w\.?l\.?o\.?g"
+    # Shop talk. Say what happens instead: "remember answers we already worked out", "visit every node".
+    r"|memo(?:i[sz]\w*)?|base case|subproblem\w*|populate\w*|traverse\w*|traversal|iterat\w*)\b",
+    re.I,
+)
+# Lines added to satisfy a rule rather than to say something.
+FILLER = re.compile(r"\b(in my (complexity )?analysis|i keep in mind|it is important to|it's important to|let'?s dive)\b", re.I)
+ARTICLE = re.compile(r"\b(a|an|the|its|their|this|that|these|each|every|both|any|one|two|no)\b", re.I)
+
+
+def cost(text: str) -> str:
+    return re.sub(r"\s+", "", text.replace("*", "×").replace("·", "×").lower())
+
 
 
 def prose(text: str) -> str:
@@ -61,6 +74,7 @@ def test_each_problem_is_written_once():
 @pytest.mark.parametrize("spec", SOLUTIONS, ids=lambda spec: spec["slugs"][0])
 def test_solution_shape(spec):
     assert spec["slugs"] and spec["pattern"] and spec["trigger"]
+    assert len(spec["pattern"]) <= 32, "the pattern's usual short name, e.g. 'Tree BFS', not a sentence"
     assert 40 <= len(spec["summary"]) <= 280 and sentences(spec["summary"]) <= 3
 
     approaches = spec["approaches"]
@@ -68,6 +82,11 @@ def test_solution_shape(spec):
     assert [item["is_optimal"] for item in approaches].count(True) == 1
     assert approaches[-1]["is_optimal"], "order approaches from the obvious way to the best one"
     assert len({item["name"] for item in approaches}) == len(approaches)
+    first, best = approaches[0], approaches[-1]
+    assert (cost(first["time_complexity"]), cost(first["space_complexity"])) != (
+        cost(best["time_complexity"]),
+        cost(best["space_complexity"]),
+    ), "the first approach must really cost more (time or space) than the best one: start from the way people think of first"
     for approach in approaches:
         assert "class Solution" in approach["code"], "a complete Java file, as the judge expects"
         assert 3 <= len(approach["steps"]) <= 6
@@ -82,12 +101,12 @@ def test_solution_shape(spec):
     assert all(len(row) == len(walk["columns"]) for row in walk["rows"])
     assert all(isinstance(cell, str) for row in walk["rows"] for cell in row)
 
-    assert 2 <= len(spec["mistakes"]) <= 4
+    assert 3 <= len(spec["mistakes"]) <= 4
     assert all(item["name"] and item["wrong"] and item["right"] for item in spec["mistakes"])
-    assert 3 <= len(spec["edge_cases"]) <= 6
+    assert 4 <= len(spec["edge_cases"]) <= 6
     assert all(item["input"] and item["expected"] != "" and item["why"] for item in spec["edge_cases"])
     assert 4 <= len(spec["interview_script"]) <= 6
-    assert 2 <= len(spec["follow_ups"]) <= 4
+    assert 3 <= len(spec["follow_ups"]) <= 4
     assert 2 <= len(spec["related_slugs"]) <= 4
     assert not set(spec["related_slugs"]) & set(spec["slugs"])
 
@@ -97,11 +116,21 @@ def test_solution_speaks_plainly(spec):
     for where, text in every_text(spec):
         assert len(text) <= 260, f"{where} is too long: {text}"
         assert sentences(text) <= 3, f"{where} has too many sentences: {text}"
-        found = JARGON.search(prose(text))
+        # An approach may carry its usual name ("Iterative, with a stack"); the explanation may not hide behind it.
+        found = None if where == "approach.name" else JARGON.search(prose(text))
         assert not found, f"{where} uses '{found.group(0)}': {text}"
         assert "!" not in prose(text), f"{where}: no exclamation marks: {text}"
-    for line in spec["interview_script"]:
-        assert re.search(r"\b(I|my|we)\b", line), f"the script is spoken in the first person: {line}"
+        assert not FILLER.search(text), f"{where} is filler, say something real: {text}"
+        assert not re.search(r"visual story", text, re.I), f"{where}: do not refer to the Visual Story in the text: {text}"
+
+    steps = [step for approach in spec["approaches"] for step in approach["steps"]]
+    full = [step for step in steps if ARTICLE.search(prose(step)) and step.rstrip().endswith((".", ":", "?"))]
+    assert len(full) / len(steps) >= 0.8, "write steps as whole sentences, not clipped notes"
+
+    script = spec["interview_script"]
+    assert sum(1 for line in script if re.search(r"\b(I|I'll|I'd|my|we|me)\b", line, re.I)) >= len(script) - 1, "spoken in the first person"
+    assert sum(1 for line in script if "O(" in line) >= 2, "say the cost of the obvious way AND of the better way"
+    assert any(re.search(r"\b(test|try it on|check it (on|with))\b", line, re.I) for line in script), "end by saying what you would test"
 
 
 @pytest.mark.parametrize("spec", SOLUTIONS, ids=lambda spec: spec["slugs"][0])

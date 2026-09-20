@@ -29,9 +29,10 @@ def test_solution_is_separate_from_the_problem_payload(client, db):
     assert client.get("/api/v1/problems/lc-3").json()["has_solution"] is False
     assert client.get("/api/v1/problems/lc-3/solution").status_code == 404
 
-    assert seed_solutions(db) == 1
+    only = [spec for spec in SOLUTIONS if "lc-3" in spec["slugs"]]
+    assert seed_solutions(db, only) == 1
     db.commit()
-    assert seed_solutions(db) == 1  # safe to run again
+    assert seed_solutions(db, only) == 1  # safe to run again
     db.commit()
 
     detail = client.get("/api/v1/problems/lc-3").json()
@@ -50,7 +51,7 @@ def test_solution_is_separate_from_the_problem_payload(client, db):
 
 def test_solution_is_locked_during_a_mock_interview(auth_client, db):
     problem = _problem(db)
-    seed_solutions(db)
+    seed_solutions(db, [spec for spec in SOLUTIONS if "lc-3" in spec["slugs"]])
     db.commit()
     assert auth_client.get("/api/v1/problems/lc-3/solution").status_code == 200
 
@@ -61,16 +62,3 @@ def test_solution_is_locked_during_a_mock_interview(auth_client, db):
     locked = auth_client.get("/api/v1/problems/lc-3/solution")
     assert locked.status_code == 403
     assert "mock interview" in locked.json()["error"]["message"]
-
-
-def test_every_seeded_solution_is_well_formed():
-    for spec in SOLUTIONS:
-        assert spec["slugs"] and spec["summary"] and spec["pattern"] and spec["trigger"]
-        assert sum(1 for item in spec["approaches"] if item["is_optimal"]) == 1
-        assert spec["approaches"][-1]["is_optimal"], "order approaches from the obvious way to the best one"
-        for approach in spec["approaches"]:
-            assert "class Solution" in approach["code"]
-            assert approach["steps"] and approach["time_why"] and approach["space_why"]
-        width = len(spec["walkthrough"]["columns"])
-        assert all(len(row) == width for row in spec["walkthrough"]["rows"])
-        assert 3 <= len(spec["interview_script"]) <= 6
