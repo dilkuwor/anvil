@@ -89,3 +89,7 @@ def test_problem_search_and_filter(auth_client, db):
     assert hard.json()["total"] == 0
     tagged = auth_client.get("/api/v1/problems", params={"tag": "array"})
     assert tagged.json()["total"] == 1
+    listed = auth_client.get("/api/v1/problems", params={"slugs": "pair-target,not-a-problem"})
+    assert [item["slug"] for item in listed.json()["items"]] == ["pair-target"]
+    none = auth_client.get("/api/v1/problems", params={"slugs": "not-a-problem"})
+    assert none.json()["total"] == 0

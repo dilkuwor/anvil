@@ -352,3 +352,12 @@ select.select-field:focus-visible {
     padding: 2.5rem 2.25rem 3.5rem;
   }
 }
+
+/* Every visualizer and story picture: no motion at all when the reader asks for less. */
+@media (prefers-reduced-motion: reduce) {
+  .viz-frame,
+  .viz-frame * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

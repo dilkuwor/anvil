@@ -49,3 +49,6 @@ logs/
 .tox/
 .cache/
 *.sqlite3
+
+# Personal local runner
+/run.sh

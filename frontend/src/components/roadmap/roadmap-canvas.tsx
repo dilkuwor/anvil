@@ -13,6 +13,11 @@ import {
   roadmapEdges,
   type RoadmapTopic,
 } from "@/lib/roadmap";
+import {
+  getKeystoneStatus,
+  getPrimaryKeystone,
+  type KeystoneStory,
+} from "@/lib/roadmap-stories";
 
 const MIN = 0.25;
 const MAX = 1.75;
@@ -21,11 +26,15 @@ export function RoadmapCanvas({
   topics,
   selectedId,
   recommendedId,
+  progress = {},
+  recommendedKeystone = null,
   onSelect,
 }: {
   topics: RoadmapTopic[];
   selectedId: string | null;
   recommendedId: string | null;
+  progress?: Record<string, { watched: boolean; recalled: boolean }>;
+  recommendedKeystone?: KeystoneStory | null;
   onSelect: (id: string) => void;
 }) {
   const frame = useRef<HTMLDivElement>(null);
@@ -152,18 +161,30 @@ export function RoadmapCanvas({
               );
             })}
           </svg>
-          {topics.map((topic) => (
-            <RoadmapNode
-              key={topic.id}
-              topic={topic}
-              selected={topic.id === selectedId}
-              recommended={topic.id === recommendedId}
-              dimmed={dimming && !related.has(topic.id)}
-              related={dimming && related.has(topic.id) && topic.id !== hoveredId}
-              onSelect={onSelect}
-              onHover={setHoveredId}
-            />
-          ))}
+          {topics.map((topic) => {
+            const primaryKeystone = getPrimaryKeystone(topic.id);
+            const keystoneStatus = primaryKeystone
+              ? getKeystoneStatus(primaryKeystone.slug, progress)
+              : undefined;
+            const isRecommended = Boolean(
+              primaryKeystone && recommendedKeystone?.slug === primaryKeystone.slug,
+            );
+            return (
+              <RoadmapNode
+                key={topic.id}
+                topic={topic}
+                selected={topic.id === selectedId}
+                recommended={topic.id === recommendedId}
+                dimmed={dimming && !related.has(topic.id)}
+                related={dimming && related.has(topic.id) && topic.id !== hoveredId}
+                keystone={primaryKeystone}
+                keystoneStatus={keystoneStatus}
+                isRecommendedKeystone={isRecommended}
+                onSelect={onSelect}
+                onHover={setHoveredId}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

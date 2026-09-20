@@ -20,6 +20,7 @@ def list_problems(
     sort: str,
     page: int,
     page_size: int,
+    slugs: list[str] | None = None,
 ) -> tuple[list[Problem], int, dict[UUID, str]]:
     query = (
         select(Problem)
@@ -33,6 +34,9 @@ def list_problems(
 
     if difficulty:
         query = query.where(Problem.difficulty == difficulty.upper())
+
+    if slugs is not None:
+        query = query.where(Problem.slug.in_(slugs))
 
     if tag:
         query = query.join(Problem.tags).where(or_(Tag.slug == tag, Tag.name.ilike(tag)))

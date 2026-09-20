@@ -13,6 +13,8 @@ import { SplitPane } from "@/components/editor/split-pane";
 import { EndInterviewDialog, InterviewBanner } from "@/components/interview/interview-banner";
 import { InterviewFeedback } from "@/components/interview/interview-feedback";
 import { InterviewerPanel } from "@/components/interview/interviewer-panel";
+import { getStory } from "@/components/story/registry";
+import { isStoryRecalled, isStoryWatched, StoryPlayer } from "@/components/story/story-player";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { StatusPip } from "@/components/problems/status-pip";
 import { SubmissionHistory } from "@/components/submissions/submission-history";
@@ -32,7 +34,7 @@ function storageKey(slug: string) {
   return `ia:code:${slug}`;
 }
 
-type ProblemTab = "problem" | "examples" | "constraints" | "hints" | "history";
+type ProblemTab = "problem" | "story" | "examples" | "constraints" | "hints" | "history";
 
 function interviewStorageKey(slug: string) {
   return `ia:interview:${slug}`;
@@ -67,7 +69,11 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     return localStorage.getItem(storageKey(problem.slug)) || problem.starter_code;
   });
   const [result, setResult] = useState<ExecutionResult | null>(null);
-  const [tab, setTab] = useState<ProblemTab>("problem");
+  const [tab, setTab] = useState<ProblemTab>(() => {
+    // `?tab=story` opens straight on the Visual Story (links from the problem list and the roadmap).
+    if (typeof window === "undefined") return "problem";
+    return new URLSearchParams(window.location.search).get("tab") === "story" && getStory(problem.slug) ? "story" : "problem";
+  });
   const [collapsed, setCollapsed] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -256,8 +262,22 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     retryInterview.isPending;
   const interviewLive = interviewMode && Boolean(session) && !session?.completed;
   const interviewDone = interviewMode && Boolean(session?.completed);
+  // A real interview has no walkthrough, so the story hides while one is live.
+  const story = interviewLive ? null : getStory(problem.slug);
   const tabs: { id: ProblemTab; label: string }[] = [
     { id: "problem", label: "Problem" },
+    ...(story
+      ? [
+          {
+            id: "story" as const,
+            label: isStoryRecalled(problem.slug)
+              ? "Visual Story ★"
+              : isStoryWatched(problem.slug)
+              ? "Visual Story ◐"
+              : "Visual Story",
+          },
+        ]
+      : []),
     { id: "examples", label: "Examples" },
     { id: "constraints", label: "Constraints" },
     { id: "hints", label: "Hints" },
@@ -313,6 +333,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-5 py-4 text-sm leading-7 text-foreground">
         {tab === "problem" ? <ProblemBody problem={problem} /> : null}
+        {tab === "story" && story ? <StoryPlayer story={story} slug={problem.slug} /> : null}
         {tab === "examples" ? <ExamplesBody problem={problem} /> : null}
         {tab === "constraints" ? <ConstraintsBody problem={problem} /> : null}
         {tab === "hints" ? <HintsBody problem={problem} /> : null}

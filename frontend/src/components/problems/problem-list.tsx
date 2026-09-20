@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { PlayCircle, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -15,6 +15,8 @@ import { ProblemsTabs } from "@/components/problems/problems-tabs";
 import { StatusPip } from "@/components/problems/status-pip";
 import { CatalogStats } from "@/components/problems/catalog-stats";
 import { TopicTags } from "@/components/problems/topic-tags";
+import { listStories } from "@/components/story/registry";
+import { StoryBadge } from "@/components/story/story-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionCard } from "@/components/ui/section";
@@ -25,6 +27,10 @@ import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
 
 const PAGE_SIZE = 15;
+// Every problem slug that has a Visual Story, for the "Visual Story" filter.
+const STORY_SLUGS = listStories()
+  .flatMap((story) => story.slugs)
+  .join(",");
 
 export function ProblemList() {
   const params = useSearchParams();
@@ -57,6 +63,7 @@ export function ProblemList() {
   const tag = params.get("tag") ?? "";
   const status = params.get("status") ?? "";
   const sort = params.get("sort") ?? "title";
+  const story = params.get("story") === "1";
   const page = Number(params.get("page") ?? "1");
 
   const search = useMemo(() => {
@@ -65,14 +72,15 @@ export function ProblemList() {
     if (difficulty) next.set("difficulty", difficulty);
     if (tag) next.set("tag", tag);
     if (status) next.set("status", status);
+    if (story) next.set("slugs", STORY_SLUGS);
     if (sort) next.set("sort", sort);
     next.set("page", String(page));
     next.set("page_size", String(PAGE_SIZE));
     return `?${next.toString()}`;
-  }, [q, difficulty, tag, status, sort, page]);
+  }, [q, difficulty, tag, status, story, sort, page]);
 
   const problems = useQuery({
-    queryKey: queryKeys.problems({ q, difficulty, tag, status, sort, page }),
+    queryKey: queryKeys.problems({ q, difficulty, tag, status, story: story ? 1 : 0, sort, page }),
     queryFn: () => api.get<ProblemListResponse>(`/api/v1/problems${search}`),
   });
   const tags = useQuery({
@@ -100,7 +108,7 @@ export function ProblemList() {
   const catalogTotal = progress.data?.total_problems ?? filteredTotal;
   const solved = progress.data?.total_solved ?? 0;
   const remaining = Math.max(catalogTotal - solved, 0);
-  const filtered = Boolean(q || difficulty || tag || status);
+  const filtered = Boolean(q || difficulty || tag || status || story);
   const from = items.length ? (page - 1) * PAGE_SIZE + 1 : 0;
   const to = (page - 1) * PAGE_SIZE + items.length;
 
@@ -114,7 +122,7 @@ export function ProblemList() {
       />
 
       <SectionCard className="p-0">
-        <div className="flex flex-col gap-2.5 border-b border-steel-800/80 bg-steel-950/30 p-3.5 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-2.5 border-b border-steel-800/80 bg-steel-950/30 p-3.5 lg:flex-row lg:flex-wrap lg:items-center">
           <form
             className="relative min-w-[12rem] flex-1"
             onSubmit={(event) => {
@@ -133,6 +141,18 @@ export function ProblemList() {
               className="pl-9"
             />
           </form>
+          <button
+            type="button"
+            aria-pressed={story}
+            title="Show only problems that have a Visual Story"
+            className={`inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors lg:self-auto ${
+              story ? "border-accent bg-accent/15 text-foreground" : "border-steel-800 text-muted-foreground hover:border-accent/50 hover:text-foreground"
+            }`}
+            onClick={() => update({ story: story ? "" : "1" })}
+          >
+            <PlayCircle className="h-4 w-4" aria-hidden />
+            Visual Story
+          </button>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:contents">
             <select
               className="select-field w-full lg:!w-[10rem]"
@@ -184,7 +204,7 @@ export function ProblemList() {
           {filtered ? (
             <button
               type="button"
-              className="self-start text-[12px] font-medium text-muted-foreground hover:text-accent transition-colors lg:px-1"
+              className="shrink-0 self-start whitespace-nowrap rounded-lg border border-steel-800 px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground lg:self-auto"
               onClick={() => router.push("/problems")}
             >
               Clear
@@ -226,13 +246,16 @@ export function ProblemList() {
                       className="group border-t border-steel-800/70 transition-colors duration-150 hover:bg-steel-800/45"
                     >
                       <td className="px-4 py-3.5">
-                        <Link
-                          href={`/problems/${item.slug}`}
-                          title={item.title}
-                          className="line-clamp-1 font-medium text-foreground transition-colors group-hover:text-accent"
-                        >
-                          {item.title}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/problems/${item.slug}`}
+                            title={item.title}
+                            className="line-clamp-1 min-w-0 font-medium text-foreground transition-colors group-hover:text-accent"
+                          >
+                            {item.title}
+                          </Link>
+                          <StoryBadge slug={item.slug} />
+                        </div>
                       </td>
                       <td className="px-4 py-3.5">
                         <DifficultyBadge difficulty={item.difficulty} />
@@ -324,9 +347,12 @@ function ProblemCard({
   return (
     <div className="rounded-xl border border-steel-800/90 bg-steel-950/40 p-4 transition-all duration-150 hover:border-steel-700/80">
       <div className="flex items-start justify-between gap-3">
-        <Link href={`/problems/${item.slug}`} className="min-w-0 text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-accent">
-          {item.title}
-        </Link>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Link href={`/problems/${item.slug}`} className="min-w-0 text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-accent">
+            {item.title}
+          </Link>
+          <StoryBadge slug={item.slug} />
+        </div>
         <DifficultyBadge difficulty={item.difficulty} />
       </div>
       <div className="mt-2.5">

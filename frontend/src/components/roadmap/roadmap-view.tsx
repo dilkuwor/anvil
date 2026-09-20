@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { Play } from "lucide-react";
+
 import { RoadmapCanvas } from "@/components/roadmap/roadmap-canvas";
 import { RoadmapPanel } from "@/components/roadmap/roadmap-panel";
 import { Button } from "@/components/ui/button";
@@ -13,10 +15,12 @@ import { api, type ProblemListResponse } from "@/lib/api";
 import type { ProblemListDetail } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
 import { hydrateRoadmap, recommendNextTopic } from "@/lib/roadmap";
+import { useKeystoneProgress } from "@/lib/use-keystone-progress";
 
 export function RoadmapView() {
   const params = useSearchParams();
   const listId = params.get("list")?.trim() || null;
+  const { progress, recommended: recommendedKeystone } = useKeystoneProgress();
 
   const problems = useQuery({
     queryKey: queryKeys.problems({ page_size: 100, source: "roadmap" }),
@@ -89,11 +93,40 @@ export function RoadmapView() {
           </div>
         </div>
       ) : null}
+      {recommendedKeystone ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-steel-800 bg-steel-900/95 px-4 py-2 text-xs backdrop-blur-md">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-2 w-2 rounded-full bg-accent animate-pulse" aria-hidden />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-accent">
+              Next Keystone:
+            </span>
+            <span className="truncate font-semibold text-foreground">
+              {recommendedKeystone.title}
+            </span>
+            <span className="hidden text-muted-foreground sm:inline">
+              · {recommendedKeystone.metaphor}
+            </span>
+            <span className="hidden text-[11px] italic text-rose-400/90 md:inline">
+              ({recommendedKeystone.trap})
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button asChild size="sm" className="h-7 text-xs">
+              <Link href={`/problems/${recommendedKeystone.slug}?tab=story`}>
+                <Play className="mr-1 h-3 w-3" />
+                Launch Visual Story →
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <RoadmapCanvas
           topics={topics}
           selectedId={selected?.id ?? null}
           recommendedId={recommended?.id ?? null}
+          progress={progress}
+          recommendedKeystone={recommendedKeystone}
           onSelect={setSelectedId}
         />
         {selected ? (
@@ -104,7 +137,12 @@ export function RoadmapView() {
               aria-label="Close topic details"
               onClick={() => setSelectedId(null)}
             />
-            <RoadmapPanel topic={selected} topics={topics} onClose={() => setSelectedId(null)} />
+            <RoadmapPanel
+              topic={selected}
+              topics={topics}
+              progress={progress}
+              onClose={() => setSelectedId(null)}
+            />
           </>
         ) : null}
       </div>
