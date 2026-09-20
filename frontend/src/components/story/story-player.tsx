@@ -78,13 +78,14 @@ export function getStoryProgress(slug: string): StoryProgress {
   };
 }
 
-// Text sizes: [in the problem pane, in focus mode]. Focus has the room, so it reads larger.
+// Text sizes: [in the problem pane, in focus mode]. The pane matches the other tabs (14px), with the
+// step sentence one notch up. Focus has the room, so it reads larger.
 const SIZES = {
-  body: ["text-[13.5px]", "text-[16px]"],
-  caption: ["text-[15px]", "text-[18px]"],
-  heading: ["text-[14.5px]", "text-[17px]"],
-  code: ["text-[12px]", "text-[14px]"],
-  small: ["text-[11.5px]", "text-[13px]"],
+  body: ["text-[14px]", "text-[17px]"],
+  caption: ["text-[15px]", "text-[20px]"],
+  heading: ["text-[15px]", "text-[19px]"],
+  code: ["text-[13px]", "text-[15px]"],
+  small: ["text-[13px]", "text-[14px]"],
 } as const;
 
 /**
@@ -96,12 +97,15 @@ function ActStepper({
   current,
   readScenes,
   watched,
+  showProgress,
   onJump,
 }: {
   frames: { scene: string }[];
   current: number;
   readScenes: string[];
   watched: boolean;
+  /** The per-act progress lines. Only in focus mode; the pane is kept as plain as possible. */
+  showProgress: boolean;
   onJump: (index: number) => void;
 }) {
   const present = SCENES.map((scene, position) => {
@@ -114,7 +118,11 @@ function ActStepper({
     <div
       role="tablist"
       aria-label="Story acts"
-      className="grid grid-cols-5 gap-1 rounded-xl border border-steel-800/80 bg-steel-950/70 p-1 backdrop-blur-sm shadow-inner"
+      className={cn(
+        "grid grid-cols-5 rounded-xl border border-steel-800/80 bg-steel-950/70 backdrop-blur-sm shadow-inner",
+        // In the pane the bar is exactly as tall as the funnel and expand buttons beside it (32px).
+        showProgress ? "gap-1 p-1" : "h-8 gap-0.5 p-0.5",
+      )}
     >
       {present.map((scene, index) => {
         const end = scene.first + scene.count - 1;
@@ -136,7 +144,8 @@ function ActStepper({
             title={`${index + 1}. ${scene.label} (${scene.count} step${scene.count === 1 ? "" : "s"})`}
             onClick={() => onJump(scene.first)}
             className={cn(
-              "group relative flex flex-col items-center justify-center gap-1 rounded-lg py-1.5 px-1 sm:px-2 transition-all duration-200 outline-none select-none cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+              "group relative flex flex-col items-center justify-center gap-1 rounded-lg px-1 sm:px-2 transition-all duration-200 outline-none select-none cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+              showProgress ? "py-1.5" : "h-full min-h-0 py-0",
               here
                 ? "bg-accent/15 border border-accent/50 text-foreground font-semibold shadow-xs"
                 : read
@@ -152,7 +161,7 @@ function ActStepper({
               ) : (
                 <div
                   className={cn(
-                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-colors",
+                    "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold transition-colors",
                     here
                       ? "bg-accent text-steel-950 shadow-xs"
                       : "bg-steel-800 text-muted-foreground/80 group-hover:text-muted-foreground"
@@ -161,24 +170,26 @@ function ActStepper({
                   {index + 1}
                 </div>
               )}
-              <span className="truncate text-xs font-medium tracking-tight hidden lg:inline">
+              <span className="truncate text-[12.5px] font-medium tracking-tight hidden lg:inline">
                 {scene.label}
               </span>
-              <span className="truncate text-[11px] font-medium tracking-tight lg:hidden">
+              <span className="truncate text-[12.5px] font-medium tracking-tight lg:hidden">
                 {scene.short}
               </span>
             </div>
 
             {/* Progress track at bottom of each segment */}
-            <div className="w-full h-1 rounded-full bg-steel-800/60 overflow-hidden mt-0.5">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-300 ease-out motion-reduce:transition-none",
-                  here ? "bg-accent" : read ? "bg-teal/70" : "bg-transparent"
-                )}
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
+            {showProgress ? (
+              <div className="w-full h-1 rounded-full bg-steel-800/60 overflow-hidden mt-0.5">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-300 ease-out motion-reduce:transition-none",
+                    here ? "bg-accent" : read ? "bg-teal/70" : "bg-transparent"
+                  )}
+                  style={{ width: `${Math.round(progress * 100)}%` }}
+                />
+              </div>
+            ) : null}
           </button>
         );
       })}
@@ -227,7 +238,7 @@ function ExampleSelector({
   const currentExample = examples[selected] ?? examples[0];
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <div ref={containerRef} className="relative flex shrink-0">
       <button
         type="button"
         aria-haspopup="listbox"
@@ -243,7 +254,7 @@ function ExampleSelector({
           "inline-flex h-8 items-center justify-center rounded-lg border transition-colors cursor-pointer",
           compact
             ? "w-8 p-0"
-            : "gap-1.5 px-2.5 font-mono text-[11px]",
+            : "gap-1.5 px-2.5 font-mono text-[12.5px]",
           open
             ? "border-accent/50 bg-steel-850 text-accent shadow-xs"
             : "border-steel-800 bg-steel-900/80 text-muted-foreground hover:border-steel-750 hover:bg-steel-850 hover:text-foreground"
@@ -264,7 +275,7 @@ function ExampleSelector({
           aria-label="Story examples"
           className="absolute right-0 top-full mt-1.5 z-40 w-72 max-w-[90vw] rounded-xl border border-steel-750 bg-steel-900/98 p-1.5 shadow-2xl backdrop-blur-md"
         >
-          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="px-2 py-1 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
             {examples.length > 1 ? "Select Dataset / Example" : "Dataset Details"}
           </div>
           <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
@@ -288,16 +299,16 @@ function ExampleSelector({
                   )}
                 >
                   <div className="flex w-full items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-semibold text-foreground">
+                    <span className="font-mono text-[13px] font-semibold text-foreground">
                       {item.label}
                     </span>
                     {isSelected && <Check className="h-3.5 w-3.5 text-accent shrink-0" />}
                   </div>
-                  <div className="font-mono text-[11px] text-muted-foreground/80 truncate w-full">
+                  <div className="font-mono text-[12.5px] text-muted-foreground/80 truncate w-full">
                     {item.input}
                   </div>
                   {item.note ? (
-                    <p className="text-[11px] text-muted-foreground/90 leading-tight line-clamp-2 mt-0.5">
+                    <p className="text-[12.5px] text-muted-foreground/90 leading-tight line-clamp-2 mt-0.5">
                       {item.note}
                     </p>
                   ) : null}
@@ -461,7 +472,7 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
         <Button variant="ghost" aria-label="Start over" onClick={() => pickExample(example)}>
           <RotateCcw className="h-4 w-4" aria-hidden />
         </Button>
-        <span className="w-16 text-right text-[12px] tabular-nums text-muted-foreground">
+        <span className="w-16 text-right text-[13px] tabular-nums text-muted-foreground">
           {current + 1} / {frames.length}
         </span>
       </div>
@@ -518,15 +529,15 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 border border-accent/25 text-accent shadow-xs">
                 <Sparkles className="h-3.5 w-3.5" />
               </div>
-              <span className="font-semibold text-sm text-foreground tracking-tight">
+              <span className="font-semibold text-[15px] text-foreground tracking-tight">
                 {story.metaphor.name}
               </span>
               {recalled ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-semibold text-teal border border-teal/30">
+                <span className="inline-flex items-center gap-1 rounded-full bg-teal/15 px-2 py-0.5 text-[12px] font-semibold text-teal border border-teal/30">
                   <Check className="h-2.5 w-2.5 stroke-[2.5]" /> Recalled
                 </span>
               ) : watched ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent border border-accent/30">
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[12px] font-semibold text-accent border border-accent/30">
                   Watched
                 </span>
               ) : null}
@@ -540,6 +551,7 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
               current={current}
               readScenes={readScenes}
               watched={watched}
+              showProgress={focus}
               onJump={go}
             />
           </div>
@@ -581,16 +593,16 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
             <div className="flex min-w-0 flex-col gap-4">
               <div className="rounded-xl border border-steel-800/80 bg-steel-950/60 p-3.5 min-h-[4rem] flex flex-col justify-center">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-accent">
+                  <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
                     <Sparkles className="h-3 w-3" />
                     {story.metaphor.name}
                   </span>
                   {recalled ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal">
+                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-teal">
                       <Check className="h-2.5 w-2.5 stroke-[2.5]" /> Recalled
                     </span>
                   ) : watched ? (
-                    <span className="text-[10px] font-semibold text-accent/80">
+                    <span className="text-[12px] font-semibold text-accent/80">
                       Watched
                     </span>
                   ) : null}
@@ -602,7 +614,7 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
 
               {quiz?.kind === "cell" ? (
                 <div className={cn("min-h-[7rem] rounded-xl border px-4 py-3.5 transition-colors", solved ? "border-teal/50 bg-teal/10" : "border-accent/50 bg-accent/10")}>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Your turn</div>
+                  <div className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Your turn</div>
                   <p className={cn("mt-1 font-semibold text-foreground", heading)}>{quiz.question}</p>
                   {choice !== undefined ? (
                     <p aria-live="polite" className={cn("mt-2 flex items-start gap-2 text-foreground/90", body)}>
@@ -651,7 +663,7 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
             <div className="flex min-w-0 flex-col gap-4">
               {quiz?.kind === "choice" ? (
                 <div className="rounded-xl border border-steel-800 bg-steel-950/60 p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Your turn — what happens next?</div>
+                  <div className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Your turn — what happens next?</div>
                   <p className={cn("mt-1.5 font-medium text-foreground", heading)}>{quiz.question}</p>
                   <div className="mt-3 flex flex-col gap-2">
                     {quiz.options.map((option, position) => {
@@ -690,7 +702,7 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
 
               {frame.scene === "solution" ? (
                 <div className="flex flex-col gap-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <div className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     Algorithm Execution
                   </div>
                   <pre className={cn("overflow-x-auto rounded-xl border border-steel-800/80 bg-steel-950/60 py-2.5 font-mono leading-6", SIZES.code[step])}>
@@ -714,7 +726,7 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
               {/* Deliberately no rules here: the practice run is recall, so the panel must not hand over the answers. */}
               {frame.scene === "card" && !last ? (
                 <div className="rounded-xl border border-accent/40 bg-accent/5 p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Practice run · your turn</div>
+                  <div className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Practice run · your turn</div>
                   <p className={cn("mt-2 font-semibold text-foreground", caption)}>A new example. You make the moves.</p>
                   <p className={cn("mt-1.5 text-muted-foreground", body)}>
                     When a question appears, answer it by clicking in the picture.
@@ -724,7 +736,7 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
 
               {frame.scene === "card" && last ? (
                 <div className="rounded-xl border border-teal/40 bg-teal/5 p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-teal">Memory card · {story.pattern}</div>
+                  <div className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-teal">Memory card · {story.pattern}</div>
                   <p className={cn("mt-2 text-foreground", caption)}>
                     You see: <span className="font-semibold">{story.trigger}</span>
                   </p>
@@ -751,12 +763,12 @@ export function StoryPlayer({ story, slug, startFocused = false }: { story: AnyP
                           <dd className="inline">{story.complexity.spaceWhy}.</dd>
                         </div>
                       </dl>
-                      <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">The same skeleton every time</div>
+                      <div className="mt-3 text-[12.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">The same skeleton every time</div>
                       <pre className={cn("mt-1.5 overflow-x-auto rounded-lg border border-steel-800/80 bg-steel-950/60 p-3 font-mono leading-6 text-foreground/90", SIZES.small[step])}>
                         {story.template.join("\n")}
                       </pre>
                       {story.siblings.length ? (
-                        <div className="mt-3 text-[13px] text-muted-foreground">
+                        <div className="mt-3 text-[14px] text-muted-foreground">
                           Same skeleton:{" "}
                           {story.siblings.map((item, position) => (
                             <span key={item.slug}>
