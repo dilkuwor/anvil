@@ -16,7 +16,7 @@ import { StatusPip } from "@/components/problems/status-pip";
 import { CatalogStats } from "@/components/problems/catalog-stats";
 import { TopicTags } from "@/components/problems/topic-tags";
 import { listStories } from "@/components/story/registry";
-import { StoryBadge } from "@/components/story/story-badge";
+import { StoryBadge, useStoryTally } from "@/components/story/story-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionCard } from "@/components/ui/section";
@@ -25,7 +25,6 @@ import { api, ApiError, type ProblemListItem, type ProblemListResponse, type Pro
 import type { ProblemListCard } from "@/lib/lists";
 import { queryKeys } from "@/lib/queries";
 import { useSession } from "@/lib/session";
-import { useKeystoneProgress } from "@/lib/use-keystone-progress";
 
 const PAGE_SIZE = 15;
 // Every problem slug that has a Visual Story, for the "Visual Story" view.
@@ -41,7 +40,6 @@ export function ProblemList() {
   const [creating, setCreating] = useState(false);
   const [auth, setAuth] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const { progress: keystoneProgress } = useKeystoneProgress();
 
   const create = useMutation({
     mutationFn: (payload: { name: string; description: string }) => api.post<ProblemListCard>("/api/v1/problem-lists", payload),
@@ -120,8 +118,7 @@ export function ProblemList() {
   const from = items.length ? (page - 1) * PAGE_SIZE + 1 : 0;
   const to = (page - 1) * PAGE_SIZE + items.length;
 
-  const recalledCount = Object.values(keystoneProgress).filter((p) => p.recalled).length;
-  const watchedCount = Object.values(keystoneProgress).filter((p) => p.watched && !p.recalled).length;
+  const tally = useStoryTally();
 
   return (
     <div className="space-y-4">
@@ -129,26 +126,26 @@ export function ProblemList() {
         title={isStories ? "Visual Stories" : "Problems"}
         description={
           isStories
-            ? "21 foundational problem archetypes with interactive 5-scene mental models."
+            ? `${tally.total} problems taught as a five-scene picture story: the problem, the slow way, the key insight, the solution, and a card to remember.`
             : "Java catalog by difficulty, topic, and status."
         }
         meta={
           isStories ? (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13px] tabular-nums text-muted-foreground">
               <span>
-                <span className="font-semibold text-foreground">21</span> keystones
+                <span className="font-semibold text-foreground">{tally.total}</span> stories
               </span>
               <span className="text-steel-700">·</span>
               <span>
-                <span className="font-semibold text-success">{recalledCount}</span> recalled
+                <span className="font-semibold text-success">{tally.recalled}</span> recalled
               </span>
               <span className="text-steel-700">·</span>
               <span>
-                <span className="font-semibold text-accent">{watchedCount}</span> watched
+                <span className="font-semibold text-accent">{tally.watched}</span> watched
               </span>
               <span className="text-steel-700">·</span>
               <span>
-                <span className="font-semibold text-foreground">{21 - recalledCount - watchedCount}</span> unstarted
+                <span className="font-semibold text-foreground">{tally.unstarted}</span> unstarted
               </span>
             </div>
           ) : (

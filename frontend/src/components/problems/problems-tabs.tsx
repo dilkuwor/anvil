@@ -4,8 +4,12 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import { listStories } from "@/components/story/registry";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Counted, never typed: the number must follow the stories that really exist.
+const STORY_COUNT = listStories().length;
 
 export function ProblemsTabs({
   onCreate,
@@ -46,7 +50,7 @@ export function ProblemsTabs({
           <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden />
           <span>Visual Stories</span>
           <span className="rounded-full bg-steel-700/60 px-1.5 py-0.2 text-[10px] font-medium tabular-nums text-foreground/80">
-            21
+            {STORY_COUNT}
           </span>
         </Link>
         <Link

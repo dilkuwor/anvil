@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { getStory } from "./registry";
+import { getStory, listStories } from "./registry";
 import { getStoryProgress } from "./story-player";
 
 function subscribe(callback: () => void) {
@@ -80,4 +80,30 @@ export function StoryBadge({ slug, className }: { slug: string; className?: stri
       {recalled ? "Recalled" : watched ? "Watched" : "Story"}
     </Link>
   );
+}
+
+let cachedTally = "";
+
+/** How many Visual Stories exist and how far the reader is with them. Counts every story, not only the roadmap keystones. */
+export function useStoryTally(): { total: number; recalled: number; watched: number; unstarted: number } {
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    () => {
+      let recalled = 0;
+      let watched = 0;
+      const stories = listStories();
+      for (const story of stories) {
+        // One story can serve two catalog slugs; progress is kept under whichever one was opened.
+        const progress = story.slugs.map((slug) => getStoryProgress(slug));
+        if (progress.some((item) => item.recalled)) recalled += 1;
+        else if (progress.some((item) => item.watched)) watched += 1;
+      }
+      const next = `${stories.length}:${recalled}:${watched}`;
+      if (next !== cachedTally) cachedTally = next;
+      return cachedTally;
+    },
+    () => `${listStories().length}:0:0`,
+  );
+  const [total, recalled, watched] = snapshot.split(":").map(Number);
+  return { total, recalled, watched, unstarted: total - recalled - watched };
 }
