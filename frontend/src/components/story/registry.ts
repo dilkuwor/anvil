@@ -20,6 +20,8 @@ import { searchRotatedArrayStory } from "./stories/search-rotated-array";
 import { threeSumStory } from "./stories/three-sum";
 import { trappingRainWaterStory } from "./stories/trapping-rain-water";
 import type { AnyProblemStory } from "./types";
+import { AGY_STORIES } from "./registry-agy";
+import { GROK_STORIES } from "./registry-grok";
 
 /**
  * Complete catalog of visual stories across Phase 1, Phase 2, and Phase 3.
@@ -48,8 +50,11 @@ const STORIES: AnyProblemStory[] = [
   longestCommonSubsequenceStory,
 ];
 
+// The second wave of stories lives in one file per author so nobody edits this list concurrently.
+const ALL_STORIES: AnyProblemStory[] = [...STORIES, ...GROK_STORIES, ...AGY_STORIES];
+
 const BY_SLUG = new Map<string, AnyProblemStory>(
-  STORIES.flatMap((story) => story.slugs.map((slug) => [slug, story] as const))
+  ALL_STORIES.flatMap((story) => story.slugs.map((slug) => [slug, story] as const))
 );
 
 export function hasStory(slug: string): boolean {
@@ -61,5 +66,5 @@ export function getStory(slug: string): AnyProblemStory | null {
 }
 
 export function listStories(): AnyProblemStory[] {
-  return STORIES;
+  return ALL_STORIES;
 }
