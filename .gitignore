@@ -52,3 +52,7 @@ logs/
 
 # Personal local runner
 /run.sh
+
+# Throwaway scratch tests that tools write while authoring stories. Never commit them: they break CI.
+frontend/src/components/story/zz-*
+frontend/src/app/zz-*
