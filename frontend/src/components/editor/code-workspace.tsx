@@ -5,7 +5,9 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { Play, Send } from "lucide-react";
+import { Play, RotateCcw, Send } from "lucide-react";
+
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotesPanel } from "@/components/notes/notes-drawer";
 import { ResultPanel } from "@/components/editor/result-panel";
 import { SplitPane } from "@/components/editor/split-pane";
@@ -84,6 +86,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
   const [interviewMode, setInterviewMode] = useState(() => Boolean(sessionId));
   const [showProblem, setShowProblem] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const prevErrorRef = useRef(false);
 
@@ -375,6 +378,14 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     </section>
   );
 
+  function resetCode() {
+    // The editor is saved to localStorage 300ms after each change, so nothing else needs clearing.
+    setCode(problem.starter_code);
+    setResult(null);
+    setConfirmReset(false);
+    toast.message("Editor reset to the starter template.");
+  }
+
   const editor = (
     <section className="grid min-h-[28rem] flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-steel-800/90 bg-editor-surface shadow-xs xl:h-full xl:min-h-0">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-steel-800/80 bg-steel-950/40 px-4 py-2.5">
@@ -402,6 +413,17 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
               {collapsed ? "Show Problem" : "Hide Problem"}
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Reset code to the starter template"
+            title="Reset to the starter template"
+            className="px-2 text-muted-foreground hover:text-foreground"
+            disabled={busy || code === problem.starter_code}
+            onClick={() => setConfirmReset(true)}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -494,6 +516,16 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
       </div>
       <SplitPane left={left} right={editor} collapsed={interviewMode ? false : collapsed} />
       {authPrompt ? <AuthPrompt kind={authPrompt} onClose={() => setAuthPrompt(null)} /> : null}
+      <ConfirmDialog
+        open={confirmReset}
+        tone="danger"
+        icon={RotateCcw}
+        title="Reset the editor?"
+        description="Your code is replaced with the starter template. This cannot be undone."
+        confirmLabel="Reset code"
+        onConfirm={resetCode}
+        onCancel={() => setConfirmReset(false)}
+      />
       <EndInterviewDialog
         open={confirmEnd}
         busy={endInterview.isPending}

@@ -13,6 +13,7 @@ import { CreateListModal } from "@/components/problems/create-list-modal";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { ListOverflowMenu } from "@/components/problems/list-overflow-menu";
 import { StatusPip } from "@/components/problems/status-pip";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TopicTags } from "@/components/problems/topic-tags";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section";
@@ -28,6 +29,7 @@ export function ProblemListDetailView({ id }: { id: string }) {
   const [difficulty, setDifficulty] = useState("");
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<"rename" | "description" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const list = useQuery({
@@ -115,11 +117,7 @@ export function ProblemListDetailView({ id }: { id: string }) {
               <ListOverflowMenu
                 onRename={() => setEditing("rename")}
                 onEditDescription={() => setEditing("description")}
-                onDelete={() => {
-                  if (window.confirm(`Delete “${data.name}”? Problems themselves are not deleted.`)) {
-                    destroy.mutate();
-                  }
-                }}
+                onDelete={() => setConfirmDelete(true)}
               />
             </div>
           }
@@ -222,6 +220,17 @@ export function ProblemListDetailView({ id }: { id: string }) {
           onAdd={(ids) => add.mutate(ids)}
         />
       ) : null}
+      <ConfirmDialog
+        open={confirmDelete}
+        tone="danger"
+        title={`Delete “${data.name}”?`}
+        description="Only the list is removed. The problems in it are not deleted."
+        confirmLabel="Delete list"
+        busyLabel="Deleting…"
+        busy={destroy.isPending}
+        onConfirm={() => destroy.mutate()}
+        onCancel={() => setConfirmDelete(false)}
+      />
       {editing ? (
         <CreateListModal
           title={editing === "rename" ? "Rename list" : "Edit description"}

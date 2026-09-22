@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
 import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { Meter } from "@/components/dashboard/meter";
 import { PageHeader } from "@/components/layout/page-header";
@@ -24,6 +26,7 @@ export function ProblemListsIndex() {
   const [creating, setCreating] = useState(false);
   const [auth, setAuth] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string; description: string; mode: "rename" | "description" } | null>(
     null,
   );
@@ -110,11 +113,7 @@ export function ProblemListsIndex() {
                   onEditDescription={() =>
                     setEditing({ id: list.id, name: list.name, description: list.description, mode: "description" })
                   }
-                  onDelete={() => {
-                    if (window.confirm(`Delete “${list.name}”? Problems themselves are not deleted.`)) {
-                      remove.mutate(list.id);
-                    }
-                  }}
+                  onDelete={() => setDeleting({ id: list.id, name: list.name })}
                 />
               </div>
               {list.description ? (
@@ -140,6 +139,19 @@ export function ProblemListsIndex() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={deleting !== null}
+        tone="danger"
+        title={`Delete “${deleting?.name ?? ""}”?`}
+        description="Only the list is removed. The problems in it are not deleted."
+        confirmLabel="Delete list"
+        busyLabel="Deleting…"
+        busy={remove.isPending}
+        onConfirm={() => {
+          if (deleting) remove.mutate(deleting.id, { onSettled: () => setDeleting(null) });
+        }}
+        onCancel={() => setDeleting(null)}
+      />
       {creating ? (
         <CreateListModal
           error={formError}
