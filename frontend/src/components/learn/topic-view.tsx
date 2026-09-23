@@ -9,6 +9,7 @@ import { CategoryIcon } from "@/components/learn/category-icon";
 import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LearnStatus } from "@/components/learn/learn-status";
 import { TopicSidebar, useTopicSidebarCollapsed } from "@/components/learn/topic-sidebar";
+import { SaveOfflineButton } from "@/components/offline/save-offline-button";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { SystemDesignProblemCard } from "@/components/system-design/problem-card";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,15 @@ export function TopicView({ slug }: { slug: string }) {
                     </Link>
                   </Button>
                 ) : null}
+                <SaveOfflineButton
+                  storageKey={`learn-topic:${data.slug}`}
+                  label="Save for offline"
+                  urls={[
+                    `/learn/${data.category_slug}/${data.slug}`,
+                    `/api/v1/learn/topics/${data.slug}`,
+                    ...data.lessons.flatMap((lesson) => [lesson.href, `/api/v1/learn/lessons/${lesson.slug}`]),
+                  ]}
+                />
               </div>
             </div>
 

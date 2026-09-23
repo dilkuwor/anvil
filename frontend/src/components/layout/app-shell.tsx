@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { LegalLinks } from "@/components/layout/legal-links";
@@ -13,6 +14,7 @@ import { BrandMark } from "@/components/ui/section";
 import { PageLoader } from "@/components/ui/state";
 import { Button } from "@/components/ui/button";
 import { api, fetchCurrentUser } from "@/lib/api";
+import { isOfflineServerSnapshot, isOfflineSnapshot, subscribeNetwork } from "@/lib/offline";
 import { queryKeys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     retry: false,
   });
   const signedIn = Boolean(me.data);
+  const offline = useSyncExternalStore(subscribeNetwork, isOfflineSnapshot, isOfflineServerSnapshot);
 
   const logout = useMutation({
     mutationFn: () => api.post("/api/v1/auth/logout"),
@@ -52,7 +55,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <PageLoader variant="screen" />;
   }
 
-  if (me.isError) {
+  // With no network the session cannot be checked, and that is not a reason to hide a page the
+  // reader already saved. Show the saved page; the check runs again when the connection returns.
+  if (me.isError && !offline) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
         <p className="text-sm text-coral">Unable to load your session.</p>
@@ -63,7 +68,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!signedIn && isPrivatePath(pathname)) {
+  // Likewise, never bounce someone off a page while offline over a check that could not run.
+  if (!signedIn && !offline && isPrivatePath(pathname)) {
     if (logout.isPending || logout.isSuccess) {
       router.replace("/");
       return null;

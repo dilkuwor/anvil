@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { CookieBanner } from "@/components/analytics/cookie-banner";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { OfflineWatch } from "@/components/offline/offline-watch";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Providers } from "@/components/providers";
 import {
@@ -92,6 +93,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-background text-foreground antialiased">
         <JsonLd data={rootJsonLd(origin)} />
         <Providers>{children}</Providers>
+        <OfflineWatch />
         <CookieBanner bannerEnabled={cookieBannerEnabled} />
         <Suspense fallback={null}>
           <GoogleAnalytics defaultConsent={analyticsDefaultConsent} />

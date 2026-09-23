@@ -475,6 +475,7 @@ class Solution {
                     "Binary search for the first range whose start is after the new end. The block stops just before it.",
                     "If the block holds anything, pull the new start down to the block's first start and push the new end up to the block's last end.",
                     "Copy the ranges before the block, add the stretched range, then copy the ranges after the block.",
+                    "This needs the stored ranges to be truly separate. Where two sit end to end, only the block the search found is joined up, not the touching ones beyond it.",
                 ],
                 "code": """import java.util.*;
 

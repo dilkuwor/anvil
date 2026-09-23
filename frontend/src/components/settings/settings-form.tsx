@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { EmailVerificationStatus } from "@/components/settings/email-verification-status";
+import { OfflineSettings } from "@/components/settings/offline-settings";
 import { UserAvatar } from "@/components/settings/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -225,6 +226,7 @@ function ProfileEditor({ user }: { user: User }) {
       </form>
 
       <LlmSettings user={current} />
+      <OfflineSettings />
       <McpSettings />
     </div>
   );

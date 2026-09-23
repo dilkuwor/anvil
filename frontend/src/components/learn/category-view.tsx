@@ -10,6 +10,7 @@ import { CategoryIcon } from "@/components/learn/category-icon";
 import { LearnCategoryNav } from "@/components/learn/learn-category-nav";
 import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LearnStatus } from "@/components/learn/learn-status";
+import { SaveOfflineButton } from "@/components/offline/save-offline-button";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section";
@@ -78,6 +79,24 @@ export function CategoryView({ slug }: { slug: string }) {
                 </Link>
               </Button>
             ) : null}
+            <SaveOfflineButton
+              storageKey={`learn-category:${data.slug}`}
+              label={`Save all ${data.lesson_count} lessons`}
+              urls={async () => {
+                const list = [`/learn/${data.slug}`, `/api/v1/learn/categories/${data.slug}`];
+                for (const topic of data.topics) {
+                  list.push(topic.href, `/api/v1/learn/topics/${topic.slug}`);
+                  // The topic reply is what names its lessons, so read it before listing them.
+                  const detail = await api
+                    .get<LearningTopicDetail>(`/api/v1/learn/topics/${topic.slug}`)
+                    .catch(() => null);
+                  for (const lesson of detail?.lessons ?? []) {
+                    list.push(lesson.href, `/api/v1/learn/lessons/${lesson.slug}`);
+                  }
+                }
+                return list;
+              }}
+            />
           </div>
         </div>
 
