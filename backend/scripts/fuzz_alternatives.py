@@ -11,7 +11,8 @@ replays them against each alternative. A disagreement is reported with the input
 
 Inputs are reshaped, not invented, so they stay inside the problem's constraints far more often than
 random data would. A mismatch still has to be read by a human: it may be a real bug, or an input the
-problem would never allow.
+problem would never allow. The commonest false alarm is a problem that promises a unique answer
+(Two Sum II, K Closest Points): reshaping can create a tie, and then both answers are right.
 """
 
 from __future__ import annotations
@@ -61,6 +62,17 @@ def mutate(value: str, rng: random.Random) -> str:
         if not flat:
             return text
         low, high = min(flat), max(flat)
+        # A square 0/1 matrix that is symmetric with a set diagonal is an adjacency matrix:
+        # keep it symmetric, or the problem's own promise is broken and any answer is defensible.
+        n = len(data)
+        square01 = n > 1 and all(len(r) == n for r in data) and set(flat) <= {0, 1}
+        if square01 and all(data[i][j] == data[j][i] for i in range(n) for j in range(n)):
+            fresh = [[0] * n for _ in range(n)]
+            for i in range(n):
+                fresh[i][i] = data[i][i]
+                for j in range(i + 1, n):
+                    fresh[i][j] = fresh[j][i] = rng.randint(0, 1)
+            return json.dumps(fresh, separators=(",", ""))
         rows = []
         for row in data:
             if len(row) == 2 and all(isinstance(v, int) for v in row) and row[0] <= row[1]:
@@ -70,7 +82,11 @@ def mutate(value: str, rng: random.Random) -> str:
                 a = rng.randint(low, high - 1 if strict and high > low else high)
                 rows.append([a, rng.randint(a + 1, high) if strict and a < high else a])
             else:
-                rows.append([rng.randint(low, high) if isinstance(v, int) else v for v in row])
+                made = [rng.randint(low, high) if isinstance(v, int) else v for v in row]
+                # A row that arrived sorted (k sorted lists, for instance) must stay sorted.
+                if all(isinstance(v, int) for v in row) and row == sorted(row):
+                    made.sort()
+                rows.append(made)
         return json.dumps(rows, separators=(",", ""))
     return text
 
@@ -177,7 +193,7 @@ def main() -> int:
                     disagreements += 1
                     print(f"DIFFERS {label}: {len(bad)}/{len(usable)} inputs")
                     for t, r in bad[:3]:
-                        print(f"    input {t['input']!r} -> best {t['expected']!r}, this {str(r.get('actual'))[:60]!r} [{r.get('status')}]")
+                        print(f"    input {t['input']!r} -> best {t['expected']!r}, this {str(r.get('actual_output'))[:60]!r} [{r.get('status')}]")
                 else:
                     print(f"agrees  {label}: {len(usable)} inputs")
     finally:
