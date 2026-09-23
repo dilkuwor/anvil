@@ -151,10 +151,7 @@ function buildSlots(tweets: Map<number, { time: number; tweetId: number }[]>): D
   return slots;
 }
 
-function buildBuckets(
-  following: Map<number, Set<number>>,
-  tweets: Map<number, { time: number; tweetId: number }[]>,
-): DesignBucket[] {
+function buildBuckets(following: Map<number, Set<number>>): DesignBucket[] {
   const buckets: DesignBucket[] = [];
   for (const [u, set] of following.entries()) {
     const list = Array.from(set).map((f) => `follows ${f}`);
@@ -277,7 +274,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
     caption: "Set up tweet wire storage and subscription sets. Clock timer begins at zero.",
     state: {
       slots: [],
-      buckets: buildBuckets(model.following, model.tweets),
+      buckets: buildBuckets(model.following),
       counter: { label: "active wires", value: 0 },
       note: { text: "newsroom wires ready", tone: "accent" },
     },
@@ -295,7 +292,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
         caption: `Reporter ${u} published tweet #${t} onto their wire bulletin.`,
         state: {
           slots: buildSlots(model.tweets),
-          buckets: buildBuckets(model.following, model.tweets),
+          buckets: buildBuckets(model.following),
           activeOp: `postTweet(${u}, ${t})`,
           counter: { label: "total tweets", value: model.clock },
           note: { text: `user ${u} posted #${t}`, tone: "accent" },
@@ -312,7 +309,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
         caption: `Reporter ${follower} subscribed to wire of reporter ${followee}.`,
         state: {
           slots: buildSlots(model.tweets),
-          buckets: buildBuckets(model.following, model.tweets),
+          buckets: buildBuckets(model.following),
           activeOp: `follow(${follower}, ${followee})`,
           counter: { label: "subscriptions", value: `user ${follower}` },
           note: { text: `${follower} follows ${followee}`, tone: "teal" },
@@ -329,7 +326,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
         caption: `Reporter ${follower} unsubscribed from wire of reporter ${followee}.`,
         state: {
           slots: buildSlots(model.tweets),
-          buckets: buildBuckets(model.following, model.tweets),
+          buckets: buildBuckets(model.following),
           activeOp: `unfollow(${follower}, ${followee})`,
           counter: { label: "unfollowed", value: followee },
           note: { text: `unfollowed user ${followee}`, tone: "coral" },
@@ -357,7 +354,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
           caption: `${TRAP}: always include the user's own ID so their feed contains their own wire posts.`,
           state: {
             slots: buildSlots(model.tweets),
-            buckets: buildBuckets(model.following, model.tweets),
+            buckets: buildBuckets(model.following),
             activeOp: `getNewsFeed(${userId})`,
             counter: { label: "trap check", value: "author's tweets" },
             note: { text: "include author's own ID", tone: "coral" },
@@ -371,7 +368,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
           caption: `Sources set prepared: author ${userId} plus all subscribed wires.`,
           state: {
             slots: buildSlots(model.tweets),
-            buckets: buildBuckets(model.following, model.tweets),
+            buckets: buildBuckets(model.following),
             activeOp: `getNewsFeed(${userId})`,
             counter: { label: "sources", value: `user ${userId}` },
             note: { text: "sources include author", tone: "teal" },
@@ -388,7 +385,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
         caption: `Compiled feed for user ${userId}: top 10 wire bulletin is [${feed.join(", ")}].`,
         state: {
           slots: buildSlots(model.tweets),
-          buckets: buildBuckets(model.following, model.tweets),
+          buckets: buildBuckets(model.following),
           activeOp: `getNewsFeed(${userId}) ➔ [${feed.join(", ")}]`,
           counter: { label: "feed items", value: feed.length },
           note: { text: `feed: [${feed.join(", ")}]`, tone: "teal" },
@@ -403,7 +400,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
     caption: `All social wire operations executed. The answer is ${JSON.stringify(outputs)}.`,
     state: {
       slots: buildSlots(model.tweets),
-      buckets: buildBuckets(model.following, model.tweets),
+      buckets: buildBuckets(model.following),
       counter: { label: "total operations", value: ops.length },
       note: { text: "feed operations complete", tone: "accent" },
     },
@@ -415,7 +412,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
     caption: "Time: O(F log(10 × F)). At most 10 tweets per friend are pushed into the max-heap.",
     state: {
       slots: buildSlots(model.tweets),
-      buckets: buildBuckets(model.following, model.tweets),
+      buckets: buildBuckets(model.following),
       note: { text: "time complexity", tone: "accent" },
     },
   });
@@ -426,7 +423,7 @@ function solutionFrames(ops: TwitterOp[]): Frame[] {
     caption: "Space: O(T + U). Memory holds T tweets and follow sets for U users.",
     state: {
       slots: buildSlots(model.tweets),
-      buckets: buildBuckets(model.following, model.tweets),
+      buckets: buildBuckets(model.following),
       note: { text: "space complexity", tone: "accent" },
     },
   });

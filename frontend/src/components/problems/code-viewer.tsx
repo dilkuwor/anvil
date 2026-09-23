@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowUpRight, Check, ChevronUp, Code2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -233,6 +233,16 @@ function tokenizeLine(
   return { tokens, inBlockComment: false };
 }
 
+function parseCodeLines(code: string): Array<{ line: string; tokens: CodeToken[] }> {
+  const rawLines = code.trim().split("\n");
+  let inBlock = false;
+  return rawLines.map((line) => {
+    const res = tokenizeLine(line, inBlock);
+    inBlock = res.inBlockComment;
+    return { line, tokens: res.tokens };
+  });
+}
+
 export type CodeViewerProps = {
   code: string;
   language?: string;
@@ -251,14 +261,7 @@ export function CodeViewer({
   className,
 }: CodeViewerProps) {
   const [copied, setCopied] = useState(false);
-
-  const rawLines = code.trim().split("\n");
-  let inBlock = false;
-  const lines = rawLines.map((line) => {
-    const res = tokenizeLine(line, inBlock);
-    inBlock = res.inBlockComment;
-    return { line, tokens: res.tokens };
-  });
+  const lines = useMemo(() => parseCodeLines(code), [code]);
 
   async function handleCopy() {
     try {

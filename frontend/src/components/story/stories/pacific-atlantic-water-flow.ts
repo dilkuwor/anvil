@@ -2,7 +2,6 @@ import {
   AgyGridsFieldView,
   type FieldCell,
   type FieldLegendItem,
-  type FieldPos,
   type FieldState,
   type FieldTone,
 } from "../agy-grids-field-view";
@@ -76,10 +75,6 @@ function parseHeights(input: string): number[][] {
   ];
 }
 
-function cloneGrid(g: number[][]): number[][] {
-  return g.map((row) => [...row]);
-}
-
 function solvePacificAtlantic(heights: number[][]): number[][] {
   const m = heights.length;
   const n = heights[0].length;
@@ -125,7 +120,6 @@ function renderCells(
   heights: number[][],
   pac: boolean[][],
   atl: boolean[][],
-  cursor?: FieldPos | null,
 ): FieldCell[][] {
   return heights.map((row, r) =>
     row.map((elev, c) => {
