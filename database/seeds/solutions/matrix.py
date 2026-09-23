@@ -83,6 +83,41 @@ SOLUTIONS: list[dict] = [
                 "space_why": "We swap numbers directly inside the grid with one temporary variable.",
                 "when_to_use": "The standard interview answer: clean two-step in-place rotation with no extra memory.",
             },
+            {
+                "name": "Four-way cycle swap, ring by ring",
+                "idea": "Send every cell straight to where it belongs: four cells trade places in one move, top to right, right to bottom, bottom to left, left to top.",
+                "steps": [
+                    "Work on one ring of the grid at a time, from the outer ring inwards. A grid of size n has n / 2 rings.",
+                    "Inside a ring, take the cell at position i along the top edge together with the three cells it trades places with on the right, bottom and left edges.",
+                    "Save the top cell, then move the left cell up into it, the bottom cell into the left, and the right cell into the bottom.",
+                    "Write the saved top cell into the right edge, which closes the circle of four.",
+                    "Stop one cell short of the corner on each edge, so no cell is moved twice.",
+                ],
+                "code": """class Solution {
+    public int[][] rotate(int[][] matrix) {
+        int n = matrix.length;
+        for (int ring = 0; ring < n / 2; ring++) {
+            int last = n - 1 - ring;
+            for (int i = ring; i < last; i++) {
+                int offset = i - ring;
+                int top = matrix[ring][i];
+                matrix[ring][i] = matrix[last - offset][ring];
+                matrix[last - offset][ring] = matrix[last][last - offset];
+                matrix[last][last - offset] = matrix[i][last];
+                matrix[i][last] = top;
+            }
+        }
+        return matrix;
+    }
+}""",
+                "time_complexity": "O(n²)",
+                "time_why": "Each cell is picked up and put down once, in groups of four.",
+                "space_complexity": "O(1)",
+                "space_why": "One saved value holds the cell that is being displaced.",
+                "when_to_use": "When each cell may be written only once, or when you want the idea behind rotating an array in place: follow the cycle each value belongs to. The four offsets are the fiddly part, so write one ring out on paper first.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]",
@@ -98,7 +133,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Swapping across the diagonal twice",
+                "name": "The Double Swap Trap",
                 "wrong": "Running the column loop from 0 to n - 1 swaps cells twice and undoes the flip.",
                 "right": "Start the column loop at `r + 1` so each pair across the diagonal is swapped once.",
             },
@@ -292,7 +327,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Missing checks before bottom and left sweeps",
+                "name": "The Duplicate Sweep Trap",
                 "wrong": "Omitting the check for `top <= bottom` before moving left duplicates numbers on single-row grids.",
                 "right": "Always check `top <= bottom` before the bottom walk, and `left <= right` before the left walk.",
             },
@@ -483,7 +518,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Zeroing cells during the first scan",
+                "name": "The Cascade Trap",
                 "wrong": "Setting a row or column to zero immediately creates new zeroes that cascade across the whole grid.",
                 "right": "Only record where the zeroes are on the first pass; set the zeroes on a separate second pass.",
             },

@@ -410,7 +410,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using this window when values can be negative",
+                "name": "The Negative Trap",
                 "wrong": "Shrinking because the sum is large, while a negative later would make a shorter prefix wrong.",
                 "right": "Negatives break the shrink. Then prefix sums plus a map (Subarray Sum Equals K).",
             },
@@ -546,7 +546,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "k = 0",
+                "name": "The Zero-Kind Trap",
                 "wrong": "Running the loop and returning 1.",
                 "right": "At most 0 kinds means the empty window. Return 0.",
             },
@@ -680,7 +680,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Restarting at the third kind",
+                "name": "The Restart Trap",
                 "wrong": "Setting left = right when a third kind appears, throwing away the previous kind that can stay.",
                 "right": "Only drop from the left until one kind is gone. The other kind stays.",
             },
@@ -807,7 +807,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "k = 0 and a zero",
+                "name": "The Zero-Budget Trap",
                 "wrong": "Never shrinking, so a zero stays in the window.",
                 "right": "When k is 0, zeros > 0 forces left to pass every zero.",
             },
@@ -937,7 +937,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Recomputing maxCount on every shrink",
+                "name": "The Recount Trap",
                 "wrong": "Scanning 26 letters on every left++. Still O(n), but easy to get wrong.",
                 "right": "A stale maxCount is safe: it never underestimates the flips you need by too little to break the answer.",
             },
@@ -1051,6 +1051,45 @@ class Solution {
                 "when_to_use": "The version to write.",
                 "is_optimal": True,
             },
+            {
+                "name": "Block maxima, forwards and backwards",
+                "idea": "Cut the row into fixed blocks of k. Any window of k values then covers the end of one block and the start of the next, so two precomputed maxima answer it.",
+                "steps": [
+                    "Split the row into blocks of k values, the first starting at index 0.",
+                    "Going left to right, record for each position the largest value from the start of its block up to that position.",
+                    "Going right to left, record for each position the largest value from that position to the end of its block.",
+                    "The window that starts at i ends at i + k - 1, and those two positions are either in the same block or in neighbouring ones.",
+                    "So the window's max is the larger of the right-to-left value at i and the left-to-right value at i + k - 1.",
+                ],
+                "code": """class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        int n = nums.length;
+        if (n == 0 || k == 0) return new int[0];
+        int[] fromBlockStart = new int[n];
+        int[] toBlockEnd = new int[n];
+        for (int i = 0; i < n; i++) {
+            fromBlockStart[i] = i % k == 0 ? nums[i] : Math.max(fromBlockStart[i - 1], nums[i]);
+        }
+        for (int i = n - 1; i >= 0; i--) {
+            boolean lastOfBlock = i == n - 1 || i % k == k - 1;
+            toBlockEnd[i] = lastOfBlock ? nums[i] : Math.max(toBlockEnd[i + 1], nums[i]);
+        }
+        int[] out = new int[n - k + 1];
+        for (int i = 0; i + k <= n; i++) {
+            out[i] = Math.max(toBlockEnd[i], fromBlockStart[i + k - 1]);
+        }
+        return out;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Three passes over the row, each doing one comparison per value.",
+                "space_complexity": "O(n)",
+                "space_why": "Two arrays of n values, one for each direction.",
+                "when_to_use": "When the windows are wanted out of order, or only a few of them: the two arrays are built once and any window is then a single comparison. It is the prefix-sum trick with max in place of add.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [1,3,-1,-3,5,3,6,7], k = 3",
@@ -1068,7 +1107,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Storing values, not indices",
+                "name": "The Value Trap",
                 "wrong": "A deque of values, so you cannot tell when the max has slid out.",
                 "right": "Store indices. Drop the front when index <= i-k.",
             },
@@ -1201,7 +1240,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Window off-by-one",
+                "name": "The Off-By-One Trap",
                 "wrong": "Comparing before the window has length |p|.",
                 "right": "Only compare when i >= |p| - 1.",
             },
@@ -1333,7 +1372,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Checking subsequence, not substring",
+                "name": "The Gap Trap",
                 "wrong": "A two-pointer on s2 that skips letters.",
                 "right": "The letters must be neighbours. The window length is |s1|.",
             },

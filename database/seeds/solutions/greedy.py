@@ -89,7 +89,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Only one trade",
+                "name": "The One Trade Trap",
                 "wrong": "Solving it like Best Time I and returning a single best pair.",
                 "right": "You may trade many times. Sum every climb, not just the biggest one.",
             },
@@ -224,7 +224,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Returning start without checking total",
+                "name": "The Unchecked Start Trap",
                 "wrong": "Returning the candidate start even when total gas is less than total cost.",
                 "right": "If `total < 0`, return -1. A unique start only exists when the whole circle has enough gas.",
             },
@@ -354,7 +354,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Jumping at every index",
+                "name": "The Every Index Trap",
                 "wrong": "Adding 1 to jumps on every i, not only when i hits currentEnd.",
                 "right": "One range is one jump. Count it when you finish the range, then set currentEnd to farthest.",
             },
@@ -483,7 +483,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Updating reach from an unreachable index",
+                "name": "The Unreachable Trap",
                 "wrong": "Always doing `reach = max(reach, i + nums[i])`, even when i is past reach.",
                 "right": "If `i > reach`, return false first. The last index must not stretch reach for you.",
             },
@@ -626,7 +626,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Forgetting max with the task count",
+                "name": "The Task Count Trap",
                 "wrong": "Returning only `(maxCount - 1) * (n + 1) + ties`.",
                 "right": "If other letters fill every gap, there is no idle time. Return `max(tasks.length, frame)`.",
             },
@@ -757,6 +757,66 @@ class Solution {
                 "when_to_use": "The version to write. Same idea as merging letter-span intervals.",
                 "is_optimal": True,
             },
+            {
+                "name": "Merge the letter spans as intervals",
+                "idea": "Each letter covers one span, from its first index to its last. The parts are what is left once every pair of overlapping spans is joined.",
+                "steps": [
+                    "Record the first and the last index of every letter that appears.",
+                    "Turn each of those pairs into a span, then sort the spans by their first index.",
+                    "Hold one block. If the next span starts at or before the block ends, stretch the block's end to cover it.",
+                    "If the next span starts after the block ends, the block is finished: store its length and open a new block at that span.",
+                    "Store the last block as well. The lengths come out in left-to-right order.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<Integer> partitionLabels(String s) {
+        int[] firstIndex = new int[26];
+        int[] lastIndex = new int[26];
+        Arrays.fill(firstIndex, -1);
+        for (int i = 0; i < s.length(); i++) {
+            int letter = s.charAt(i) - 'a';
+            if (firstIndex[letter] == -1) {
+                firstIndex[letter] = i;
+            }
+            lastIndex[letter] = i;
+        }
+        List<int[]> spans = new ArrayList<>();
+        for (int letter = 0; letter < 26; letter++) {
+            if (firstIndex[letter] != -1) {
+                spans.add(new int[] {firstIndex[letter], lastIndex[letter]});
+            }
+        }
+        List<Integer> out = new ArrayList<>();
+        if (spans.isEmpty()) {
+            return out;
+        }
+        spans.sort(Comparator.comparingInt(span -> span[0]));
+        int start = spans.get(0)[0];
+        int end = spans.get(0)[1];
+        for (int i = 1; i < spans.size(); i++) {
+            int[] span = spans.get(i);
+            if (span[0] <= end) {
+                end = Math.max(end, span[1]);
+            } else {
+                out.add(end - start + 1);
+                start = span[0];
+                end = span[1];
+            }
+        }
+        out.add(end - start + 1);
+        return out;
+    }
+}
+""",
+                "time_complexity": "O(n + A log A)",
+                "time_why": "One pass records the spans, then at most 26 of them are sorted and joined.",
+                "space_complexity": "O(1)",
+                "space_why": "Two arrays of length 26 and a list of at most 26 spans, besides the output.",
+                "when_to_use": "When the pieces are not letters but labelled spans of any kind: bookings, sessions, jobs. There is no small alphabet to walk then, and joining the spans is the same code as Merge Intervals.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 's = "ababcc"',
@@ -773,7 +833,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Cutting on first sight of a new letter",
+                "name": "The First Sight Trap",
                 "wrong": "Closing a part as soon as the next letter has not appeared yet in it.",
                 "right": "A letter already inside the part may still appear later. Stretch end to that last index first.",
             },

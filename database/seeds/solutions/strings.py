@@ -139,7 +139,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Letters as a set",
+                "name": "The Letter Set Trap",
                 "wrong": "Using the set of letters as the key, so `aab` and `abb` look the same.",
                 "right": "Counts matter. `aab` is two a and one b. `abb` is one a and two b.",
             },
@@ -294,7 +294,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "split on one space",
+                "name": "The One Space Trap",
                 "wrong": "Calling `split(\" \")` and joining the pieces, so extra spaces become empty words.",
                 "right": "Skip runs of spaces, or split on one or more spaces after a trim.",
             },
@@ -474,7 +474,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Zero groups",
+                "name": "The Zero Group Trap",
                 "wrong": "Spelling a zero group as Zero Thousand, so 1000010 becomes One Million Zero Thousand Ten.",
                 "right": "If the three digits are 0, add nothing. Skip that scale.",
             },
@@ -645,6 +645,56 @@ class Solution {
                 "when_to_use": "The version to write. Same time as the table, no extra array.",
                 "is_optimal": True,
             },
+            {
+                "name": "Manacher's algorithm",
+                "idea": "One left-to-right pass works out how far the palindrome at every center reaches, reusing what the mirror center on the left already proved.",
+                "steps": [
+                    "Put a `#` between every pair of letters and at both ends, so odd and even palindromes alike sit on one center.",
+                    "Walk the padded string from left to right, recording how far the palindrome at each center reaches.",
+                    "Remember the palindrome that reaches furthest right so far. If the current center sits inside it, its mirror on the left gives a reach already safe to assume.",
+                    "Push outward only from that safe reach. Keep the best center, updating only on a strictly bigger reach so a tie keeps the leftmost.",
+                    "The best reach is the answer's length, and it starts at `(bestCenter - bestReach) / 2` in the original string.",
+                ],
+                "code": """class Solution {
+    public String longestPalindrome(String s) {
+        StringBuilder padded = new StringBuilder("#");
+        for (char c : s.toCharArray()) {
+            padded.append(c).append('#');
+        }
+        char[] t = padded.toString().toCharArray();
+        int n = t.length;
+        int[] reach = new int[n];
+        int center = 0, right = 0, bestCenter = 0, bestReach = 0;
+        for (int i = 0; i < n; i++) {
+            if (i < right) {
+                reach[i] = Math.min(right - i, reach[2 * center - i]);
+            }
+            while (i - reach[i] - 1 >= 0 && i + reach[i] + 1 < n
+                    && t[i - reach[i] - 1] == t[i + reach[i] + 1]) {
+                reach[i]++;
+            }
+            if (i + reach[i] > right) {
+                center = i;
+                right = i + reach[i];
+            }
+            if (reach[i] > bestReach) {
+                bestReach = reach[i];
+                bestCenter = i;
+            }
+        }
+        int start = (bestCenter - bestReach) / 2;
+        return s.substring(start, start + bestReach);
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The right edge of the furthest palindrome only ever moves right, so the outward pushing costs n steps in total.",
+                "space_complexity": "O(n)",
+                "space_why": "The padded string and the reach array are each about twice the length of the input.",
+                "when_to_use": "The real answer to 'can you do it in linear time'. The same pass also hands you the reach of every center, which counts all palindromic substrings with one extra line.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 's = "cbbd"',
@@ -662,7 +712,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Missing even centers",
+                "name": "The Even Center Trap",
                 "wrong": "Only expanding around a single letter, so `bb` in `cbbd` is never found.",
                 "right": "Also expand from `(center, center + 1)`. Even palindromes sit on a gap.",
             },
@@ -811,7 +861,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Overflow after the multiply",
+                "name": "The After Multiply Trap",
                 "wrong": "Doing `result * 10 + digit` first, then noticing it wrapped past MAX.",
                 "right": "Compare `result` to `Integer.MAX_VALUE / 10` before multiplying. Digit 8 or 9 at that edge also clamps.",
             },

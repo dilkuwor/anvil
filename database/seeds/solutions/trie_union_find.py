@@ -164,7 +164,7 @@ class Trie {
         },
         "mistakes": [
             {
-                "name": "Confusing search with startsWith",
+                "name": "The Prefix Alias Trap",
                 "wrong": "Returning true in search just because the prefix nodes exist treats prefixes as complete words.",
                 "right": "In search, verify both that the node exists and that its terminal flag is true.",
             },
@@ -393,7 +393,7 @@ class WordDictionary {
         },
         "mistakes": [
             {
-                "name": "Checking null child branches without guard",
+                "name": "The Unguarded Dot Trap",
                 "wrong": "Calling match on null children without checking if child is null causes unnecessary recursion.",
                 "right": "Check if `child != null` before launching the recursive call.",
             },
@@ -620,7 +620,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Duplicate words in output list",
+                "name": "The Duplicate Harvest Trap",
                 "wrong": "Finding the same word from two different paths adds duplicate entries to the output.",
                 "right": "Set `next.word = null` immediately after adding it to the output list.",
             },
@@ -798,7 +798,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Unioning nodes directly instead of their roots",
+                "name": "The Raw Node Union Trap",
                 "wrong": "Writing parent[u] = v creates broken components if u is not already the root of its set.",
                 "right": "Always call find on both endpoints first: parent[find(u)] = find(v).",
             },
@@ -974,7 +974,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "One-based indexing off-by-one error",
+                "name": "The One-Based Index Trap",
                 "wrong": "Allocating parent array of size n instead of n + 1 causes index out of bounds for node n.",
                 "right": "Allocate parent with edges.length + 1 since vertices are numbered 1 to n.",
             },
@@ -1186,7 +1186,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Merging accounts by name instead of email",
+                "name": "The Name Match Trap",
                 "wrong": "Assuming accounts with the same person name belong to the same person merges two different people with the same name.",
                 "right": "Only merge accounts that share at least one identical email address.",
             },

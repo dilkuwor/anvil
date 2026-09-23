@@ -277,5 +277,1968 @@
     "trap_rule": "The table has an extra row 0 and column 0 for the empty word. So the table is (m + 1) × (n + 1), and row i reads letter i − 1.",
     "time": "O(m × n)",
     "space": "O(m × n)"
+  },
+  {
+    "slugs": [
+      "lc-904"
+    ],
+    "pattern": "Window, at most 2 distinct",
+    "trigger": "a row of items, and you may keep at most two kinds in a neighbour run",
+    "insight": "A caterpillar whose body holds only two kinds. A third kind makes the tail crawl forward until one kind is gone, never jump to the head.",
+    "metaphor": "The caterpillar",
+    "trap": "The Restart Trap",
+    "trap_rule": "A third kind does not send the tail to the head. The tail crawls one tree at a time until only two kinds remain.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-340"
+    ],
+    "pattern": "Window, at most k distinct",
+    "trigger": "“longest substring” with at most k different letters",
+    "insight": "A caterpillar whose body holds only k kinds. A new kind makes the tail crawl until a kind is gone. If k is 0, the body stays empty.",
+    "metaphor": "The caterpillar",
+    "trap": "The Zero-Kind Trap",
+    "trap_rule": "If k is 0 the body may hold no letter kinds. Return 0 at once. Do not let the head eat.",
+    "time": "O(n)",
+    "space": "O(k)"
+  },
+  {
+    "slugs": [
+      "lc-1004"
+    ],
+    "pattern": "Sliding window, at most k zeros",
+    "trigger": "longest run of ones after flipping at most k zeros",
+    "insight": "A caterpillar whose body may hold at most k zeros. A (k+1)th zero makes the tail crawl until a zero leaves. If k is 0, every zero must leave.",
+    "metaphor": "The caterpillar",
+    "trap": "The Zero-Budget Trap",
+    "trap_rule": "When k is 0, a zero may not stay in the body. zeros > 0 forces the tail past every zero. Never skip the shrink.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-209"
+    ],
+    "pattern": "Sliding window, positives",
+    "trigger": "shortest neighbour run whose sum is at least a target, and every value is positive",
+    "insight": "A caterpillar whose head adds and whose tail drops while the body stays heavy enough. That crawl is safe only because every box is positive.",
+    "metaphor": "The caterpillar",
+    "trap": "The Negative Trap",
+    "trap_rule": "Do not use this crawl when a value can be negative. Dropping a negative raises the body, so a later short run can be missed. Then use prefix sums.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-424"
+    ],
+    "pattern": "Sliding window, replacements",
+    "trigger": "longest same-letter run after at most k changes",
+    "insight": "A caterpillar is allowed when body length minus the top letter's count is at most k. On a shrink, keep the old top count. Do not walk the body to recount.",
+    "metaphor": "The caterpillar",
+    "trap": "The Recount Trap",
+    "trap_rule": "Do not scan the body to recompute maxCount when the tail moves. A leftover top count is safe: it never breaks the answer.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-438"
+    ],
+    "pattern": "Fixed window, anagrams",
+    "trigger": "every start index of a scrambled copy of one word inside another",
+    "insight": "A shopper with a basket that always holds as many letters as the list. Fill it first, then slide: take one, drop one, and record a start when the list is ticked.",
+    "metaphor": "The grocery checklist",
+    "trap": "The Off-By-One Trap",
+    "trap_rule": "Do not ask the list until the basket holds |p| letters (i >= |p| - 1). Asking sooner, or waiting one extra letter, misses the first start.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-567"
+    ],
+    "pattern": "Fixed window, anagrams",
+    "trigger": "whether one string contains a scrambled copy of another as a neighbour run",
+    "insight": "A shopper with a basket the length of the list, sliding on the longer string. Only neighbours count. A skip across a hole is not a match.",
+    "metaphor": "The grocery checklist",
+    "trap": "The Gap Trap",
+    "trap_rule": "The letters must be neighbours. Skipping holes (a subsequence) is wrong. The basket length is always |s1|.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-239"
+    ],
+    "pattern": "Monotonic deque, sliding window",
+    "trigger": "the maximum of every neighbour run of a fixed length k as it slides",
+    "insight": "A sliding frame of k, and a champion line of seat numbers. The front is the max. Store seats, not scores, so you can drop a max that has left the frame.",
+    "metaphor": "The champion line",
+    "trap": "The Value Trap",
+    "trap_rule": "Store seats (indices), not scores. Drop the front when its seat is <= i - k. A line of scores cannot tell when the max has slid out.",
+    "time": "O(n)",
+    "space": "O(k)"
+  },
+  {
+    "slugs": [
+      "lc-125"
+    ],
+    "pattern": "Two pointers",
+    "trigger": "a string that may hold spaces and punctuation, and you must say whether it is a palindrome",
+    "insight": "Two walkers meet in the middle. Each one skips junk. Only letters and digits count, and case does not.",
+    "metaphor": "The two walkers",
+    "trap": "The Junk Trap",
+    "trap_rule": "Commas, spaces, and other marks are not letters. Skip them. Only letters and digits are compared, in lowercase.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-16"
+    ],
+    "pattern": "Sort + two pointers",
+    "trigger": "three values whose sum is closest to a target, and exactly one such sum exists",
+    "insight": "Sort, peg one number, squeeze two calipers. Keep the sum whose distance to the target is smallest, not the larger sum.",
+    "metaphor": "The peg and the calipers",
+    "trap": "The Distance Trap",
+    "trap_rule": "A larger sum is not always closer. Compare the distance of each sum to the target, and keep the nearer one.",
+    "time": "O(n²)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-167"
+    ],
+    "pattern": "Two pointers on a sorted row",
+    "trigger": "a sorted array and two values that add to a target, and you must return their positions counted from one",
+    "insight": "Two calipers on a sorted row. Too small, the left one steps right. Too big, the right one steps left. On a hit, add one to each position.",
+    "metaphor": "The two calipers",
+    "trap": "The Zero-Based Trap",
+    "trap_rule": "The boxes are numbered from zero in code, but the answer counts from one. Return left + 1 and right + 1.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-26"
+    ],
+    "pattern": "Read and write pointers",
+    "trigger": "a sorted array, and you must drop copies on the same row and return the new length",
+    "insight": "A write slot holds the next unique. Because the row is sorted, a value is new when it differs from the last unique we kept, not from the box behind read.",
+    "metaphor": "Read and write",
+    "trap": "The Overwrite Trap",
+    "trap_rule": "After a write, the box behind read may already hold a value we wrote. Compare with the last unique at the write slot, never with that neighbour.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-283"
+    ],
+    "pattern": "Read and write pointers",
+    "trigger": "move zeros to the end, keep the order of the rest, on the same row",
+    "insight": "A write slot is the next hole for a non-zero. Each non-zero swaps into that hole. Zeros slide right, and the other numbers keep their order.",
+    "metaphor": "Read and write",
+    "trap": "The Order Trap",
+    "trap_rule": "Never swap the first zero with the last non-zero. Always swap the next non-zero into the next write slot, left to right.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-680"
+    ],
+    "pattern": "Two pointers, one skip",
+    "trigger": "a palindrome after deleting at most one character",
+    "insight": "Walk inward. On the first clash, try skipping the left letter, and try skipping the right. One of those two walks must be a strict palindrome.",
+    "metaphor": "The two walkers, one skip",
+    "trap": "The One-Side Trap",
+    "trap_rule": "Never skip only the left letter, or only the right, by habit. Try both. One of them may be the only save.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-88"
+    ],
+    "pattern": "Two pointers from the back",
+    "trigger": "merge two sorted arrays into the first one, which has spare slots at the end",
+    "insight": "Fill from the back, where the empty slots sit. Take the larger of the two remaining tails so you never overwrite a value you still need.",
+    "metaphor": "The two tails",
+    "trap": "The Front Merge Trap",
+    "trap_rule": "Never write into the front of the top row first. That overwrites a value you still need. Write from the back.",
+    "time": "O(m + n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-435"
+    ],
+    "pattern": "Greedy: earliest end",
+    "trigger": "a list of intervals, and you must remove as few as you can so the rest do not overlap",
+    "insight": "Sort by end time. Keep a meeting when it starts at or after the last end you kept. The earliest end leaves the most room, so the number removed is n minus kept.",
+    "metaphor": "The earliest end",
+    "trap": "The Long Meeting Trap",
+    "trap_rule": "Sorting by start and keeping the first meeting can keep a long early one that blocks two short ones. Sort by end so the meeting that frees the line first is kept.",
+    "time": "O(n log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-57"
+    ],
+    "pattern": "Sweep a sorted interval list",
+    "trigger": "a sorted, non-overlapping list of ranges, and you must insert one more range, merging if it overlaps",
+    "insight": "Copy every meeting that ends before the new one starts, merge every meeting that overlaps it, then copy the rest. Keep stretching while the next start is still at or before the new end.",
+    "metaphor": "The calendar insert",
+    "trap": "The Early Stop Trap",
+    "trap_rule": "Do not stop merging after the first overlap. Keep stretching while the next meeting still starts at or before the new end. One insert can swallow several old meetings.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-1011"
+    ],
+    "pattern": "Binary search on the answer",
+    "trigger": "the smallest ship capacity that still finishes in a fixed number of days, packages in a fixed order",
+    "insight": "Lay capacities on a dial from the heaviest package to the total weight. Too small stays too small below. Try the middle, count the days, and throw half the dial away.",
+    "metaphor": "The capacity dial",
+    "trap": "The Split Package Trap",
+    "trap_rule": "One package cannot be split. Low must be the heaviest package, or a day can never hold it.",
+    "time": "O(n log S)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-153"
+    ],
+    "pattern": "Binary search on a rotated row",
+    "trigger": "a sorted array that was rotated, and you must find the smallest value in log time",
+    "insight": "The smallest value sits just after the cliff. If the middle bar is taller than the right flag, the cliff is to the right of it. If not, the shortest is at the middle or left.",
+    "metaphor": "The ramp and the cliff",
+    "trap": "The Left-End Trap",
+    "trap_rule": "Compare with the right end. If mid is bigger than high, the min is strictly right of mid. A smooth left ramp can still hold the shortest bar.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-162"
+    ],
+    "pattern": "Binary search on a peak",
+    "trigger": "a row of hills, and you must find an index taller than both neighbours",
+    "insight": "From the middle hill, walk uphill. If the right-hand neighbour is taller, a peak sits to the right. If not, a peak sits at the middle or to the left.",
+    "metaphor": "Walk uphill",
+    "trap": "The Off-the-End Trap",
+    "trap_rule": "Use while (low < high). Then mid is always strictly left of high, so the right-hand neighbour exists.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-278"
+    ],
+    "pattern": "Binary search on a yes/no prefix",
+    "trigger": "versions go from good to bad and stay bad, and you must find the first bad one with as few checks as possible",
+    "insight": "The versions are a row of good, then bad. If the middle is bad, the first crack is at the needle or left. If it is good, the first crack is strictly right of the needle.",
+    "metaphor": "The version line",
+    "trap": "The Overflow Trap",
+    "trap_rule": "Use mid = low + (high - low) / 2. Adding the two ends can wrap when n is near two billion.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-34"
+    ],
+    "pattern": "Binary search for a range",
+    "trigger": "a sorted array, and you need the first and last index of a value, in log time",
+    "insight": "Search twice on the sorted row. One search finds the leftmost target. The other finds the leftmost value bigger than target, then step one left.",
+    "metaphor": "The two posts",
+    "trap": "The Walk-Out Trap",
+    "trap_rule": "A long run of the target makes walking out from one hit O(n). Use a second bound search.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-4"
+    ],
+    "pattern": "Binary search on a partition",
+    "trigger": "the median of two already-sorted arrays, in log time, without merging them",
+    "insight": "Cut both arrays so the left half has the right count. A cut is valid when every left value is no bigger than every right value. Then the median sits on the cut.",
+    "metaphor": "The cut",
+    "trap": "The Long Row Trap",
+    "trap_rule": "Always search on the shorter array. Then the matching cut on the longer one cannot fall off the end.",
+    "time": "O(log(min(m, n)))",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-704"
+    ],
+    "pattern": "Binary search",
+    "trigger": "a sorted array of distinct values, and you must return the index of a target or -1",
+    "insight": "Look at the middle of the remaining ramp. If it is the target, stop. If the target is smaller, drop the right half. If larger, drop the left half.",
+    "metaphor": "The ramp",
+    "trap": "The Overflow Trap",
+    "trap_rule": "Use mid = low + (high - low) / 2. Adding the two ends can wrap on a huge row.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-74"
+    ],
+    "pattern": "Binary search on a flat matrix",
+    "trigger": "a matrix where each row is sorted and the first of the next row is bigger than the last of this row",
+    "insight": "The matrix is one sorted row written in wrapping lines. Treat a step along the ribbon as a cell, wrapping by the column count, and search that ribbon.",
+    "metaphor": "The wrapping ribbon",
+    "trap": "The Column Trap",
+    "trap_rule": "A flat index k is row k / cols and column k % cols. Using the row count in that map picks the wrong cell.",
+    "time": "O(log(m · n))",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-138"
+    ],
+    "pattern": "Hash map of original to copy",
+    "trigger": "a list whose cars also have a side coupling to any car, or to nothing, and you must deep-copy both kinds of coupling",
+    "insight": "Stand up a copy of every car first. A notebook maps each original to its copy. Only then wire forward and side couplings, so a side coupling that points ahead has a target.",
+    "metaphor": "The copy yard",
+    "trap": "The Early Side Trap",
+    "trap_rule": "Do not hook a copy's side coupling while creating copies. The target copy may not exist yet. Create every copy first, then wire from the notebook.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-143"
+    ],
+    "pattern": "Find middle, reverse, weave",
+    "trigger": "reorder a list to first, last, second, second-last, and so on, by changing couplings only",
+    "insight": "Find the middle, cut the train in two, turn the second half around, then weave one car from the left with one from the turned right.",
+    "metaphor": "Cut, turn, weave",
+    "trap": "The Uncut Reverse Trap",
+    "trap_rule": "Hook the middle car onto null before turning the second half. If the halves stay joined, the weave walks into a loop.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-148"
+    ],
+    "pattern": "Merge sort on a linked list",
+    "trigger": "sort a linked list in O(n log n) time, with little extra memory",
+    "insight": "Split the train at the middle, sort each half, then merge the two sorted halves. A linked list only walks forward, so this split-and-merge fits it.",
+    "metaphor": "Split, sort, merge",
+    "trap": "The Uncut Split Trap",
+    "trap_rule": "After taking the right half, hook the middle car onto null. Skip the cut and a two-car train never shrinks.",
+    "time": "O(n log n)",
+    "space": "O(log n)"
+  },
+  {
+    "slugs": [
+      "lc-160"
+    ],
+    "pattern": "Two pointers on two lists",
+    "trigger": "the first shared car of two singly linked lists, or a report that they do not meet",
+    "insight": "Walk both trains. When a walker hits null, switch it onto the other train. They travel the same total length and meet at the shared car, or both hit null.",
+    "metaphor": "Two trains, switch heads",
+    "trap": "The Value Twin Trap",
+    "trap_rule": "The join is the same car, not two cars with the same number. Values may repeat before the join.",
+    "time": "O(m + n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-19"
+    ],
+    "pattern": "Two pointers, n steps apart",
+    "trigger": "remove the n-th car from the end of a linked list, in one pass if you can",
+    "insight": "A spare engine, a lead n cars ahead, and a trail. When the lead sits on the last car, the trail sits just before the car to drop, even if that car is the first.",
+    "metaphor": "Lead and trail",
+    "trap": "The Missing Engine Trap",
+    "trap_rule": "Start lead and trail on a spare engine in front of the train. Without it, dropping the first car has no coupling behind it to skip with.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-2"
+    ],
+    "pattern": "Digit-by-digit add with carry",
+    "trigger": "two numbers stored as linked lists, digits reversed, one digit per car, and you must return the sum the same way",
+    "insight": "The front cars are the ones digits. Add digit by digit with a carry, and keep going while either train has a digit or the carry is still 1.",
+    "metaphor": "Digit cars and a carry",
+    "trap": "The Forgotten Carry Trap",
+    "trap_rule": "Keep looping while either train has a digit or the carry is still 1. [5] plus [5] is 0 then 1, not just 0.",
+    "time": "O(max(m, n))",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-21"
+    ],
+    "pattern": "Merge two sorted lists",
+    "trigger": "two sorted linked lists that must be spliced into one sorted list, reusing the existing cars",
+    "insight": "A spare engine holds the start. The tail always hooks the smaller first car of the two trains. When one train ends, attach the rest in one hook.",
+    "metaphor": "Two trains and a spare engine",
+    "trap": "The Lost First Car Trap",
+    "trap_rule": "Park a spare engine and return the car after it. Picking the first car with no engine, then moving on, loses the start of the train.",
+    "time": "O(m + n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-234"
+    ],
+    "pattern": "Reverse the second half",
+    "trigger": "whether a singly linked list reads the same forwards and backwards, with little extra memory if you can",
+    "insight": "Turn the second half of the train around, then walk the front half and the turned half together. Stop when the turned half runs out.",
+    "metaphor": "Two halves of a train",
+    "trap": "The Over-Compare Trap",
+    "trap_rule": "Stop when the turned half has no car left. Walking the front until it ends steps into reversed couplings.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "balanced-brackets"
+    ],
+    "pattern": "Stack",
+    "trigger": "a string of brackets, and you must say whether every opener is closed in the right order",
+    "insight": "A pile of plates. Each opener is a plate. A closer may take only the top plate. Kind counts can look even while the order is wrong.",
+    "metaphor": "The plate pile",
+    "trap": "The Count Trap",
+    "trap_rule": "Even counts of each kind are not enough. The closer must match the latest unmatched opener, which sits on top of the pile.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-20"
+    ],
+    "pattern": "Stack",
+    "trigger": "a string of (), [], {}, and you must say whether they close in the right order",
+    "insight": "A pile of plates. Each opener writes the closer it still needs. A closer may take only the top plate. Crossing a pair is false.",
+    "metaphor": "The plate pile",
+    "trap": "The Crossing Trap",
+    "trap_rule": "A closer must equal the top plate. Matching a plate further down would cross the pairs, as in ([)].",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-150"
+    ],
+    "pattern": "Stack",
+    "trigger": "a postfix row of numbers and operators, and you must find the integer value",
+    "insight": "A pile of number plates. An operator takes the top plate as the right number, then the plate below as the left. Swap them and minus or divide goes wrong.",
+    "metaphor": "The plate pile",
+    "trap": "The Operand Trap",
+    "trap_rule": "Take the top plate first: it is the right number. Minus and divide are not symmetric.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-155"
+    ],
+    "pattern": "Design: min stack",
+    "trigger": "a stack that must also return the current minimum, and every call should take one step",
+    "insight": "Each plate stores its value and the min of the pile at that depth. getMin reads the top plate. A pop restores the min below.",
+    "metaphor": "The plate pile",
+    "trap": "The Lost Min Trap",
+    "trap_rule": "A single min field is forgotten when that value leaves. Store the running min on every plate so a pop restores the min below.",
+    "time": "O(1)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-227"
+    ],
+    "pattern": "Stack",
+    "trigger": "an infix string of + - * / with no parentheses, and * / bind tighter than + -",
+    "insight": "Signed plates. Plus and minus wait. Star and slash change the top plate now. Left to right with no extra binding misses *.",
+    "metaphor": "The plate pile",
+    "trap": "The Left-to-Right Trap",
+    "trap_rule": "Do not add or subtract as soon as you see the next number. * and / must change the top plate first.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-394"
+    ],
+    "pattern": "Stack",
+    "trigger": "a nested encoded string of the form k[substring], and you must expand every repeat",
+    "insight": "Nested plates. '[' parks the count and the tray so far. ']' repeats the inner tray onto that parked tray. Counts may have more than one digit.",
+    "metaphor": "The plate pile",
+    "trap": "The Single-Digit Trap",
+    "trap_rule": "Build the count as count * 10 + digit. A count like 10 is one number, not a 1 followed by a 0-repeat.",
+    "time": "O(n + L)",
+    "space": "O(n + L)"
+  },
+  {
+    "slugs": [
+      "lc-71"
+    ],
+    "pattern": "Stack",
+    "trigger": "a Unix path with slashes, '.', and '..', and you must return the simplified absolute path",
+    "insight": "Folder plates on a root floor. A real name is a plate. \"..\" takes the top plate if there is one. The floor never leaves.",
+    "metaphor": "The plate pile",
+    "trap": "The Root Trap",
+    "trap_rule": "If the pile is empty, \"..\" does nothing. Never go above the root floor.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "minimum-tracker-stack"
+    ],
+    "pattern": "Design: min stack",
+    "trigger": "a stack that returns the current minimum as well as the top, and every call should take one step",
+    "insight": "Two piles. Values hold every push. Mins hold a history, including ties. Pop a min plate only when that same value leaves.",
+    "metaphor": "The plate pile",
+    "trap": "The Strict Min Trap",
+    "trap_rule": "Push onto mins when val is <= the live min, not only when it is strictly smaller. A tied min must survive after the first copy is popped.",
+    "time": "O(1)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-1"
+    ],
+    "pattern": "Hash map",
+    "trigger": "two indices whose values add to a target, and exactly one pair exists",
+    "insight": "A notebook of value to seat. Look up the partner first, then write this box, so one seat is never used twice.",
+    "metaphor": "The notebook",
+    "trap": "The Same-Index Trap",
+    "trap_rule": "Look up the partner before you write this box. A value cannot pair with its own seat.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "pair-target"
+    ],
+    "pattern": "Hash map of seen values",
+    "trigger": "two indices whose values add to a target, and exactly one pair exists",
+    "insight": "A notebook of value to seat. Look up the partner first, then write this box, so one seat is never used twice.",
+    "metaphor": "The notebook",
+    "trap": "The Same-Index Trap",
+    "trap_rule": "Look up the partner before you write this box. A value cannot pair with its own seat.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-128"
+    ],
+    "pattern": "Hash set",
+    "trigger": "longest run of consecutive integers, and the values need not sit next to each other in the array",
+    "insight": "A notebook of presence. Only start a chain at a head — a value whose neighbour below is missing — then walk forward.",
+    "metaphor": "The chain",
+    "trap": "The Every-Start Trap",
+    "trap_rule": "Do not walk forward from every value. Only a head starts a chain, or the same chain is re-walked.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-217"
+    ],
+    "pattern": "Hash set",
+    "trigger": "return true if any value appears at least twice",
+    "insight": "A notebook of values already seen. A failed write means a copy. Leave the original row alone.",
+    "metaphor": "The notebook",
+    "trap": "The Scramble Trap",
+    "trap_rule": "Do not sort the caller's row. Use a notebook, or sort a copy if you must.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-242"
+    ],
+    "pattern": "Frequency count",
+    "trigger": "return true if one string is an anagram of the other",
+    "insight": "If the lengths differ, stop. Then two tallies: count one row up and the other down. All slots must end at zero.",
+    "metaphor": "Two tallies",
+    "trap": "The Length-Skip Trap",
+    "trap_rule": "Different lengths cannot match. Return false first, so the two rows stay in lockstep.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-347"
+    ],
+    "pattern": "Frequency count",
+    "trigger": "return the k values that appear most often. Order does not matter, and the answer is unique",
+    "insight": "Count in a notebook, then drop each value onto a shelf labelled by that count. Read from the high shelves down until you hold k.",
+    "metaphor": "The count shelves",
+    "trap": "The Full-Heap Trap",
+    "trap_rule": "Do not pile every value into a max-heap of size n. Keep k winners, or use count shelves.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-49"
+    ],
+    "pattern": "Hash map",
+    "trigger": "group strings that are anagrams of one another. Order of groups does not matter",
+    "insight": "A notebook keyed by the sorted word. Every family member shares that key. A set of letters is not enough.",
+    "metaphor": "The family notebook",
+    "trap": "The Letter-Set Trap",
+    "trap_rule": "Do not key on the distinct letters. Counts (or the fully sorted word) must be part of the key.",
+    "time": "O(n·k log k)",
+    "space": "O(n·k)"
+  },
+  {
+    "slugs": [
+      "lc-560"
+    ],
+    "pattern": "Prefix sum",
+    "trigger": "count how many neighbour slices sum to k. Values may be negative, so a shrinking window does not work",
+    "insight": "A slice sum is two running totals. Look up running minus k in a notebook, then write the current running.",
+    "metaphor": "The running notebook",
+    "trap": "The Window Trap",
+    "trap_rule": "Do not grow and shrink a window. Negatives break that. Use running totals and a notebook.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "first-and-last-position"
+    ],
+    "pattern": "Binary search",
+    "trigger": "a sorted array, and you need the first and last index of a value, in log time",
+    "insight": "Two fence searches: first box not smaller than target, then first box not smaller than target plus one.",
+    "metaphor": "Two fences",
+    "trap": "The Linear-Walk Trap",
+    "trap_rule": "Do not find one hit then walk to both ends. A long run is linear. Use a second fence.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-121"
+    ],
+    "pattern": "One pass, running minimum",
+    "trigger": "buy once, sell later, and you want the biggest profit from a list of daily prices",
+    "insight": "Remember the cheapest stall so far. Score today's sale against that stall first, then maybe lower it. A day is never both.",
+    "metaphor": "The cheapest stall",
+    "trap": "The Same-Day Trap",
+    "trap_rule": "Score the sale first, then lower cheapest. A day cannot be both buy and sell.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-169"
+    ],
+    "pattern": "Boyer-Moore voting",
+    "trigger": "an element that appears more than half the time, and you may assume it exists",
+    "insight": "One candidate, one count. Matches add, others subtract, a zero count elects the next value. Do not sort for the middle.",
+    "metaphor": "The vote",
+    "trap": "The Middle-Sort Trap",
+    "trap_rule": "Sorting and picking the middle is correct but O(n log n). Voting is linear and leaves the row alone.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-189"
+    ],
+    "pattern": "In-place reverse",
+    "trigger": "rotate an array right by k steps, with no extra array",
+    "insight": "Wrap k by the row length, flip all, flip the front k, flip the rest.",
+    "metaphor": "Three flips",
+    "trap": "The Modulo Trap",
+    "trap_rule": "Set k to k modulo n first. Rotating n steps is the identity. k may also become 0.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-238"
+    ],
+    "pattern": "Prefix and suffix products",
+    "trigger": "each index wants the product of every other value, with no division, in linear time",
+    "insight": "Left wave times right wave. Write left products forward, multiply right products on the way back. Never divide.",
+    "metaphor": "Two waves",
+    "trap": "The Division Trap",
+    "trap_rule": "Do not take the total product and divide by this box. A zero breaks that. Use two waves.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-31"
+    ],
+    "pattern": "Next permutation in place",
+    "trigger": "rearrange into the next larger permutation, or the smallest if you are already at the last",
+    "insight": "Walk from the right while this box is at least the next. Swap the pivot with the smallest upgrade, then flip the tail.",
+    "metaphor": "The pivot",
+    "trap": "The Strict-Rise Trap",
+    "trap_rule": "Walk while this box is at least the next. A plateau is still a falling tail.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-41"
+    ],
+    "pattern": "Index as a hash table",
+    "trigger": "the smallest missing positive integer, in linear time and constant extra space",
+    "insight": "The row is the notebook: slot i should hold i+1. Keep swapping at a seat until the value belongs, then scan for the first empty home.",
+    "metaphor": "Home slots",
+    "trap": "The Once-Swap Trap",
+    "trap_rule": "Use a while, not an if. After a swap, the new value at this seat may also need a home.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-53"
+    ],
+    "pattern": "Kadane, best run ending here",
+    "trigger": "the largest sum of any neighbour run in an array that may hold negatives",
+    "insight": "A running bag: extend, or drop and start here. Seed best with the first box, never 0.",
+    "metaphor": "The running bag",
+    "trap": "The Zero-Start Trap",
+    "trap_rule": "Empty is not allowed. Seed best with the first box, not 0, so all-negative rows work.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "merged-median"
+    ],
+    "pattern": "Binary search on a partition",
+    "trigger": "the median of two already-sorted arrays, in log time, without merging them",
+    "insight": "Always cut the shorter row. A cut is good when every left edge is ≤ every right edge. Then the median sits on the cut.",
+    "metaphor": "The short cut",
+    "trap": "The Long-Cut Trap",
+    "trap_rule": "Always search on the shorter array. Then the other cut stays inside the longer one.",
+    "time": "O(log(min(m, n)))",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "missing-range-value"
+    ],
+    "pattern": "XOR or sum of 0..n",
+    "trigger": "n distinct numbers from 0..n, and exactly one value in that range is missing",
+    "insight": "Mix every seat with every value, and also mix n. Pairs cancel. The missing number is left.",
+    "metaphor": "The cancel notebook",
+    "trap": "The Forgotten-N Trap",
+    "trap_rule": "Start at n, or mix n at the end. The range is 0 through n, one past the last seat.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "single-pass-profit"
+    ],
+    "pattern": "One pass, running minimum",
+    "trigger": "at most one buy and one later sell, on a list of daily prices",
+    "insight": "If today is a new low, move the stall. Else score a sale. Never do both on the same day.",
+    "metaphor": "The cheapest stall",
+    "trap": "The After-Sale Trap",
+    "trap_rule": "A new low is not a sale. Do not update min after counting today as a same-day sale.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-122"
+    ],
+    "pattern": "Greedy: every uphill step",
+    "trigger": "a row of prices, and you may buy and sell many times but hold only one share",
+    "insight": "A hillside walk. Every uphill step is a climb you can pocket. A dip is a skip, not a reason to wait for one bigger trade.",
+    "metaphor": "The hillside walk",
+    "trap": "The One Trade Trap",
+    "trap_rule": "You may trade many times. Sum every climb, not just the single biggest buy and sell.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-134"
+    ],
+    "pattern": "Greedy circuit",
+    "trigger": "stations on a circle, each with gas and a cost to reach the next, and you start with an empty tank",
+    "insight": "A tank on a circle. If a stretch runs dry, no start inside it works, so move start to the next station. If the whole circle is short, return -1.",
+    "metaphor": "The tank on a circle",
+    "trap": "The Unchecked Start Trap",
+    "trap_rule": "If the circle total is negative, return -1. A unique start only exists when the whole circle has enough gas.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-45"
+    ],
+    "pattern": "Greedy jump range",
+    "trigger": "each index names a jump length, the end is always reachable, and you want the fewest jumps",
+    "insight": "A flood. The boxes you can reach with k jumps are one range. Count a jump when that range ends, and move the fence to the farthest landing.",
+    "metaphor": "The flood",
+    "trap": "The Every Index Trap",
+    "trap_rule": "One range is one jump. Count it when you finish the range, not at every index.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-55"
+    ],
+    "pattern": "Greedy farthest reach",
+    "trigger": "each index names a jump length, and you only need to know if the last index is reachable",
+    "insight": "A flood that stretches as far as any box you already stood on can jump. If you ever stand past that flood, you are stuck.",
+    "metaphor": "The flood",
+    "trap": "The Unreachable Trap",
+    "trap_rule": "If a box sits past reach, return false first. A later box must not stretch the flood for you.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-621"
+    ],
+    "pattern": "Greedy: idle-frame formula",
+    "trigger": "tasks labeled A–Z, and two of the same letter must be at least n slots apart",
+    "insight": "A calendar set by the busiest letter: (maxCount - 1) groups of n + 1 slots, plus the letters that tie. Then take the max with the number of tasks.",
+    "metaphor": "The calendar",
+    "trap": "The Task Count Trap",
+    "trap_rule": "If other letters fill every gap, there is no idle time. Return the larger of the frame and the number of tasks.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-763"
+    ],
+    "pattern": "Greedy: last-seen partition",
+    "trigger": "cut a string into as many parts as you can, and each letter may appear in at most one part",
+    "insight": "A fence at the last copy of every letter in the part. Stretch the fence as you walk, and cut only when you land on it.",
+    "metaphor": "The last-seen fence",
+    "trap": "The First Sight Trap",
+    "trap_rule": "A new letter does not close the part. Stretch the fence to the last copy of every letter already inside, then cut when you land on it.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-136"
+    ],
+    "pattern": "Bit XOR",
+    "trigger": "every value appears twice except one, and you must use linear time and constant extra space",
+    "insight": "A mix of bits. A pair flips the same bits twice and they cancel to 0. XOR every value; the single number is left.",
+    "metaphor": "The cancel mix",
+    "trap": "The OR Trap",
+    "trap_rule": "OR and AND do not cancel a pair. XOR is the mix that sends x then x back to 0.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-191"
+    ],
+    "pattern": "Bit counting",
+    "trigger": "return how many bits are set to 1 (the Hamming weight)",
+    "insight": "Lamps on a strip. Mixing n with n minus 1 drops the lowest lit lamp. Count the drops until the strip is dark.",
+    "metaphor": "The lamp strip",
+    "trap": "The Arithmetic Shift Trap",
+    "trap_rule": "An arithmetic shift keeps the sign bit. Drop 1-bits with n & (n - 1), or use an unsigned shift.",
+    "time": "O(k)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-268"
+    ],
+    "pattern": "Bit XOR",
+    "trigger": "n distinct numbers taken from 0..n, and exactly one value in that range is missing",
+    "insight": "A mix of bits. Pair each index with its value, and also mix n. Pairs cancel. The missing number is left.",
+    "metaphor": "The cancel mix",
+    "trap": "The Forgotten n Trap",
+    "trap_rule": "The range is 0 through n. Start the mix at n, or n itself can never appear.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-338"
+    ],
+    "pattern": "Bit dynamic programming",
+    "trigger": "an array of length n+1 where ans[i] is the number of 1 bits in i",
+    "insight": "A row of counts. Each i has one more 1 than i with its lowest 1 dropped, and that smaller count is already in the row.",
+    "metaphor": "The count row",
+    "trap": "The Length n Trap",
+    "trap_rule": "Allocate n + 1 slots. You need a count for every i from 0 through n.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-43"
+    ],
+    "pattern": "Digit array multiplication",
+    "trigger": "multiply two non-negative integers given as strings, without a big-integer type",
+    "insight": "A row of places. The product of digits at i and j writes ones at i+j+1 and carry at i+j. Then skip leading zeros.",
+    "metaphor": "The place row",
+    "trap": "The Ones Place Trap",
+    "trap_rule": "The ones digit of the product of i and j lands at i+j+1. The carry goes to i+j.",
+    "time": "O(mn)",
+    "space": "O(m + n)"
+  },
+  {
+    "slugs": [
+      "lc-50"
+    ],
+    "pattern": "Fast exponentiation",
+    "trigger": "implement myPow(x, n): raise x to the integer power n",
+    "insight": "Square the base and walk the exponent bits. On a 1-bit, multiply the result by the current base. Copy a negative exponent into a long before you negate.",
+    "metaphor": "The exponent bits",
+    "trap": "The MIN_VALUE Trap",
+    "trap_rule": "Copy n into a long first, then negate the long. The most negative int has no positive int partner.",
+    "time": "O(log |n|)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "mirror-number"
+    ],
+    "pattern": "Reverse half the digits",
+    "trigger": "is this integer a mirror: the same forwards and backwards. Negatives are not",
+    "insight": "Peel digits from the right onto a reversed half until it is at least as long as what remains. Reject a trailing zero at the start, except 0.",
+    "metaphor": "The two halves",
+    "trap": "The Trailing Zero Trap",
+    "trap_rule": "If x ends in 0 and x is not 0, return false at the start. A reverse would drop that zero.",
+    "time": "O(d)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "anagram-bundles"
+    ],
+    "pattern": "Hash map",
+    "trigger": "group strings that are anagrams of one another",
+    "insight": "A count key. Two words share a bundle only when every letter count matches, not when they merely share a set of letters.",
+    "metaphor": "The count key",
+    "trap": "The Letter Set Trap",
+    "trap_rule": "Counts matter. aab is two a and one b. abb is one a and two b. A set of letters would join them.",
+    "time": "O(n · k)",
+    "space": "O(n · k)"
+  },
+  {
+    "slugs": [
+      "lc-151"
+    ],
+    "pattern": "Reverse in place",
+    "trigger": "reverse the order of the words in a string, and collapse extra spaces",
+    "insight": "Flip the whole row, flip each word back so its letters are restored, then skip runs of spaces so empty words never appear.",
+    "metaphor": "The flip then restore",
+    "trap": "The One Space Trap",
+    "trap_rule": "Splitting on a single space keeps empty words from extra spaces. Skip runs of spaces, or split on one or more spaces after a trim.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-273"
+    ],
+    "pattern": "Digit grouping",
+    "trigger": "convert a non-negative integer into English words",
+    "insight": "Split the number into groups of three. Spell each non-zero group with one helper, and skip a group that is zero.",
+    "metaphor": "Groups of three",
+    "trap": "The Zero Group Trap",
+    "trap_rule": "If the three digits are 0, add nothing. Do not speak Zero Thousand.",
+    "time": "O(1)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-5"
+    ],
+    "pattern": "Expand around center",
+    "trigger": "return the longest palindromic substring. On a tie, the leftmost one",
+    "insight": "A palindrome grows from its centre: a letter, or the gap between two letters. Expand while the two sides match, and keep the longest leftmost run.",
+    "metaphor": "The growing centre",
+    "trap": "The Even Center Trap",
+    "trap_rule": "Also expand from the gap after each letter. Even palindromes sit on a gap, not on a letter.",
+    "time": "O(n²)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-8"
+    ],
+    "pattern": "String parsing",
+    "trigger": "parse a string into a 32-bit integer: spaces, an optional sign, then digits, then clamp",
+    "insight": "Skip leading spaces, read one sign, then read digits. Check overflow before multiplying, and stop at the first non-digit.",
+    "metaphor": "The careful parse",
+    "trap": "The After Multiply Trap",
+    "trap_rule": "Compare result to the 32-bit ceiling divided by 10 before multiplying. Digit 8 or 9 at that edge also clamps.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-104"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "a binary tree, and you need to find its maximum depth (the longest path from root to leaf)",
+    "insight": "Each node asks its left and right branches for their depth. It takes the deeper one, adds 1 for itself, and reports that up.",
+    "metaphor": "Reports climbing the tree",
+    "trap": "The Count Trap",
+    "trap_rule": "Depth counts nodes along the path from root down to the leaf, not edges. A single root node has depth 1, never 0.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-100"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "two binary trees, and you must say whether they are identical in shape and in every value",
+    "insight": "Two walkers make the same turns in both trees. Every pair of spots reports yes or no: both empty is yes, one empty is no, different values is no. One no climbs straight to the top.",
+    "metaphor": "Two walkers, one report per pair",
+    "trap": "The Empty Spot Trap",
+    "trap_rule": "Check for empty spots before reading any value: both null is a match, exactly one null is a difference. Only then compare p.val with q.val, or the program crashes on null.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-101"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "whether a binary tree is symmetric around its center, or a mirror of itself",
+    "insight": "Two walkers start on opposite sides of the mirror line. At every step, outer pairs with outer and inner pairs with inner.",
+    "metaphor": "The mirror walk",
+    "trap": "The Same-Side Trap",
+    "trap_rule": "The left walker's outer turn matches the right walker's outer turn: left with right, and right with left.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-572"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "“is a subtree of another tree”, or contains a matching tree structure and values",
+    "insight": "Treat subRoot as a stamp template. Slide it over candidate spots in the main tree and test lockstep matches with two walkers.",
+    "metaphor": "The stamp template",
+    "trap": "The Delimiter Trap",
+    "trap_rule": "Wrap every node value with distinct delimiters like commas and null markers.",
+    "time": "O(m * n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-110"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "a binary tree, and you must say whether at every node the two sides are almost equally tall",
+    "insight": "Every node asks its two sides how tall they are, once. It reports its own height up, or tilted if the sides differ by more than 1. Tilted climbs straight to the top.",
+    "metaphor": "Height reports climbing the tree",
+    "trap": "The Measure Again Trap",
+    "trap_rule": "Never walk down a side again to measure it at every node: that is O(n²). One climb reports height and balance together, and each node only reads the two reports from below.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-543"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "a binary tree, and you are asked for the longest path between any two nodes, counted in lines",
+    "insight": "Every path has one highest node, its bend. Each node adds its two side heights for its own bend, keeps the longest seen, and reports only its height up.",
+    "metaphor": "Height reports climbing the tree",
+    "trap": "The Through The Top Trap",
+    "trap_rule": "The longest path does not have to pass through the top node. Check the bend at every node and keep the longest, not only left height plus right height at the root.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-112"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "a binary tree and a target number, and you must say whether some way from the top down to a leaf adds up to it",
+    "insight": "Carry one number down: what is still needed. Each node takes off its own value. Only a leaf may answer: yes if it is exactly what is still needed. A yes climbs straight up.",
+    "metaphor": "A number handed down, a report climbing up",
+    "trap": "The Early Stop Trap",
+    "trap_rule": "Only check the target at a leaf, where both children are null. Reaching the sum at a node that still has children is not a yes: the way must go on down to a leaf.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-226"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "a binary tree, and you must mirror it: at every node the left side and the right side change places",
+    "insight": "Each node asks both sides to flip themselves and holds the two reports. Only then does it swap its two links and report up.",
+    "metaphor": "Flip reports climbing the tree",
+    "trap": "The Lost Side Trap",
+    "trap_rule": "Hold both flipped sides in variables before changing any link. Writing root.right = invertTree(root.left) at once overwrites the only link to the other side, and it is lost.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-103"
+    ],
+    "pattern": "Tree BFS",
+    "trigger": "a tree, and the answer is wanted level by level, with every second row turned around",
+    "insight": "Keep the waiting line exactly as it is, left to right. Flip only the row: on a right-to-left level, each value goes on the left end of the row.",
+    "metaphor": "The waiting line and the flipping row",
+    "trap": "The Shuffled Line Trap",
+    "trap_rule": "Children always join the line left child first, then right child. Never change that order to turn a row around: flip only where the value goes in the row.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-199"
+    ],
+    "pattern": "Tree BFS",
+    "trigger": "a tree looked at from one side, and you are asked which node can be seen on each level",
+    "insight": "Take the tree level by level through a waiting line. Count the line before each row: the last of that row to leave the front is the one seen from the right.",
+    "metaphor": "The waiting line, seen from the right",
+    "trap": "The Right Turn Trap",
+    "trap_rule": "Never walk down by right children only. When the right side ends early, deeper nodes on the left side are seen. Take every level, and keep the last node of each.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-94"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "a tree whose nodes must be listed “left side, then the node, then right side” (in a search tree: from smallest to biggest)",
+    "insight": "A node waits on a pile while its left side is written. Go left until there is no more left to go, take the top of the pile, write it, then walk its right side the same way.",
+    "metaphor": "The waiting pile: left side, me, right side",
+    "trap": "The Early Pop Trap",
+    "trap_rule": "Never take a node off the pile right after putting it on. Keep pushing left children until there is no more left to go, and only then pop.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-230"
+    ],
+    "pattern": "Binary search tree",
+    "trigger": "a search tree (smaller to the left, bigger to the right) and you are asked for the kth smallest value",
+    "insight": "Smaller is always to the left. Go left onto a pile, take nodes off the top from smallest up, count down from k, and stop the moment the count reaches 0.",
+    "metaphor": "Smaller to the left, bigger to the right: the waiting pile",
+    "trap": "The Full List Trap",
+    "trap_rule": "Do not walk the whole tree into a list and then pick number k. Count down as nodes come off the pile, and return the moment k reaches 0.",
+    "time": "O(h + k)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-98"
+    ],
+    "pattern": "Binary search tree",
+    "trigger": "a tree, and you must decide whether it keeps the search-tree rule: smaller to the left, bigger to the right, for every node",
+    "insight": "Every node arrives with a range. A step left turns the node above into the ceiling; a step right turns it into the floor. The other limit is handed down unchanged.",
+    "metaphor": "Smaller to the left, bigger to the right: floor and ceiling",
+    "trap": "The Parent Only Trap",
+    "trap_rule": "Never compare a node only with its parent or its children. Hand a floor and a ceiling down from every node above, and check the node against that range.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-235"
+    ],
+    "pattern": "Binary search tree",
+    "trigger": "a search tree (smaller to the left, bigger to the right) and two of its values, and you are asked for the lowest node above both",
+    "insight": "Walk down from the top. While both values are smaller, go left; while both are bigger, go right. The first node where the ways split, or where one value is the node itself, is the answer.",
+    "metaphor": "Smaller to the left, bigger to the right: where the ways split",
+    "trap": "The Blind Search Trap",
+    "trap_rule": "Never search both sides of a node in a search tree. Compare the two values with the node: both smaller means left, both bigger means right, anything else means stop here.",
+    "time": "O(h)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-124"
+    ],
+    "pattern": "Tree DFS",
+    "trigger": "a tree of numbers, and you are asked for the best path between any two nodes, one that may turn anywhere",
+    "insight": "Every node hears an arm from each side, scores its own bend (left arm + itself + right arm), then reports up itself plus one arm only. The best bend is the answer.",
+    "metaphor": "Arms and the bend",
+    "trap": "The Fork Trap",
+    "trap_rule": "Score the bend with both arms, but report up itself plus the better arm only. A path that continues upwards cannot go down both sides.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-863"
+    ],
+    "pattern": "Tree BFS",
+    "trigger": "a tree, one marked node in it, and you are asked for every node a fixed number of lines away, in any direction",
+    "insight": "Give every node a note naming the node above it, so lines work both ways. Then let a wave spread from the target, one line per step. After k steps the wave stands on the answer.",
+    "metaphor": "Notes and the wave",
+    "trap": "The One-Way Trap",
+    "trap_rule": "A tree's lines only lead down. Record each node's parent first, so the wave can also go up; the seen list stops it flowing back.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-108"
+    ],
+    "pattern": "Divide and conquer",
+    "trigger": "a sorted row of numbers that must become a balanced search tree",
+    "insight": "Lift the middle box: it becomes the root. The piece left of it becomes the left side, the piece right of it the right side, each built the same way. A piece is only two marks, never a copy.",
+    "metaphor": "Lift the middle",
+    "trap": "The Big Sum Trap",
+    "trap_rule": "Find the middle as left + (right - left) / 2. Writing (left + right) / 2 adds two large marks first, and that sum can overflow an int.",
+    "time": "O(n)",
+    "space": "O(log n)"
+  },
+  {
+    "slugs": [
+      "lc-105"
+    ],
+    "pattern": "Divide and conquer",
+    "trigger": "two lists written from the same tree, one naming each node before its children and one naming it between them, and the tree must be rebuilt",
+    "insight": "Preorder is a roll call: the next name is always the top of the next piece. Its box in inorder cuts the row: left piece is its left side, right piece its right side. The cut box is in neither.",
+    "metaphor": "Roll call and the cut",
+    "trap": "The Wrong Cut Trap",
+    "trap_rule": "The left piece is left..mid - 1 and the right piece is mid + 1..right. The cut box itself belongs to neither, or nodes cross into the wrong side.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-297"
+    ],
+    "pattern": "Tree serialization",
+    "trigger": "a tree must be turned into text, and later the same tree must be rebuilt from that text alone",
+    "insight": "Write the tree on a tape in one fixed order: node, left side, right side, with a mark # for every empty spot. Read the tape back in the same order: a number makes a node, a mark closes a spot.",
+    "metaphor": "The tape with marks",
+    "trap": "The Missing Mark Trap",
+    "trap_rule": "Write a mark for every empty spot. Numbers alone fit many different trees; the marks are what keep the shape.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-1046"
+    ],
+    "pattern": "Heap / top K",
+    "trigger": "again and again, take the largest (or the two largest) of a group that keeps changing",
+    "insight": "A sorting pile always lifts its heaviest stone to the top. Take the top twice, smash, drop what is left back in. Nothing is ever sorted again.",
+    "metaphor": "The sorting pile",
+    "trap": "The Upside-Down Trap",
+    "trap_rule": "Java's ready-made PriorityQueue keeps the smallest on top. Pass Comparator.reverseOrder() so the heaviest stone comes out first.",
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-215"
+    ],
+    "pattern": "Heap / top K",
+    "trigger": "“the kth largest” (or the k largest) in a group that is in no order",
+    "insight": "A sorting pile with only k seats, smallest on top. Every number drops in; when there is one too many, the top is thrown out. At the end the top is the kth largest.",
+    "metaphor": "The sorting pile",
+    "trap": "The Keep-Everything Trap",
+    "trap_rule": "A largest-on-top pile must hold all n numbers. Keep a smallest-on-top pile with only k seats: O(k) memory and O(n log k) time.",
+    "time": "O(n log k)",
+    "space": "O(k)"
+  },
+  {
+    "slugs": [
+      "lc-973"
+    ],
+    "pattern": "Heap / top K",
+    "trigger": "“the k closest” (or k smallest, k best) out of many, where the order of the answer does not matter",
+    "insight": "Tag each point with x·x + y·y. A sorting pile with only k seats keeps the closest so far, farthest on top. One too many: the top is thrown out.",
+    "metaphor": "The sorting pile",
+    "trap": "The Square Root Trap",
+    "trap_rule": "Do not call Math.sqrt. Compare the squared distance x*x + y*y: same order, whole numbers, no rounding errors.",
+    "time": "O(n log k)",
+    "space": "O(k)"
+  },
+  {
+    "slugs": [
+      "lc-23"
+    ],
+    "pattern": "Heap / top K",
+    "trigger": "several lists that are each already in order, to be joined into one ordered list",
+    "insight": "The next number is always one of the heads. Keep only the heads in a sorting pile, smallest on top: take the top, then drop in the number that came after it in its list.",
+    "metaphor": "The sorting pile",
+    "trap": "The Empty List Trap",
+    "trap_rule": "Never add a null head to the pile: the comparator would crash on it. Check head != null first, and node.next != null before adding the next one.",
+    "time": "O(N log k)",
+    "space": "O(k)"
+  },
+  {
+    "slugs": [
+      "lc-253"
+    ],
+    "pattern": "Heap / top K",
+    "trigger": "meetings (start and end times) and the question “how many rooms at the least?”",
+    "insight": "Take meetings by start time. A sorting pile holds each room's end time, earliest on top. If the top is not later than the start, reuse that room; else open a new one.",
+    "metaphor": "The sorting pile",
+    "trap": "The Back-to-Back Trap",
+    "trap_rule": "A room that frees at 5 can host a meeting that starts at 5. Test ends.peek() <= start, not < start.",
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-295"
+    ],
+    "pattern": "Heap / top K",
+    "trigger": "the median (the middle value) is asked again and again while numbers keep arriving",
+    "insight": "Two sorting piles face each other: the small half shows its biggest, the big half shows its smallest. Keep them level, and the median is at the tops.",
+    "metaphor": "The sorting pile",
+    "trap": "The Chopped Half Trap",
+    "trap_rule": "(small.peek() + big.peek()) / 2 is whole-number division and chops off the .5. Divide by 2.0 to return a double.",
+    "time": "O(log n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-48"
+    ],
+    "pattern": "Matrix",
+    "trigger": "rotate an n x n grid ninety degrees clockwise in place",
+    "insight": "Fold across the diagonal by swapping (r, c) with (c, r). Then flip each row horizontally left to right.",
+    "metaphor": "The fold and flip",
+    "trap": "The Double Swap Trap",
+    "trap_rule": "Start the column loop at r + 1 so each pair across the diagonal is swapped once.",
+    "time": "O(n²)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-54"
+    ],
+    "pattern": "Matrix",
+    "trigger": "read a grid in clockwise spiral order from outside to inside",
+    "insight": "Keep four boundary walls. Sweep each wall from corner to corner and shrink it inward immediately.",
+    "metaphor": "The shrinking fence",
+    "trap": "The Duplicate Sweep Trap",
+    "trap_rule": "Always check top <= bottom before the bottom walk, and left <= right before the left walk.",
+    "time": "O(m × n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-73"
+    ],
+    "pattern": "Matrix",
+    "trigger": "if an element is 0, set its entire row and column to 0 in place",
+    "insight": "Use the first row and column as marker bulletin boards. Scan inner cells and pin zeroes to headers.",
+    "metaphor": "The border bulletin board",
+    "trap": "The Cascade Trap",
+    "trap_rule": "Only record where the zeroes are on the first pass; set the zeroes on a separate second pass.",
+    "time": "O(m × n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-130"
+    ],
+    "pattern": "Boundary flood fill",
+    "trigger": "Capture all regions that are surrounded by 'X' by flipping them.",
+    "insight": "Any 'O' connected to the border cannot be surrounded. Flood inward from all border 'O' cells, marking them as safe. Then turn any remaining 'O' into 'X' and restore the safe ones.",
+    "metaphor": "The fortress moat and wall",
+    "trap": "The Border Flipping Trap",
+    "trap_rule": "Never flip an 'O' that touches the border or is connected to the border, because it has an escape path.",
+    "time": "O(M × N)",
+    "space": "O(M × N)"
+  },
+  {
+    "slugs": [
+      "lc-286"
+    ],
+    "pattern": "Multi-source BFS",
+    "trigger": "Fill each empty room with the distance to its nearest gate.",
+    "insight": "Put all gates into a queue at the same time. Expand outward in waves step by step: the first time a wave reaches an empty room is guaranteed to be its shortest distance.",
+    "metaphor": "The lantern glow from castle gates",
+    "trap": "The Room to Gate Search Trap",
+    "trap_rule": "Push all gates into the queue first and expand outward, rather than searching inward from every single empty room.",
+    "time": "O(M × N)",
+    "space": "O(M × N)"
+  },
+  {
+    "slugs": [
+      "lc-417"
+    ],
+    "pattern": "Multi-source BFS",
+    "trigger": "find all cells from which water can flow to both the Pacific and Atlantic oceans",
+    "insight": "Reverse the flow: instead of rolling water downhill from every mountain, climb uphill from the ocean shores. Cells that both the Pacific and Atlantic waves reach are the continental divide.",
+    "metaphor": "The twin tide uphill flood",
+    "trap": "The Downhill From All Cells Trap",
+    "trap_rule": "Flow uphill from ocean borders rather than searching downhill from every cell individually.",
+    "time": "O(M × N)",
+    "space": "O(M × N)"
+  },
+  {
+    "slugs": [
+      "lc-542"
+    ],
+    "pattern": "Multi-source BFS",
+    "trigger": "Find the distance of the nearest 0 for each cell in a binary matrix.",
+    "insight": "Start from all 0 cells simultaneously with distance 0. Radiate outward level by level: the first wave that enters an unvisited 1 cell gives its true shortest distance.",
+    "metaphor": "The water ripples from stone splashes",
+    "trap": "The Starting From Ones Trap",
+    "trap_rule": "Enqueue all 0 cells first and spread outward, rather than launching separate searches from every 1 cell.",
+    "time": "O(M × N)",
+    "space": "O(M × N)"
+  },
+  {
+    "slugs": [
+      "lc-547"
+    ],
+    "pattern": "Graph search",
+    "trigger": "Find the total number of connected provinces in a kingdom connectivity matrix.",
+    "insight": "Each city begins as its own province. Scan the upper triangle of the matrix: whenever two separate cities share a road, merge their territories and count down by one.",
+    "metaphor": "The kingdom territory maps",
+    "trap": "The Connection Counting Trap",
+    "trap_rule": "A province is an entire cluster of connected cities: two cities sharing a road merge into one province rather than forming separate provinces.",
+    "time": "O(N²)",
+    "space": "O(N)"
+  },
+  {
+    "slugs": [
+      "lc-133"
+    ],
+    "pattern": "Graph search",
+    "trigger": "produce a deep copy of a connected undirected graph",
+    "insight": "Create copies node by node. Maintain a map from original node to its copy: if an original is already in the map, return the existing clone immediately so cycles do not cause infinite loops.",
+    "metaphor": "The twin mirror blueprint studio",
+    "trap": "The Infinite Cycle Trap",
+    "trap_rule": "Register a node in the clone map before exploring its neighbors to avoid infinite loops on graph cycles.",
+    "time": "O(V + E)",
+    "space": "O(V)"
+  },
+  {
+    "slugs": [
+      "lc-210"
+    ],
+    "pattern": "Topological sort",
+    "trigger": "Find the order of courses to finish all courses given prerequisite pairs, or return an empty array if cycle exists.",
+    "insight": "Count incoming prerequisite blockers for each course. Enqueue courses with zero blockers. As each falls, decrement blockers for downstream courses and enqueue newly unblocked ones. Return empty on cycles.",
+    "metaphor": "The row of standing dominoes",
+    "trap": "The Partial Array Trap",
+    "trap_rule": "If a circular blocker stops some dominoes from falling, return an empty array rather than the incomplete order.",
+    "time": "O(V + E)",
+    "space": "O(V + E)"
+  },
+  {
+    "slugs": [
+      "lc-269"
+    ],
+    "pattern": "Topological sort",
+    "trigger": "Derive the order of characters in an alien language from a sorted list of words.",
+    "insight": "Compare adjacent words: the first differing letter tells us that character A comes before character B. Use Kahn's algorithm with blocker counts to peel off ready letters. If a longer word comes before its prefix, return empty string.",
+    "metaphor": "The ancient rune alphabet stones",
+    "trap": "The Prefix Violation Trap",
+    "trap_rule": "If a longer word comes before its own prefix (like 'abc' before 'ab'), the dictionary order is invalid: return an empty string.",
+    "time": "O(C)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-127"
+    ],
+    "pattern": "Breadth-first search",
+    "trigger": "Find the length of the shortest transformation sequence from a begin word to an end word.",
+    "insight": "Transform word by word. Mutate each character of the current word through the 26 alphabet letters and test presence in the word dictionary set. Level by level breadth-first search finds the shortest ladder.",
+    "metaphor": "The word morph stepping stones",
+    "trap": "The Linear Dictionary Scan Trap",
+    "trap_rule": "Mutate each character across 26 letters and look up in a hash set, rather than linearly comparing against every word in the dictionary.",
+    "time": "O(N × L²)",
+    "space": "O(N × L)"
+  },
+  {
+    "slugs": [
+      "lc-743"
+    ],
+    "pattern": "Shortest path",
+    "trigger": "minimum time for all nodes to receive a signal from a starting node",
+    "insight": "Use Dijkstra with a min-heap to always expand the earliest signal pulse next. Record shortest times in a map, skip stale heap entries, and return the maximum delay once all nodes are reached.",
+    "metaphor": "The relay beacon radio network",
+    "trap": "The Stale Heap Entry Trap",
+    "trap_rule": "Nodes can be added to the min-heap multiple times with shorter distances. When polling an entry, if the node is already finalized, skip it immediately.",
+    "time": "O((V + E) log V)",
+    "space": "O(V + E)"
+  },
+  {
+    "slugs": [
+      "lc-787"
+    ],
+    "pattern": "Shortest path",
+    "trigger": "find cheapest flight route from source to destination with at most k stops",
+    "insight": "Use Bellman-Ford relaxed over k + 1 rounds. In each round, read prices from a voucher snapshot clone of the previous round to ensure each round adds at most one flight hop.",
+    "metaphor": "The sky layover voucher routes",
+    "trap": "The Chained Flights Trap",
+    "trap_rule": "In each hop round, calculate candidate prices using a clone of the previous round. Using prices updated in the same round allows more stops than k.",
+    "time": "O(K × E)",
+    "space": "O(V)"
+  },
+  {
+    "slugs": [
+      "lc-78"
+    ],
+    "pattern": "Subsets",
+    "trigger": "“return all subsets” (the power set) of distinct numbers",
+    "insight": "A walker on a branching path with one bag: put an item in, write the bag down at every spot, walk on, then step back and take the item out.",
+    "metaphor": "The path of choices",
+    "trap": "The Empty Notebook Trap",
+    "trap_rule": "Write a copy of the bag, never the bag itself: out.add(new ArrayList<>(path)). The bag ends up empty, and so would every line.",
+    "time": "O(n · 2^n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-90"
+    ],
+    "pattern": "Subsets with duplicates",
+    "trigger": "“return all subsets” when the numbers may contain duplicates",
+    "insight": "Line the items up so twins stand together. The walker with the bag skips a fork only when it equals the fork just walked at the same spot.",
+    "metaphor": "The path of choices",
+    "trap": "The Twin Trap",
+    "trap_rule": "Skip a twin only among the forks of one spot: i > start, not i > 0. The first fork of a spot is always walked, or lists like [2,2] are lost.",
+    "time": "O(n · 2^n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-46"
+    ],
+    "pattern": "Permutations",
+    "trigger": "“all possible orderings” (permutations) of distinct numbers",
+    "insight": "A walker with a bag, and a tag on every item that is in it. At each spot, look along the whole shelf: any item without a tag can go in next. Step back, tag off.",
+    "metaphor": "The path of choices",
+    "trap": "The Left Behind Trap",
+    "trap_rule": "At every spot the loop starts at index 0, not at the current index. Any unused item may come next, or earlier items are left behind.",
+    "time": "O(n · n!)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-39"
+    ],
+    "pattern": "Backtracking",
+    "trigger": "“all unique combinations that sum to a target”, and a number may be used any number of times",
+    "insight": "A walker filling a bag to an exact weight. The forks begin at the item just taken, so it may go in again. Lightest first: at the first fork that is too heavy, stop looking.",
+    "metaphor": "The path of choices",
+    "trap": "The One Use Trap",
+    "trap_rule": "Walk on with i, not i + 1: the forks of the next spot begin at the item just taken, so it can be taken again.",
+    "time": "O(N^(target / min))",
+    "space": "O(target / min)"
+  },
+  {
+    "slugs": [
+      "lc-17"
+    ],
+    "pattern": "Backtracking",
+    "trigger": "map phone digits to all possible letter combinations",
+    "insight": "Each digit opens forks for its dial letters. Walk each letter, step to the next digit, and un-choose on return.",
+    "metaphor": "The phone dial path",
+    "trap": "The Empty Dial Trap",
+    "trap_rule": "Check for an empty input upfront and return an empty list, never a list holding an empty word.",
+    "time": "O(4^n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-22"
+    ],
+    "pattern": "Constrained backtracking",
+    "trigger": "generate all combinations of well-formed parentheses for n pairs",
+    "insight": "Open a bracket whenever open count is under n. Close a bracket only when close count is strictly below open count.",
+    "metaphor": "The balanced bracket trail",
+    "trap": "The Premature Close Trap",
+    "trap_rule": "Never place a close bracket unless the number of open brackets already placed is strictly greater.",
+    "time": "O(4^n / sqrt(n))",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-131"
+    ],
+    "pattern": "Backtracking",
+    "trigger": "split a string into all possible sets of palindromic substrings",
+    "insight": "Pick a split point whose prefix reads symmetrically. Put that slice in the bag, split the remainder, and un-choose when unwinding.",
+    "metaphor": "The symmetrical slicing path",
+    "trap": "The Shared Bag Trap",
+    "trap_rule": "Always create a shallow copy new ArrayList<>(path) when saving a partition to the notebook, instead of saving the shared reference.",
+    "time": "O(n · 2^n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-79"
+    ],
+    "pattern": "Grid search",
+    "trigger": "determine if a word exists in a grid of characters moving horizontally or vertically",
+    "insight": "Try starting from every matching cell. Step on adjacent letters, mark visited cells with '#', and un-choose on backtrack.",
+    "metaphor": "The stepping stone word trail",
+    "trap": "The Reused Cell Trap",
+    "trap_rule": "Mark visited cells with a temporary marker character like '#' so the same letter cell is never reused on a single path.",
+    "time": "O(m · n · 3^L)",
+    "space": "O(L)"
+  },
+  {
+    "slugs": [
+      "lc-51"
+    ],
+    "pattern": "N-Queens",
+    "trigger": "place n queens on an n x n chessboard so no two queens threaten each other",
+    "insight": "Place one queen per row. For each column, check whether column or diagonals are threatened before placing, and un-choose on backtrack.",
+    "metaphor": "The royal guard chessboard",
+    "trap": "The Negative Diagonal Trap",
+    "trap_rule": "Avoid negative indices when indexing diagonal arrays: add offset n - 1 to r - c, or compare coordinate differences directly.",
+    "time": "O(n!)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-70"
+    ],
+    "pattern": "1-D DP",
+    "trigger": "“how many different ways” to reach the top, taking 1 or 2 steps at a time",
+    "insight": "Stepping stones, one per step. The last hop onto a stone came from one stone back or two stones back, so its number is the sum of those two. Carry just those two numbers forward.",
+    "metaphor": "The stepping stones",
+    "trap": "The Echo Trap",
+    "trap_rule": "Plain recursion never writes an answer down, so the same step is asked again and again: O(2^n). Fill forward once, carrying two numbers: O(n).",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-198"
+    ],
+    "pattern": "1-D DP",
+    "trigger": "the largest total from a row of numbers, where two picked numbers may never be neighbours",
+    "insight": "Stepping stones, one per house. Walk past a house: a short hop, number unchanged. Rob it: a long hop from two stones back, plus its cash. Each stone keeps the larger.",
+    "metaphor": "The stepping stones",
+    "trap": "The Every-Other Trap",
+    "trap_rule": "The best plan is not always every other house. In 2, 1, 1, 2 it robs both ends and walks past two houses in a row. Compare both hops at every stone.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-213"
+    ],
+    "pattern": "1-D DP",
+    "trigger": "the largest total where two picked numbers may never be neighbours, and the numbers stand in a circle",
+    "insight": "The ring only forbids robbing both ends. Cut it open twice: one row of stones without the last house, one without the first. The larger result wins.",
+    "metaphor": "The stepping stones, on a ring",
+    "trap": "The Lone House Trap",
+    "trap_rule": "With a single house, both rows leave that house out and return 0. Check nums.length == 1 first and return nums[0].",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-91"
+    ],
+    "pattern": "1-D DP",
+    "trigger": "“how many ways” to split a string of digits into pieces, where each piece is one digit or two",
+    "insight": "Stepping stones between the digits. A short hop reads one digit (1 to 9), a long hop reads a pair (10 to 26). A stone's number is the sum of what its allowed hops bring.",
+    "metaphor": "The stepping stones",
+    "trap": "The Zero Trap",
+    "trap_rule": "A 0 alone is no letter: single digits must be 1 to 9. A 0 can only be read as the second digit of 10 or 20.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-139"
+    ],
+    "pattern": "1-D DP",
+    "trigger": "“can this string be cut into words from a list?”",
+    "insight": "A stepping stone at every cut. A stone is lit when one word hops onto it from a lit stone behind it. Stone 0 starts lit; the answer is the last stone.",
+    "metaphor": "The stepping stones",
+    "trap": "The Long List Trap",
+    "trap_rule": "Never ask the plain wordDict list: every question reads it word by word. Pour it into a HashSet first, so each question is one look.",
+    "time": "O(n³)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-300"
+    ],
+    "pattern": "Patience sorting",
+    "trigger": "“length of the longest strictly increasing subsequence” of an array",
+    "insight": "Deal the numbers as cards onto piles. Each card goes on the leftmost pile whose top is not smaller; a card bigger than every top starts a new pile. The pile count is the answer.",
+    "metaphor": "The pile tops",
+    "trap": "The Pile Tops Trap",
+    "trap_rule": "The tops are not the chain. A top may be a late, small card that replaced an older one. tails only gives the length: return size.",
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-152"
+    ],
+    "pattern": "Dynamic programming",
+    "trigger": "“largest product” of a run of neighbours, with negative numbers allowed",
+    "insight": "Each stone keeps two numbers for the runs ending there: high and low. A negative number flips them, so today's low can be tomorrow's high. Look only at the stone just behind.",
+    "metaphor": "The two-number stones",
+    "trap": "The Sign Flip Trap",
+    "trap_rule": "Do not keep only the maximum, as you would for sums. A negative number flips the smallest product into the biggest: track both high and low.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-416"
+    ],
+    "pattern": "0/1 Knapsack",
+    "trigger": "“split the numbers into two groups with equal sums” (or: can some of them add up to an exact total, each used once)",
+    "insight": "Stepping stones for the sums 0 to half the total. Each number is a hop that lights new stones from lit ones. Walk the stones backwards, so one number is never used twice.",
+    "metaphor": "The stepping stones",
+    "trap": "The Used Twice Trap",
+    "trap_rule": "Walking the sums forwards lets a stone just lit by x be hopped from again by the same x. Walk sum from target down to x, so each number is used once at most.",
+    "time": "O(n · target)",
+    "space": "O(target)"
+  },
+  {
+    "slugs": [
+      "lc-62"
+    ],
+    "pattern": "2-D DP",
+    "trigger": "count the different paths through a grid, moving only right or down",
+    "insight": "A table of small answers: each square holds the number of ways to reach it. A walker steps in only from above or from the left, so a square is those two added up. The corner holds the answer, and one rolling row is enough.",
+    "metaphor": "Counting the ways in",
+    "trap": "The Overflow Trap",
+    "trap_rule": "The shortcut formula multiplies 1 × 2 × … × (m + n − 2), which passes the int limit from 13 on. Add square by square instead, or multiply and divide one factor at a time.",
+    "time": "O(m · n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-221"
+    ],
+    "pattern": "2-D DP",
+    "trigger": "the largest square of 1s inside a grid of 0s and 1s",
+    "insight": "Each square holds the side of the biggest carpet whose bottom right corner lies on it. A hole holds 0. A tile holds its smallest neighbour (above, left, diagonal) plus 1. The answer is the best side times itself.",
+    "metaphor": "The carpet corner",
+    "trap": "The Side Trap",
+    "trap_rule": "The table holds side lengths, but the question asks for the area. Return best * best, not best.",
+    "time": "O(m · n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-72"
+    ],
+    "pattern": "2-D DP",
+    "trigger": "the fewest inserts, deletes and replaces to turn one word into another",
+    "insight": "A table of small answers: each square is the fewest edits to turn the first i letters into the first j. Letters match: copy the diagonal, for free. Letters differ: cheapest of diagonal (replace), above (delete), left (insert), plus 1.",
+    "metaphor": "The cheapest neighbour",
+    "trap": "The Free Match Trap",
+    "trap_rule": "A letter that already matches costs no edit. On a match copy the diagonal as it is, prev[j - 1], with no + 1.",
+    "time": "O(m · n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-647"
+    ],
+    "pattern": "Center expansion",
+    "trigger": "count (or find) the palindromes inside a string",
+    "insight": "Every palindrome has a middle. Drop a pebble on every letter and in every gap between letters, and let a ripple grow while the two letters it reaches are the same. Each time it grows, that is one more palindrome.",
+    "metaphor": "The pebble and the ripple",
+    "trap": "The Gap Trap",
+    "trap_rule": "A palindrome with an even number of letters has its middle in a gap. Expand from (center, center + 1) as well as from (center, center).",
+    "time": "O(n²)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-208"
+    ],
+    "pattern": "Trie",
+    "trigger": "implement a trie with insert, search, and startsWith methods",
+    "insight": "A Trie stores words as paths in a 26-way character tree where common prefixes share the same nodes. Step down child nodes character by character, marking the final node as terminal.",
+    "metaphor": "The branching alphabet trail",
+    "trap": "The Prefix Alias Trap",
+    "trap_rule": "In search, verify both that the node exists and that its terminal flag is true.",
+    "time": "O(L)",
+    "space": "O(total characters)"
+  },
+  {
+    "slugs": [
+      "lc-211"
+    ],
+    "pattern": "Trie",
+    "trigger": "add words and search with dot '.' wildcards matching any character",
+    "insight": "Store words in a 26-way prefix tree. When searching, follow character links directly, and branch recursively across every child when meeting a dot wildcard.",
+    "metaphor": "The branching alphabet trail",
+    "trap": "The Unguarded Dot Trap",
+    "trap_rule": "Check that child != null before launching the recursive call on a dot wildcard.",
+    "time": "O(L) regular, O(26^L) worst wildcard",
+    "space": "O(total characters)"
+  },
+  {
+    "slugs": [
+      "lc-212"
+    ],
+    "pattern": "Trie",
+    "trigger": "find all words from a dictionary that can be formed by sequentially adjacent grid letters",
+    "insight": "Insert all dictionary words into a prefix tree. As we explore the grid in four directions, walk down matching branches, pruning as soon as a prefix is missing.",
+    "metaphor": "The alphabet trail on stones",
+    "trap": "The Duplicate Harvest Trap",
+    "trap_rule": "Set next.word = null immediately after adding it to out to avoid duplicate entries.",
+    "time": "O(m · n · 4^L)",
+    "space": "O(N · L)"
+  },
+  {
+    "slugs": [
+      "lc-323"
+    ],
+    "pattern": "Union find",
+    "trigger": "find the number of connected components in an undirected graph given edges",
+    "insight": "Start with n isolated components where every node is its own root leader. For each edge, find both roots: if they differ, link one root to the other and decrease the component count.",
+    "metaphor": "The island bridges",
+    "trap": "The Raw Node Union Trap",
+    "trap_rule": "Always call find on both endpoints first: parent[find(u)] = find(v).",
+    "time": "O(E · α(V))",
+    "space": "O(V)"
+  },
+  {
+    "slugs": [
+      "lc-684"
+    ],
+    "pattern": "Union find",
+    "trigger": "find an edge in an undirected graph that creates a cycle and can be removed to leave a tree",
+    "insight": "A tree on n nodes has exactly n - 1 edges and no cycles. Add edges one by one into a disjoint set: the first edge connecting two nodes that already share the same root closes the cycle.",
+    "metaphor": "The island loop bridge",
+    "trap": "The One-Based Index Trap",
+    "trap_rule": "Allocate parent with edges.length + 1 since vertices are numbered 1 to n.",
+    "time": "O(n · α(n))",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-721"
+    ],
+    "pattern": "Union find",
+    "trigger": "merge accounts that share common email addresses and return sorted emails by user",
+    "insight": "Each account lists a name and emails belonging to one person. Union all emails in an account to the first email, then group all emails by their root leader and sort each group.",
+    "metaphor": "The email name tag chains",
+    "trap": "The Name Match Trap",
+    "trap_rule": "Only merge accounts that share at least one identical email address.",
+    "time": "O(N · K log(N · K))",
+    "space": "O(N · K)"
+  },
+  {
+    "slugs": [
+      "lc-706"
+    ],
+    "pattern": "Separate chaining",
+    "trigger": "design a hash map without using built-in hash table libraries",
+    "insight": "Map keys to bucket slots using modulo hashing. Within each bucket, chain entries in a list: scan the chain to update an existing key on put, or append at the head.",
+    "metaphor": "The labeled letter cubbies",
+    "trap": "The Duplicate Key Trap",
+    "trap_rule": "Scan the bucket chain first: if an entry with matching key exists, update its value.",
+    "time": "O(1)",
+    "space": "O(N + B)"
+  },
+  {
+    "slugs": [
+      "lc-380"
+    ],
+    "pattern": "Array with map index",
+    "trigger": "collection with insert, delete, and getRandom all running in average O(1) time",
+    "insight": "Store values in a dense list for O(1) random indexing, and track their list indices in a map. To delete in O(1) time without shifting, swap the target with the last element and pop the tail.",
+    "metaphor": "The swapping numbered chairs",
+    "trap": "The Premature Update Trap",
+    "trap_rule": "When removing an element, do not re-insert into the map if the last element is the target itself.",
+    "time": "O(1)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": [
+      "lc-362"
+    ],
+    "pattern": "Circular bucket counter",
+    "trigger": "record hits at timestamps and count total hits in the past 300 seconds",
+    "insight": "Maintain a 300-slot circular ring of buckets modulo 300. When a hit arrives, if the slot holds a stale timestamp from an older cycle, reset it to the new second with count 1; otherwise increment.",
+    "metaphor": "The rotating 300-second carousel",
+    "trap": "The Stale Bucket Trap",
+    "trap_rule": "Check seconds[slot] != timestamp: overwrite the timestamp and reset count to 1 if stale.",
+    "time": "O(1)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-535"
+    ],
+    "pattern": "Base62 encoding",
+    "trigger": "shorten a long URL to a short key and decode it back",
+    "insight": "Assign an auto-incrementing integer ID to each new long URL and convert it to a Base62 string. A hash map stores the key to URL mapping, allowing instant retrieval upon decoding.",
+    "metaphor": "The luggage claim ticket",
+    "trap": "The Hash Collision Trap",
+    "trap_rule": "Use an incremental counter to guarantee distinct short tokens for distinct URLs.",
+    "time": "O(1)",
+    "space": "O(N)"
+  },
+  {
+    "slugs": [
+      "lc-355"
+    ],
+    "pattern": "Heap / Hash map",
+    "trigger": "social feed design with posting, following, and top-10 recent news feed",
+    "insight": "Store tweets per user and track friendships with follow sets. To build the feed, gather tweets from the user and followed accounts, merging them with a max-heap to extract the top ten.",
+    "metaphor": "The broadcast newsroom wire",
+    "trap": "The Missing Author Trap",
+    "trap_rule": "Always add the user's own ID to the sources set so their feed includes their own tweets.",
+    "time": "O(F log(10 × F))",
+    "space": "O(T + U)"
+  },
+  {
+    "slugs": [
+      "lc-895"
+    ],
+    "pattern": "Frequency stack",
+    "trigger": "stack that pops the most frequent element, breaking ties by recency",
+    "insight": "Group elements into stacks indexed by frequency. Keep copies in each lower stack so pop removes only the top layer, updating the maximum frequency.",
+    "metaphor": "The apartment building floors",
+    "trap": "The Element Move Trap",
+    "trap_rule": "Keep copies across all lower frequency stacks so popping an element preserves its earlier appearances.",
+    "time": "O(1)",
+    "space": "O(N)"
+  },
+  {
+    "slugs": [
+      "lc-981"
+    ],
+    "pattern": "Binary search on time",
+    "trigger": "store key-value pairs with timestamps and retrieve value at timestamp or earlier",
+    "insight": "Since set timestamps arrive in increasing order, append each new timestamp to an array. On get, binary search for the largest timestamp at or before the query time.",
+    "metaphor": "The stamped historical ledger",
+    "trap": "The Exact Match Trap",
+    "trap_rule": "Do not search only for the exact timestamp: if an exact match does not exist, return the closest earlier entry.",
+    "time": "O(log N)",
+    "space": "O(N)"
   }
 ]

@@ -168,7 +168,7 @@ class Node {
         },
         "mistakes": [
             {
-                "name": "Wiring random on the first pass",
+                "name": "The Early Side Trap",
                 "wrong": "Setting `copy.random` while creating copies, when the target copy may not exist yet.",
                 "right": "Create every copy first. Wire next and random on a second pass through the map.",
             },
@@ -481,7 +481,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Not cutting before the reverse",
+                "name": "The Uncut Reverse Trap",
                 "wrong": "Reversing the second half while it is still linked to the first, so the weave walks into a cycle.",
                 "right": "Set `slow.next = null` before reversing. The two halves must be separate chains.",
             },
@@ -615,6 +615,69 @@ class Solution {
                 "when_to_use": "The version to write. Mention a bottom-up merge if they insist on O(1) extra space.",
                 "is_optimal": True,
             },
+            {
+                "name": "Bottom-up merge sort, no recursion",
+                "idea": "Do the same merging from the other end: treat the list as runs of one node, merge neighbouring runs into runs of two, then four, until one run covers the list.",
+                "steps": [
+                    "Count the nodes, and put a dummy node in front of the head so the list can be rebuilt each round.",
+                    "For a width of 1, then 2, then 4, and so on while the width is under the count, sweep the list once.",
+                    "In a sweep, cut off the next run of that width, cut off the run after it, merge the two, and attach the result to the tail built so far.",
+                    "Keep sweeping until the list runs out, then double the width and start the next sweep.",
+                    "When the width reaches the count the list is one sorted run, so return what follows the dummy node.",
+                ],
+                "code": """class Solution {
+    public ListNode sortList(ListNode head) {
+        int count = 0;
+        for (ListNode p = head; p != null; p = p.next) count++;
+        ListNode dummy = new ListNode(0);
+        dummy.next = head;
+        for (int width = 1; width < count; width *= 2) {
+            ListNode tail = dummy;
+            ListNode rest = dummy.next;
+            while (rest != null) {
+                ListNode left = rest;
+                ListNode right = cut(left, width);
+                rest = cut(right, width);
+                tail = mergeOnto(tail, left, right);
+            }
+        }
+        return dummy.next;
+    }
+
+    // Keeps the first width nodes of head and returns the head of what is left.
+    private ListNode cut(ListNode head, int width) {
+        if (head == null) return null;
+        for (int i = 1; i < width && head.next != null; i++) head = head.next;
+        ListNode rest = head.next;
+        head.next = null;
+        return rest;
+    }
+
+    private ListNode mergeOnto(ListNode tail, ListNode a, ListNode b) {
+        while (a != null && b != null) {
+            if (a.val <= b.val) {
+                tail.next = a;
+                a = a.next;
+            } else {
+                tail.next = b;
+                b = b.next;
+            }
+            tail = tail.next;
+        }
+        tail.next = a != null ? a : b;
+        while (tail.next != null) tail = tail.next;
+        return tail;
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "Each sweep touches all n nodes, and the width doubles, so there are log n sweeps.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the dummy node and a few pointers are kept; nothing calls itself, so there is no stack to pay for.",
+                "when_to_use": "When they rule out recursion, or ask for truly constant extra space and refuse to count the O(log n) stack. It is also how sorting works on data too large to hold at once: merge small runs, then merge the merged runs.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "head = [4,2,1,3]",
@@ -629,7 +692,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Not cutting at the middle",
+                "name": "The Uncut Split Trap",
                 "wrong": "Recursing on the whole list because `slow.next` is still linked.",
                 "right": "Set `slow.next = null` after taking `second`. A two-node list never shrinks if you skip the cut.",
             },
@@ -795,7 +858,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Matching on value",
+                "name": "The Value Twin Trap",
                 "wrong": "Returning the first node of B whose `val` appears in A.",
                 "right": "The join is the same node object. Values may repeat before the join.",
             },
@@ -922,7 +985,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "No dummy when dropping the head",
+                "name": "The Missing Engine Trap",
                 "wrong": "Starting trail at the head, so there is no node before the head when n equals the length.",
                 "right": "Start both at a dummy in front of the head. Then `dummy.next` is the new head.",
             },
@@ -1071,7 +1134,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Dropping the last carry",
+                "name": "The Forgotten Carry Trap",
                 "wrong": "Stopping when both lists end, even if carry is 1.",
                 "right": "The loop is `l1 != null || l2 != null || carry != 0`. [5] + [5] is [0,1].",
             },
@@ -1327,7 +1390,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Losing the first node",
+                "name": "The Lost First Car Trap",
                 "wrong": "Choosing the first head with a special case, and forgetting to keep a pointer to it.",
                 "right": "A dummy node holds the start. Return `dummy.next`.",
             },
@@ -1467,7 +1530,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Comparing into the reversed half too far",
+                "name": "The Over-Compare Trap",
                 "wrong": "Looping while front is not null, so after the first half you compare nodes against themselves in a mess of reversed links.",
                 "right": "Loop while `back != null`. The reversed half is the shorter or equal one.",
             },

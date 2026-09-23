@@ -52,6 +52,24 @@ in an interview), `is_optimal`.
 - `time_why` / `space_why` point at something concrete: "each letter enters the window once",
   not "linear scan".
 
+### Other algorithms that also solve it (optional, 0–2)
+
+An approach with `"is_alternative": True` is **not** a step on the way to the best answer. It is a
+different, named algorithm that also solves the problem, shown in its own section for breadth:
+line sweep, quickselect, union find, Morris traversal, monotonic stack, divide and conquer,
+bitmask enumeration, combinatorics, and so on.
+
+- They come **after** the best approach in the list, and never carry `is_optimal`.
+- Add one only when it is a genuinely different idea, not a tidier version of the same loop. If the
+  problem has no such algorithm, add none. Padding is worse than nothing.
+- `name` starts with the algorithm's usual name, so the reader learns to recognise it:
+  "Line sweep over start and end events", "Quickselect on the k-th position".
+- `when_to_use` is the point of the whole entry: say what this one buys you that the best approach
+  does not — a follow-up it answers directly, a constraint it handles, a structure it reuses.
+- It may be slower than the best approach. Say so honestly in its costs; it earns its place by
+  being a different tool, not a faster one.
+- The code is real Java and is run by the checker like any other approach.
+
 ### The walkthrough
 
 `input` (the example), `columns` (3–7 short headers), `rows` (3–9 rows, every cell a **string**),

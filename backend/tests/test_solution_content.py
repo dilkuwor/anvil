@@ -33,7 +33,9 @@ ARTICLE = re.compile(r"\b(a|an|the|its|their|this|that|these|each|every|both|any
 
 
 def cost(text: str) -> str:
-    return re.sub(r"\s+", "", text.replace("*", "×").replace("·", "×").lower())
+    """Compare what a cost SAYS, not how it is typed: O(M × N), O(m * n) and O(m·n) are one cost."""
+    text = text.replace("*", "×").replace("·", "×").replace("²", "^2").replace("³", "^3")
+    return re.sub(r"\s+", "", text.lower())
 
 
 
@@ -78,11 +80,18 @@ def test_solution_shape(spec):
     assert 40 <= len(spec["summary"]) <= 280 and sentences(spec["summary"]) <= 3
 
     approaches = spec["approaches"]
-    assert 2 <= len(approaches) <= 3, "the slow way, the best way, and at most one real alternative"
+    main = [item for item in approaches if not item.get("is_alternative")]
+    alternatives = [item for item in approaches if item.get("is_alternative")]
+    assert 2 <= len(main) <= 3, "the slow way, the best way, and at most one more on the way there"
+    assert len(alternatives) <= 2, "one or two other algorithms is plenty"
     assert [item["is_optimal"] for item in approaches].count(True) == 1
-    assert approaches[-1]["is_optimal"], "order approaches from the obvious way to the best one"
+    assert main[-1]["is_optimal"], "order the main approaches from the obvious way to the best one"
+    assert approaches[: len(main)] == main, "other algorithms come after the best one, never in the middle"
     assert len({item["name"] for item in approaches}) == len(approaches)
-    first, best = approaches[0], approaches[-1]
+    for item in alternatives:
+        assert not item["is_optimal"], "the best approach is the recommended one, not an alternative"
+        assert item["when_to_use"], "say when you would reach for this algorithm instead"
+    first, best = main[0], main[-1]
     assert (cost(first["time_complexity"]), cost(first["space_complexity"])) != (
         cost(best["time_complexity"]),
         cost(best["space_complexity"]),
@@ -140,5 +149,10 @@ def test_solution_agrees_with_its_visual_story(spec):
         pytest.skip("no Visual Story for this problem")
     assert set(story["slugs"]) <= set(spec["slugs"]), f"also serve the story's other slugs: {story['slugs']}"
     assert spec["mistakes"][0]["name"] == story["trap"], "lead with the trap the story teaches, by the same name"
-    best = spec["approaches"][-1]
-    assert best["time_complexity"] == story["time"], f"story says {story['time']}"
+    # The last MAIN approach is the recommended one; "another way" entries sit after it.
+    best = [item for item in spec["approaches"] if not item.get("is_alternative")][-1]
+    told = {cost(item["time_complexity"]) for item in spec["approaches"]}
+    assert cost(story["time"]) in told, (
+        f"the Visual Story teaches {story['time']}, which is not the cost of any approach in the Solution "
+        f"(best is {best['time_complexity']})"
+    )

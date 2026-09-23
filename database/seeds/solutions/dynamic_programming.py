@@ -67,6 +67,45 @@ SOLUTIONS: list[dict] = [
                 "space_why": "Only two integer state variables are maintained in memory.",
                 "when_to_use": "The optimal interview approach calculating Fibonacci counts with constant extra space.",
             },
+            {
+                "name": "Fast doubling of the Fibonacci pair",
+                "idea": "The answer is a Fibonacci number, and two doubling rules jump from the pair at k straight to the pair at 2k, so n can be halved instead of walked.",
+                "steps": [
+                    "The ways to climb n stairs equal the Fibonacci number at n + 1, counting from F(0) = 0 and F(1) = 1.",
+                    "Write a helper that hands back the pair `{F(k), F(k + 1)}` for a given k, and answers `{0, 1}` when k is 0.",
+                    "Otherwise ask the helper for k / 2, call its two answers a and b, and work out `c = a * (2b - a)` and `d = a * a + b * b`.",
+                    "Those two are `F(2k)` and `F(2k + 1)`, so return `{c, d}` when k is even and `{d, c + d}` when k is odd.",
+                    "Read the answer off the first slot of the pair for n + 1.",
+                ],
+                "code": """class Solution {
+    public int climbStairs(int n) {
+        return (int) fibPair(n + 1)[0];
+    }
+
+    // Returns {F(k), F(k + 1)} with F(0) = 0 and F(1) = 1.
+    private long[] fibPair(int k) {
+        if (k == 0) {
+            return new long[] {0, 1};
+        }
+        long[] half = fibPair(k / 2);
+        long a = half[0];
+        long b = half[1];
+        long c = a * (2 * b - a);
+        long d = a * a + b * b;
+        if (k % 2 == 0) {
+            return new long[] {c, d};
+        }
+        return new long[] {d, c + d};
+    }
+}""",
+                "time_complexity": "O(log n)",
+                "time_why": "Each round halves n, so there are about log n rounds of a few multiplications.",
+                "space_complexity": "O(log n)",
+                "space_why": "The helper calls itself about log n times deep, holding one pair per level.",
+                "when_to_use": "When n is far too big to step through, such as a billion, usually with the answer wanted modulo something. It is the same jump as raising the 2 by 2 Fibonacci matrix to a power, written without the matrix.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "n = 4",
@@ -81,7 +120,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Uncached recursive branching",
+                "name": "The Echo Trap",
                 "wrong": "Calling `climbStairs(n - 1) + climbStairs(n - 2)` without saving results, exploding to O(2^n) time.",
                 "right": "Accumulate values forward with loops or rolling variables in O(n) time.",
             },
@@ -211,7 +250,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Odd versus even index trap",
+                "name": "The Every-Other Trap",
                 "wrong": "Assuming the best plan is either all even-indexed houses or all odd-indexed houses.",
                 "right": "Optimal plans can skip two consecutive houses, such as [2, 1, 1, 2] where robbing both 2s yields 4.",
             },
@@ -356,7 +395,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Missing single-house base condition",
+                "name": "The Lone House Trap",
                 "wrong": "Calling `robRange(nums, 0, -1)` when `nums.length == 1`, returning 0 instead of nums[0].",
                 "right": "Check `if (nums.length == 1) return nums[0]` before setting up range boundaries.",
             },
@@ -478,6 +517,58 @@ class Solution {
                 "space_why": "The table allocates an array of size amount + 1.",
                 "when_to_use": "The standard interview answer: simple array lookups with no recursion overhead.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Breadth-first search over amounts",
+                "idea": "Treat each amount as a place and each coin as one step away from it, so the fewest coins is the shortest path from 0 to the target.",
+                "steps": [
+                    "Answer 0 straight away when the amount is 0.",
+                    "Put 0 in a queue, which hands places back in the order they arrived, and mark 0 as seen.",
+                    "Take the whole current layer off the queue at once, counting one more coin for the layer after it.",
+                    "From each place, add every coin that still fits. Landing exactly on the amount means the current layer number is the answer.",
+                    "Push each new place onto the queue and mark it seen, so it is never opened twice. An empty queue means the amount cannot be made.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int coinChange(int[] coins, int amount) {
+        if (amount == 0) {
+            return 0;
+        }
+        boolean[] seen = new boolean[amount + 1];
+        Deque<Integer> queue = new ArrayDeque<>();
+        queue.add(0);
+        seen[0] = true;
+        int used = 0;
+        while (!queue.isEmpty()) {
+            used++;
+            for (int layer = queue.size(); layer > 0; layer--) {
+                int at = queue.poll();
+                for (int coin : coins) {
+                    if (coin > amount - at) {
+                        continue;
+                    }
+                    int next = at + coin;
+                    if (next == amount) {
+                        return used;
+                    }
+                    if (!seen[next]) {
+                        seen[next] = true;
+                        queue.add(next);
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+}""",
+                "time_complexity": "O(amount × coins)",
+                "time_why": "Each amount enters the queue at most once, and each one tries every coin.",
+                "space_complexity": "O(amount)",
+                "space_why": "The seen flags and the queue each hold at most one entry per amount.",
+                "when_to_use": "When the question is really about the fewest moves: reach a number by doubling or subtracting, or the shortest word ladder. Seeing it as a shortest path lets you stop the moment you touch the target.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -649,7 +740,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Assuming tails represents the actual subsequence",
+                "name": "The Pile Tops Trap",
                 "wrong": "Reading the tails array directly to print the actual elements of the subsequence.",
                 "right": "The tails array only records minimal ending values for each length, not the chronological subsequence.",
             },
@@ -791,7 +882,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using wordDict list directly",
+                "name": "The Long List Trap",
                 "wrong": "Calling `wordDict.contains(sub)` on the raw List, causing linear scans for every lookup.",
                 "right": "Convert `wordDict` into a `HashSet` upfront for O(1) average lookup time.",
             },
@@ -926,6 +1017,42 @@ class Solution {
                 "space_why": "A single boolean array of size target + 1 tracks reachability.",
                 "when_to_use": "The optimal interview solution that compresses the knapsack state into a single backwards array.",
             },
+            {
+                "name": "Bitset of reachable sums",
+                "idea": "Hold every reachable sum as the bits of one huge number, so adding a value to all of them at once is a single shift and merge.",
+                "steps": [
+                    "Add up the numbers and answer false when the total is odd; otherwise the target is half the total.",
+                    "Start with the number 1, meaning bit 0 is on, because the sum 0 is reachable by choosing nothing.",
+                    "For each value x, shift the number left by x places. Every bit that was on moves up by x, which is that same sum with x now added.",
+                    "Merge the shifted copy back into the number with `or`, so the old sums and the new ones are both marked.",
+                    "When every value has been folded in, answer whether the bit at the target position is on.",
+                ],
+                "code": """import java.math.BigInteger;
+
+class Solution {
+    public boolean canPartition(int[] nums) {
+        int total = 0;
+        for (int x : nums) {
+            total += x;
+        }
+        if (total % 2 != 0) {
+            return false;
+        }
+        BigInteger reachable = BigInteger.ONE;
+        for (int x : nums) {
+            reachable = reachable.or(reachable.shiftLeft(x));
+        }
+        return reachable.testBit(total / 2);
+    }
+}""",
+                "time_complexity": "O(n × total / 64)",
+                "time_why": "Each value shifts and merges a number of about total bits, and the machine moves 64 bits per instruction.",
+                "space_complexity": "O(total / 64)",
+                "space_why": "One big number carries a single bit per sum up to the total.",
+                "when_to_use": "When the flag array is the slow part and you want the same work to run about 64 times faster, or when you want the whole answer in four lines. Java offers `BigInteger` and `java.util.BitSet`; C++ has `std::bitset`.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [1, 5, 11, 5]",
@@ -940,7 +1067,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Walking the sum loop forward",
+                "name": "The Used Twice Trap",
                 "wrong": "Looping `sum` from `value` up to `target`, which allows the same number to be reused multiple times.",
                 "right": "Walk `sum` backwards from `target` down to `value` so each number is used at most once.",
             },
@@ -1228,7 +1355,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Adding cost on matching characters",
+                "name": "The Free Match Trap",
                 "wrong": "Adding 1 to the operation count when `word1.charAt(i - 1) == word2.charAt(j - 1)`.",
                 "right": "Matching characters require zero operations: directly copy the diagonal cost `prev[j - 1]`.",
             },
@@ -1348,6 +1475,35 @@ class Solution {
                 "space_why": "Only one 1D array of length n is maintained in memory.",
                 "when_to_use": "The optimal interview approach that reduces space to O(min(m, n)).",
             },
+            {
+                "name": "Combinatorics: choose which moves go down",
+                "idea": "Every path is the same list of moves in a different order, so counting paths is counting which of the moves are the down ones.",
+                "steps": [
+                    "Any route from corner to corner makes exactly `m - 1` down moves and `n - 1` right moves, for `m + n - 2` moves in all.",
+                    "A route is fixed once you say which of those moves go down, so the count is the binomial coefficient `C(m + n - 2, m - 1)`.",
+                    "Choose the smaller of `m - 1` and `n - 1` as the number being picked, which makes the loop as short as possible.",
+                    "Build the value one factor at a time: multiply by the next term from the top, then divide by the step number.",
+                    "Every one of those divisions comes out whole, so the running value stays near the answer. Keep it in a `long` while multiplying.",
+                ],
+                "code": """class Solution {
+    public int uniquePaths(int m, int n) {
+        int moves = m + n - 2;
+        int down = Math.min(m - 1, n - 1);
+        long ways = 1;
+        for (int step = 1; step <= down; step++) {
+            ways = ways * (moves - down + step) / step;
+        }
+        return (int) ways;
+    }
+}""",
+                "time_complexity": "O(min(m, n))",
+                "time_why": "One multiply and one divide per chosen move, and there are min(m, n) - 1 of them.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the running product and the loop counter are kept.",
+                "when_to_use": "When the grid is enormous and only the count is wanted: with no table, a grid of a million by a million costs the same as a small one. It breaks the moment a cell is blocked, which is why the table stays the expected answer.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "m = 3, n = 3",
@@ -1361,7 +1517,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Integer overflow in combination formula",
+                "name": "The Overflow Trap",
                 "wrong": "Calculating `(m + n - 2)! / ((m - 1)! * (n - 1)!)` using standard factorial multiplications, overflowing 32-bit integers.",
                 "right": "Use dynamic programming additions or multiply and divide factors incrementally to avoid integer overflow.",
             },
@@ -1493,6 +1649,53 @@ class Solution {
                 "space_why": "Only pointer variables and an integer counter are used.",
                 "when_to_use": "The optimal interview approach that avoids table allocations and checks palindromes in-place.",
             },
+            {
+                "name": "Manacher's algorithm",
+                "idea": "One left-to-right pass works out how far the palindrome at every center reaches, reusing what the mirror center on the left already proved.",
+                "steps": [
+                    "Put a `#` between every pair of letters and at both ends, so odd and even palindromes alike sit on one center.",
+                    "Walk the padded string from left to right, recording how far the palindrome at each center reaches.",
+                    "Remember the palindrome that reaches furthest right so far. If the current center sits inside it, its mirror on the left gives a reach already safe to assume.",
+                    "Push outward only from that safe reach, so no pair of letters is compared twice.",
+                    "A center whose reach is r covers `(r + 1) / 2` palindromes of the original string, so add that in as you go.",
+                ],
+                "code": """class Solution {
+    public int countSubstrings(String s) {
+        StringBuilder padded = new StringBuilder("#");
+        for (char c : s.toCharArray()) {
+            padded.append(c).append('#');
+        }
+        char[] t = padded.toString().toCharArray();
+        int n = t.length;
+        int[] reach = new int[n];
+        int center = 0;
+        int right = 0;
+        int total = 0;
+        for (int i = 0; i < n; i++) {
+            if (i < right) {
+                reach[i] = Math.min(right - i, reach[2 * center - i]);
+            }
+            while (i - reach[i] - 1 >= 0 && i + reach[i] + 1 < n
+                    && t[i - reach[i] - 1] == t[i + reach[i] + 1]) {
+                reach[i]++;
+            }
+            if (i + reach[i] > right) {
+                center = i;
+                right = i + reach[i];
+            }
+            total += (reach[i] + 1) / 2;
+        }
+        return total;
+    }
+}""",
+                "time_complexity": "O(n)",
+                "time_why": "The right edge of the furthest palindrome only ever moves right, so the outward pushing costs n steps in total.",
+                "space_complexity": "O(n)",
+                "space_why": "The padded string and the reach array are each about twice the length of the input.",
+                "when_to_use": "When the string is long enough that O(n²) is too slow, or when the reach of every center is wanted for later questions. Naming it is the right answer to 'can this be linear', and few interviews ask for more than that.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "s = \"aaa\"",
@@ -1508,7 +1711,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Missing even-length centers",
+                "name": "The Gap Trap",
                 "wrong": "Only expanding around single characters `(center, center)`, missing palindromes like \"aa\".",
                 "right": "Palindromes can have even length, so expand around `(center, center + 1)` as well.",
             },
@@ -1656,7 +1859,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Treating '0' as valid single digit",
+                "name": "The Zero Trap",
                 "wrong": "Allowing '0' to map to a letter or decode on its own.",
                 "right": "Digits must be 1 to 9 for a single letter; '0' can only appear as the second digit in '10' or '20'.",
             },
@@ -1790,7 +1993,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Forgetting negative times negative is positive",
+                "name": "The Sign Flip Trap",
                 "wrong": "Only tracking the maximum product like in Kadane algorithm for sum.",
                 "right": "Track both the minimum and maximum product because a negative number turns a negative minimum into a large maximum.",
             },
@@ -1935,7 +2138,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Returning side length instead of area",
+                "name": "The Side Trap",
                 "wrong": "Returning `best` directly as the answer.",
                 "right": "The problem asks for the area of the square, so return `best * best`.",
             },

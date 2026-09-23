@@ -93,7 +93,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "One search, then a linear walk",
+                "name": "The Linear-Walk Trap",
                 "wrong": "Binary search to any 8, then walk left and right to the ends of the run.",
                 "right": "A long run of the target makes that walk O(n). Use a second bound search.",
             },
@@ -202,6 +202,36 @@ SOLUTIONS: list[dict] = [
                 "when_to_use": "The version to write. One pass, no extra array.",
                 "is_optimal": True,
             },
+            {
+                "name": "Kadane on the day-to-day changes",
+                "idea": "Read the prices as the change from one day to the next: any trade earns the sum of the changes in between, so the best trade is the best run of changes.",
+                "steps": [
+                    "Look at each day as its change from the day before: `prices[i] - prices[i-1]`.",
+                    "Buying on day i and selling on day j earns the sum of the changes between them.",
+                    "Walk the changes with a running sum, and drop that sum back to 0 whenever it goes below 0.",
+                    "Keep the largest running sum seen. It stays 0 when every change is a fall.",
+                ],
+                "code": """class Solution {
+    public int maxProfit(int[] prices) {
+        int best = 0;
+        int run = 0;
+        for (int i = 1; i < prices.length; i++) {
+            int change = prices[i] - prices[i - 1];
+            run = Math.max(0, run + change);
+            best = Math.max(best, run);
+        }
+        return best;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "One pass over the days, working out each change as you go.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the running sum and the best are stored. The changes are never written down.",
+                "when_to_use": "When you want one idea to cover two problems: seen as changes, this is Maximum Subarray. It is also the reading to reach for when the question hands you the daily moves rather than the prices.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "prices = [7,1,5,3,6,4]",
@@ -218,7 +248,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Selling on the buy day",
+                "name": "The Same-Day Trap",
                 "wrong": "Updating cheapest before computing today's profit, so a day sells against itself.",
                 "right": "Compute profit first, then lower cheapest. A day cannot be both buy and sell.",
             },
@@ -328,6 +358,38 @@ class Solution {
                 "when_to_use": "The version they want if they ask for constant space. Write this.",
                 "is_optimal": True,
             },
+            {
+                "name": "Count the ones in each bit",
+                "idea": "Build the answer one bit at a time: a value that fills more than half the row has each of its bits set in more than half the values.",
+                "steps": [
+                    "Take the bit positions one at a time, 32 in all.",
+                    "For one position, count how many values have a 1 there.",
+                    "If that count is more than half the length, the majority has a 1 there, so set that bit in the answer.",
+                    "After all 32 positions the answer is built. Negative values need no special care: the sign bit is position 31 like any other.",
+                ],
+                "code": """class Solution {
+    public int majorityElement(int[] nums) {
+        int answer = 0;
+        int half = nums.length / 2;
+        for (int bit = 0; bit < 32; bit++) {
+            int ones = 0;
+            for (int value : nums) {
+                if (((value >> bit) & 1) == 1) ones++;
+            }
+            if (ones > half) answer |= 1 << bit;
+        }
+        return answer;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Thirty-two passes over the row, one per bit position, so the work is 32n.",
+                "space_complexity": "O(1)",
+                "space_why": "One counter and the answer being built up.",
+                "when_to_use": "When the counting rule changes. If every value appears three times except one, the candidate-and-count trick breaks, but counting the ones in each bit position and taking each count modulo 3 still spells out the odd value.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [2,2,1,1,1,2,2]",
@@ -345,7 +407,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Sorting and picking the middle",
+                "name": "The Middle-Sort Trap",
                 "wrong": "Sorting, then returning nums[n/2].",
                 "right": "That is correct, but O(n log n). Voting is linear and uses no extra array.",
             },
@@ -460,6 +522,44 @@ class Solution {
                 "when_to_use": "The version to write when they want in-place.",
                 "is_optimal": True,
             },
+            {
+                "name": "Cyclic replacements",
+                "idea": "Send each value straight to its final slot, catching whatever was there, and go round in a ring until you are back where the ring started.",
+                "steps": [
+                    "Set k to k modulo the length.",
+                    "Start at index 0 and pick up its value. Put it down at slot `(0 + k) % n`, picking up whatever was parked there.",
+                    "Carry on from that slot the same way, until you come back to the slot you started from.",
+                    "Count how many values you have placed. While that is under n, start a fresh ring at the next index and repeat.",
+                ],
+                "code": """class Solution {
+    public int[] rotate(int[] nums, int k) {
+        int n = nums.length;
+        k %= n;
+        int placed = 0;
+        for (int start = 0; placed < n; start++) {
+            int at = start;
+            int carry = nums[start];
+            do {
+                int next = (at + k) % n;
+                int displaced = nums[next];
+                nums[next] = carry;
+                carry = displaced;
+                at = next;
+                placed++;
+            } while (at != start);
+        }
+        return nums;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Every value is picked up once and put down once, however many rings there are.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the carried value and the count of placed values are extra.",
+                "when_to_use": "When writing a value is the expensive part, such as rows in a file or records on disk. This writes each value exactly once, while the three reverses write most of them twice.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [1,2,3,4,5,6,7], k = 3",
@@ -474,7 +574,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Forgetting k modulo n",
+                "name": "The Modulo Trap",
                 "wrong": "Reversing the first k items when k is bigger than n.",
                 "right": "Set `k %= n` first. Rotating n steps is the identity. Also k = 0 after that.",
             },
@@ -603,7 +703,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using division",
+                "name": "The Division Trap",
                 "wrong": "Product of the whole array, then divide by nums[i].",
                 "right": "A zero makes the total 0 and division crash. Two zeros make every slot 0. Do not divide.",
             },
@@ -764,7 +864,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using > instead of >= on the pivot walk",
+                "name": "The Strict-Rise Trap",
                 "wrong": "Stopping only when nums[i] > nums[i+1], so equal neighbours look like a rise.",
                 "right": "Walk while `nums[i] >= nums[i+1]`. A plateau is still a decreasing tail.",
             },
@@ -882,6 +982,40 @@ class Solution {
                 "when_to_use": "The version they want. Linear time, no extra set.",
                 "is_optimal": True,
             },
+            {
+                "name": "Mark by sign",
+                "idea": "Leave every value where it is and use the sign of slot v-1 as a tick meaning the number v was seen.",
+                "steps": [
+                    "First pass: replace every value that is not in 1..n with n+1, so nothing out of range can be mistaken for a tick.",
+                    "Second pass: read each slot's size without its sign, and if that size v is in 1..n, make the value in slot v-1 negative.",
+                    "A negative value in a slot is the tick for that slot's number, whatever value happens to be parked there.",
+                    "Third pass: the first slot still holding a positive value is the missing number. If none is positive, the answer is n+1.",
+                ],
+                "code": """class Solution {
+    public int firstMissingPositive(int[] nums) {
+        int n = nums.length;
+        for (int i = 0; i < n; i++) {
+            if (nums[i] <= 0 || nums[i] > n) nums[i] = n + 1;
+        }
+        for (int i = 0; i < n; i++) {
+            int seen = Math.abs(nums[i]);
+            if (seen <= n && nums[seen - 1] > 0) nums[seen - 1] = -nums[seen - 1];
+        }
+        for (int i = 0; i < n; i++) {
+            if (nums[i] > 0) return i + 1;
+        }
+        return n + 1;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Three passes straight through the row, with no swapping and no repeated visits.",
+                "space_complexity": "O(1)",
+                "space_why": "The ticks live in the sign bits of the input. Nothing else is stored.",
+                "when_to_use": "When the values must stay in the order they came in, since swapping rearranges the input. The same sign trick is what solves 'find all numbers missing from 1..n' and 'find all duplicates' on one array.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [3,4,-1,1]",
@@ -898,7 +1032,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using if instead of while",
+                "name": "The Once-Swap Trap",
                 "wrong": "One swap per index, then moving on, leaving the new value at i unplaced.",
                 "right": "Keep swapping at i until the value there belongs or is out of range.",
             },
@@ -1010,6 +1144,50 @@ class Solution {
                 "when_to_use": "The version to write. One pass.",
                 "is_optimal": True,
             },
+            {
+                "name": "Divide and conquer on the middle",
+                "idea": "Cut the row in half. The best run lies wholly in the left half, wholly in the right half, or across the middle, and the crossing one is easy to measure.",
+                "steps": [
+                    "A range of one value answers itself: that value.",
+                    "Otherwise cut the range at the middle and solve the left half and the right half the same way.",
+                    "For the crossing run, walk left from the middle adding values and keep the largest total reached.",
+                    "Do the same walking right from just past the middle, then add the two totals together.",
+                    "The answer for the range is the largest of those three numbers.",
+                ],
+                "code": """class Solution {
+    public int maxSubArray(int[] nums) {
+        return best(nums, 0, nums.length - 1);
+    }
+
+    private int best(int[] nums, int lo, int hi) {
+        if (lo == hi) return nums[lo];
+        int mid = lo + (hi - lo) / 2;
+        int left = best(nums, lo, mid);
+        int right = best(nums, mid + 1, hi);
+        int leftReach = Integer.MIN_VALUE;
+        int sum = 0;
+        for (int i = mid; i >= lo; i--) {
+            sum += nums[i];
+            leftReach = Math.max(leftReach, sum);
+        }
+        int rightReach = Integer.MIN_VALUE;
+        sum = 0;
+        for (int i = mid + 1; i <= hi; i++) {
+            sum += nums[i];
+            rightReach = Math.max(rightReach, sum);
+        }
+        return Math.max(Math.max(left, right), leftReach + rightReach);
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "The row is cut in half about log n times, and every level walks all n values for its crossing runs.",
+                "space_complexity": "O(log n)",
+                "space_why": "The calls stack about log n deep, each holding a few sums.",
+                "when_to_use": "The classic follow-up when the one-pass version is banned. It is also the way to answer 'best run inside any range you ask for': keep these three sums plus the total in each node of a segment tree and a query costs O(log n).",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
@@ -1029,7 +1207,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Starting best at 0",
+                "name": "The Zero-Start Trap",
                 "wrong": "Initialising best to 0, so an array of all negatives returns 0.",
                 "right": "The empty subarray is not allowed. Seed best with nums[0].",
             },
@@ -1164,7 +1342,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Searching the longer array",
+                "name": "The Long-Cut Trap",
                 "wrong": "Binary searching the longer row, so j = half - i can go negative.",
                 "right": "Always search on the shorter array. Then j stays inside the longer one.",
             },
@@ -1282,7 +1460,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Forgetting to xor n",
+                "name": "The Forgotten-N Trap",
                 "wrong": "Only xoring indices 0..n-1 with the values, so n itself can never appear.",
                 "right": "Start at n, or xor n at the end. The range is 0..n, one past the last index.",
             },
@@ -1405,7 +1583,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using the same index twice",
+                "name": "The Same-Index Trap",
                 "wrong": "Storing the value before looking up, so 3+3 uses index 0 twice when target is 6.",
                 "right": "Look up first, then store. The partner must be a different earlier index.",
             },
@@ -1512,6 +1690,36 @@ class Solution {
                 "when_to_use": "The version to write. One pass.",
                 "is_optimal": True,
             },
+            {
+                "name": "Kadane on the day-to-day changes",
+                "idea": "Read the prices as the change from one day to the next: any trade earns the sum of the changes in between, so the best trade is the best run of changes.",
+                "steps": [
+                    "Look at each day as its change from the day before: `prices[i] - prices[i-1]`.",
+                    "Buying on day i and selling on day j earns the sum of the changes between them.",
+                    "Walk the changes with a running sum, and drop that sum back to 0 whenever it goes below 0.",
+                    "Keep the largest running sum seen. It stays 0 when every change is a fall.",
+                ],
+                "code": """class Solution {
+    public int maxProfit(int[] prices) {
+        int best = 0;
+        int run = 0;
+        for (int i = 1; i < prices.length; i++) {
+            int change = prices[i] - prices[i - 1];
+            run = Math.max(0, run + change);
+            best = Math.max(best, run);
+        }
+        return best;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "One pass over the days, working out each change as you go.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the running sum and the best are stored. The changes are never written down.",
+                "when_to_use": "When you want one idea to cover two problems: seen as changes, this is Maximum Subarray. It is also the reading to reach for when the question hands you the daily moves rather than the prices.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "prices = [7,1,5,3,6,4]",
@@ -1528,7 +1736,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Updating min after a same-day sale",
+                "name": "The After-Sale Trap",
                 "wrong": "This version uses if/else, so a new low is not also a sell. Mixing the two updates can sell on the buy day.",
                 "right": "Either compute profit first then min, or use if/else so a new low is not a sell.",
             },

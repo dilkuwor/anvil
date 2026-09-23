@@ -135,7 +135,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Adding path reference directly",
+                "name": "The Shared Bag Trap",
                 "wrong": "Adding the mutable path object directly into the results stores references that get cleared later.",
                 "right": "Always create a shallow copy new ArrayList<>(path) when saving a completed partition.",
             },
@@ -298,6 +298,53 @@ class Solution {
                 "space_why": "The call stack and StringBuilder both use space proportional to digits length n.",
                 "when_to_use": "The optimal interview approach minimizing allocations with a single reusable buffer.",
             },
+            {
+                "name": "Counting in mixed bases",
+                "idea": "Number the answers 0, 1, 2 and so on. The number itself says which letter to take from each digit, the way an odometer rolls over.",
+                "steps": [
+                    "Look up the letters for each digit and multiply their counts together: that is how many answers there are.",
+                    "Give every answer a number, from 0 up to that total minus 1.",
+                    "To spell out answer number k, go through the digits from the last one back to the first.",
+                    "At each digit, take the letter at position k % count, then divide k by that count and move left.",
+                    "Collect the letters into a string and add it to the list. Counting upwards gives the answers in order.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    private static final String[] KEYS = {
+        "", "", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz"
+    };
+
+    public List<String> letterCombinations(String digits) {
+        List<String> out = new ArrayList<>();
+        if (digits.isEmpty()) {
+            return out;
+        }
+        int total = 1;
+        for (int i = 0; i < digits.length(); i++) {
+            total *= KEYS[digits.charAt(i) - '0'].length();
+        }
+        for (int k = 0; k < total; k++) {
+            char[] answer = new char[digits.length()];
+            int rest = k;
+            for (int i = digits.length() - 1; i >= 0; i--) {
+                String letters = KEYS[digits.charAt(i) - '0'];
+                answer[i] = letters.charAt(rest % letters.length());
+                rest /= letters.length();
+            }
+            out.add(new String(answer));
+        }
+        return out;
+    }
+}""",
+                "time_complexity": "O(4^n · n)",
+                "time_why": "There are up to 4^n answers, and each one is spelled out letter by letter across n digits.",
+                "space_complexity": "O(n)",
+                "space_why": "One character buffer of length n is filled per answer, with no queue and no call stack.",
+                "when_to_use": "When you want one answer out of the set without building the rest: the 500th name, or a random one. The same multiplication gives the count up front, so you can page through the answers.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 'digits = "23"',
@@ -313,7 +360,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Returning list with empty string for empty input",
+                "name": "The Empty Dial Trap",
                 "wrong": "Returning a list containing an empty string fails when the problem requires an empty list.",
                 "right": "Check digits.isEmpty() before beginning recursion and return an empty list immediately.",
             },
@@ -497,7 +544,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Allowing close bracket before open bracket",
+                "name": "The Premature Close Trap",
                 "wrong": "Checking close < n instead of close < open generates invalid prefixes like ')(...'.",
                 "right": "Only append a closing parenthesis when close is strictly less than open.",
             },
@@ -668,7 +715,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Recursing on i + 1 instead of i",
+                "name": "The One Use Trap",
                 "wrong": "Passing i + 1 to the recursive call prevents reusing the same number multiple times.",
                 "right": "Pass index i to the recursive call so the same number can be selected again.",
             },
@@ -838,7 +885,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Starting loop from current index",
+                "name": "The Left Behind Trap",
                 "wrong": "Looping from start to nums.length instead of 0 misses earlier unused elements for later positions.",
                 "right": "In permutations, every position can pick any unused element, so always loop from index 0.",
             },
@@ -1048,7 +1095,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Negative array index for diagonal calculation",
+                "name": "The Negative Diagonal Trap",
                 "wrong": "Using row - col directly produces negative array indices when col > row.",
                 "right": "Offset the difference by adding n: row - col + n guarantees non-negative indices.",
             },
@@ -1203,7 +1250,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Adding path without copying",
+                "name": "The Empty Notebook Trap",
                 "wrong": "Calling out.add(path) stores a reference to a mutable list that ends up empty when backtracking finishes.",
                 "right": "Always add a new snapshot: out.add(new ArrayList<>(path)).",
             },
@@ -1402,7 +1449,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Reusing the same cell twice",
+                "name": "The Reused Cell Trap",
                 "wrong": "Failing to mark the current cell as visited allows the search to bounce back and forth between two cells.",
                 "right": "Overwrite the current cell with a temporary marker '#' before recursing into adjacent neighbors.",
             },
@@ -1564,7 +1611,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Checking i > 0 instead of i > start",
+                "name": "The Twin Trap",
                 "wrong": "Using i > 0 skips duplicate elements across deeper levels, preventing valid subsets like [2, 2].",
                 "right": "Check i > start to only skip duplicates among siblings at the current recursion level.",
             },

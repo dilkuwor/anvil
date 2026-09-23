@@ -86,7 +86,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Counting kinds, ignoring order",
+                "name": "The Count Trap",
                 "wrong": "A counter per kind, so \"([)]\" looks fine because each closer has an opener.",
                 "right": "Order matters. The closer must match the latest unmatched opener, which a stack holds.",
             },
@@ -238,7 +238,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Operand order",
+                "name": "The Operand Trap",
                 "wrong": "Popping left first, then right, so 4 13 5 / + becomes 5/13.",
                 "right": "Pop right first, then left. Subtraction and division are not symmetric.",
             },
@@ -431,7 +431,7 @@ class MinStack {
         },
         "mistakes": [
             {
-                "name": "One min field that never comes back",
+                "name": "The Lost Min Trap",
                 "wrong": "A single `min` variable. After you pop the min, you have forgotten the min below it.",
                 "right": "Store the running min with every value, so a pop restores the min below.",
             },
@@ -574,7 +574,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Crossing pairs",
+                "name": "The Crossing Trap",
                 "wrong": "Accepting \"([)]\" because each kind has a match somewhere.",
                 "right": "The closer must equal the top of the stack, which is the latest unmatched opener's closer.",
             },
@@ -732,7 +732,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Left to right with no precedence",
+                "name": "The Left-to-Right Trap",
                 "wrong": "Doing 3+2*2 as (3+2)*2 = 10.",
                 "right": "Apply * and / when you see them. + and - wait as signed numbers.",
             },
@@ -879,7 +879,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Single-digit counts only",
+                "name": "The Single-Digit Trap",
                 "wrong": "Setting count = c - '0' instead of multiplying by 10, so 100[leetcode] repeats once.",
                 "right": "`count = count * 10 + (c - '0')`, and reset count to 0 on '['.",
             },
@@ -1017,7 +1017,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Going above root",
+                "name": "The Root Trap",
                 "wrong": "Pushing '..' when the stack is empty, so the path starts with /..",
                 "right": "If the stack is empty, '..' is a no-op. Root stays '/'.",
             },
@@ -1133,6 +1133,42 @@ class Solution {
                 "space_why": "The stack holds days that are still waiting.",
                 "when_to_use": "The version to write. One pass.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Walk from the right with jumps",
+                "idea": "Fill the answers from the last day backwards, and use the answers already written to hop over stretches of colder days instead of stepping through them.",
+                "steps": [
+                    "Start at the second to last day and work back to day 0. The last day keeps its 0.",
+                    "Look at tomorrow. If it is warmer, the wait is 1 and you are done with this day.",
+                    "If it is not warmer, tomorrow's own answer says where its next warmer day is, so jump straight there and compare again.",
+                    "If a jump lands on a day whose answer is 0, nothing ahead is warmer, so this day stays 0 too.",
+                ],
+                "code": """class Solution {
+    public int[] dailyTemperatures(int[] temperatures) {
+        int n = temperatures.length;
+        int[] out = new int[n];
+        for (int i = n - 2; i >= 0; i--) {
+            int j = i + 1;
+            while (j < n && temperatures[j] <= temperatures[i]) {
+                if (out[j] == 0) {
+                    j = n;
+                } else {
+                    j += out[j];
+                }
+            }
+            if (j < n) out[i] = j - i;
+        }
+        return out;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Every jump lands on a strictly warmer day, so one day's chain of jumps is as long as the number of different temperatures, at most 71 here.",
+                "space_complexity": "O(1)",
+                "space_why": "Nothing is kept besides the answer array itself. There is no stack.",
+                "when_to_use": "When you are told to use no extra structure: the answers you have already written are the only memory. It is also the shape to reach for when each answer points at the next one, as in a chain of links you can shortcut.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -1263,6 +1299,60 @@ class Solution {
                 "space_why": "The stack holds indices of bars that are still growing.",
                 "when_to_use": "The version to write. One pass, finish leftover bars with a closing height of 0.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Divide and conquer on the shortest bar",
+                "idea": "In any stretch of bars, the best rectangle either runs the full width at the height of the shortest bar, or it avoids that bar completely and sits on one side of it.",
+                "steps": [
+                    "Build a table that answers, for any stretch of the row, which bar in it is the shortest.",
+                    "Keep a list of stretches still to measure, starting with the whole row.",
+                    "Take a stretch, find its shortest bar, and measure that height across the full width of the stretch.",
+                    "Split the stretch at that bar and add the part on its left and the part on its right back to the list.",
+                    "Keep the largest area seen. An empty stretch is dropped.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int largestRectangleArea(int[] heights) {
+        int n = heights.length;
+        if (n == 0) return 0;
+        int levels = 1;
+        while ((1 << levels) <= n) levels++;
+        // shortest[k][i]: index of the shortest bar in the 2^k bars starting at i.
+        int[][] shortest = new int[levels][n];
+        for (int i = 0; i < n; i++) shortest[0][i] = i;
+        for (int k = 1; k < levels; k++) {
+            int half = 1 << (k - 1);
+            for (int i = 0; i + (1 << k) <= n; i++) {
+                int left = shortest[k - 1][i], right = shortest[k - 1][i + half];
+                shortest[k][i] = heights[left] <= heights[right] ? left : right;
+            }
+        }
+        int best = 0;
+        Deque<int[]> stretches = new ArrayDeque<>();
+        stretches.push(new int[] {0, n - 1});
+        while (!stretches.isEmpty()) {
+            int[] stretch = stretches.pop();
+            int lo = stretch[0], hi = stretch[1];
+            if (lo > hi) continue;
+            int k = 31 - Integer.numberOfLeadingZeros(hi - lo + 1);
+            int left = shortest[k][lo], right = shortest[k][hi - (1 << k) + 1];
+            int mid = heights[left] <= heights[right] ? left : right;
+            best = Math.max(best, heights[mid] * (hi - lo + 1));
+            stretches.push(new int[] {lo, mid - 1});
+            stretches.push(new int[] {mid + 1, hi});
+        }
+        return best;
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "Building the shortest-bar table fills log n rows of n entries. Each split removes one bar, so there are at most n stretches, each handled in a fixed number of steps.",
+                "space_complexity": "O(n log n)",
+                "space_why": "The table keeps one row of n entries for every doubling of the width.",
+                "when_to_use": "When the question becomes the largest rectangle inside a given part of the row, asked many times. The table is built once and each question splits from there, while the stack pass has to start over every time.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -1474,7 +1564,7 @@ class MinStack {
         },
         "mistakes": [
             {
-                "name": "Pushing the min only when val is strictly smaller",
+                "name": "The Strict Min Trap",
                 "wrong": "Using `<` so a second copy of the same min is not recorded.",
                 "right": "Push onto mins when `val <= mins.peek()`. A tied min must survive after the first copy is popped.",
             },

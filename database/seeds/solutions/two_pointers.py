@@ -223,6 +223,47 @@ class Solution {
                 "when_to_use": "The version to write. Sort, then peg and squeeze.",
                 "is_optimal": True,
             },
+            {
+                "name": "Hash set for the third number",
+                "idea": "Pin the first value, then walk the rest keeping a set of what you have passed; the third number is fixed by the other two, so a lookup decides it.",
+                "steps": [
+                    "Sort the array, so repeats sit together and each triple comes out in rising order.",
+                    "For each first value, skip it if it matches the value before it, and start with an empty set.",
+                    "Walk the values after it. For a second value, the third must be `-(first + second)`.",
+                    "If that third number is already in the set, record the triple, then step past any copy of the second value.",
+                    "Add the second value to the set and carry on.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<List<Integer>> threeSum(int[] nums) {
+        Arrays.sort(nums);
+        List<List<Integer>> out = new ArrayList<>();
+        for (int i = 0; i + 2 < nums.length; i++) {
+            if (nums[i] > 0) break;
+            if (i > 0 && nums[i] == nums[i - 1]) continue;
+            Set<Integer> seen = new HashSet<>();
+            for (int j = i + 1; j < nums.length; j++) {
+                int third = -(nums[i] + nums[j]);
+                if (seen.contains(third)) {
+                    out.add(List.of(nums[i], third, nums[j]));
+                    while (j + 1 < nums.length && nums[j] == nums[j + 1]) j++;
+                }
+                seen.add(nums[j]);
+            }
+        }
+        return out;
+    }
+}
+""",
+                "time_complexity": "O(n²)",
+                "time_why": "Each pinned value walks the rest of the row once, and a set lookup costs the same each time.",
+                "space_complexity": "O(n)",
+                "space_why": "The set can grow to hold every value after the pinned one.",
+                "when_to_use": "When you have already written Two Sum with a hash map: this is that same lookup with one value pinned in front, so there is nothing new to work out under pressure. Reach for it when you are unsure which pointer to move.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [-1,0,1,2,-1,-4]",
@@ -352,6 +393,45 @@ class Solution {
                 "space_why": "Only the two pointers, two maxes, and the total are stored.",
                 "when_to_use": "The version to write. Same idea as precomputed max arrays, no extra arrays.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Monotonic stack, one flat layer at a time",
+                "idea": "Hold the bars on a stack while they keep getting shorter; the moment a taller bar arrives it closes a dip, and that dip is paid off as one flat layer.",
+                "steps": [
+                    "Go left to right. Keep a stack of bar positions whose heights only fall as you look down it.",
+                    "While the new bar is taller than the bar on top, pop that top. The popped bar is the floor of a dip.",
+                    "The dip's walls are the new bar and whatever is on top now. If the stack is empty there is no left wall, so stop popping.",
+                    "Add width times depth: width is the gap between the two walls, depth is the lower wall minus the floor.",
+                    "Push the new bar and carry on. Whatever is left on the stack at the end holds nothing.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int trap(int[] height) {
+        Deque<Integer> falling = new ArrayDeque<>();
+        int total = 0;
+        for (int i = 0; i < height.length; i++) {
+            while (!falling.isEmpty() && height[i] > height[falling.peek()]) {
+                int floor = falling.pop();
+                if (falling.isEmpty()) break;
+                int leftWall = falling.peek();
+                int width = i - leftWall - 1;
+                int depth = Math.min(height[leftWall], height[i]) - height[floor];
+                total += width * depth;
+            }
+            falling.push(i);
+        }
+        return total;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Every bar is pushed once and popped at most once.",
+                "space_complexity": "O(n)",
+                "space_why": "The stack holds every bar when the heights only fall, as in [5,4,3,2,1].",
+                "when_to_use": "When the water is counted layer by layer instead of column by column, which is what a follow-up about pouring or draining in stages wants. It is also the bridge to Largest Rectangle in Histogram: the same falling stack, popped the same way.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -496,7 +576,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Forgetting to skip junk",
+                "name": "The Junk Trap",
                 "wrong": "Comparing commas and spaces as if they counted.",
                 "right": "Only letters and digits count. Skip the rest.",
             },
@@ -630,7 +710,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Comparing sums, not distances",
+                "name": "The Distance Trap",
                 "wrong": "Keeping the sum that is larger, not the one nearer the target.",
                 "right": "Compare Math.abs(sum - target).",
             },
@@ -740,6 +820,39 @@ class Solution {
                 "when_to_use": "The version to write. The sort is the whole point.",
                 "is_optimal": True,
             },
+            {
+                "name": "Binary search for the partner",
+                "idea": "For each value the number it needs is fixed, and the row is sorted, so look that number up by halving the part of the row to its right.",
+                "steps": [
+                    "For each index i, work out the partner it needs: target minus `numbers[i]`.",
+                    "Binary search for that partner in the part of the row after i, halving the range at each step.",
+                    "If it is found at index j, return i+1 and j+1, because the answer is 1-based.",
+                    "Searching only to the right of i stops the same entry being used twice.",
+                ],
+                "code": """class Solution {
+    public int[] twoSum(int[] numbers, int target) {
+        for (int i = 0; i < numbers.length; i++) {
+            int need = target - numbers[i];
+            int lo = i + 1, hi = numbers.length - 1;
+            while (lo <= hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (numbers[mid] == need) return new int[] {i + 1, mid + 1};
+                if (numbers[mid] < need) lo = mid + 1;
+                else hi = mid - 1;
+            }
+        }
+        return new int[0];
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "Each of the n values pays for one search that halves the range about log n times.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the two search bounds and the middle index are stored.",
+                "when_to_use": "When you need the nearest partner at or above a value rather than an exact match: the same search lands on that spot, while the two pointers would need rewriting. It also suits a row too big to hold, read a slice at a time.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "numbers = [2,7,11,15], target = 9",
@@ -753,7 +866,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "0-based indices",
+                "name": "The Zero-Based Trap",
                 "wrong": "Returning [left, right].",
                 "right": "The problem wants 1-based: left + 1 and right + 1.",
             },
@@ -877,7 +990,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Comparing to nums[read-1] after overwrites",
+                "name": "The Overwrite Trap",
                 "wrong": "Using a neighbour that was already overwritten.",
                 "right": "Compare to nums[write-1], the last unique you kept.",
             },
@@ -1004,7 +1117,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Breaking non-zero order",
+                "name": "The Order Trap",
                 "wrong": "Swapping the last non-zero with the first zero, which reorders the rest.",
                 "right": "Always swap the next non-zero into the next write slot, left to right.",
             },
@@ -1144,7 +1257,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Greedy skip of one side only",
+                "name": "The One-Side Trap",
                 "wrong": "Always deleting the left character on a mismatch.",
                 "right": "Try both skips. One of them may be the only one that works.",
             },
@@ -1263,7 +1376,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Merging from the front",
+                "name": "The Front Merge Trap",
                 "wrong": "Writing into nums1[0], which overwrites a value you still need.",
                 "right": "Write from the back, where the spare slots are.",
             },

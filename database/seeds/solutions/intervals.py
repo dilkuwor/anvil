@@ -83,6 +83,44 @@ class Solution {
                 "when_to_use": "The version to write. Count what you keep, then subtract from n.",
                 "is_optimal": True,
             },
+            {
+                "name": "Longest chain that fits (a table)",
+                "idea": "Turn it around: instead of removing as few as possible, keep as many as possible. Sort by start and find the longest chain of intervals that do not overlap, the way you find a longest rising run.",
+                "steps": [
+                    "Sort the intervals by start time.",
+                    "For each interval i, look at every earlier interval j.",
+                    "If j ends at or before i starts, interval i can follow j, so the chain ending at i can be one longer than the chain ending at j.",
+                    "Keep the longest chain found anywhere. The answer is the total count minus that length.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int eraseOverlapIntervals(int[][] intervals) {
+        int n = intervals.length;
+        Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+        int[] chain = new int[n];
+        int longest = 0;
+        for (int i = 0; i < n; i++) {
+            chain[i] = 1;
+            for (int j = 0; j < i; j++) {
+                if (intervals[j][1] <= intervals[i][0]) {
+                    chain[i] = Math.max(chain[i], chain[j] + 1);
+                }
+            }
+            longest = Math.max(longest, chain[i]);
+        }
+        return n - longest;
+    }
+}
+""",
+                "time_complexity": "O(n²)",
+                "time_why": "Every interval is compared with every earlier one.",
+                "space_complexity": "O(n)",
+                "space_why": "One chain length per interval.",
+                "when_to_use": "When intervals carry a weight and you want the most valuable set rather than the most intervals. Greed stops working there, and this table handles it by swapping the count for the weight.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "intervals = [[1,2],[2,3],[3,4],[1,3]]",
@@ -97,7 +135,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Sorting by start, then keeping the first",
+                "name": "The Long Meeting Trap",
                 "wrong": "Sorting by start and always keeping the next interval that does not overlap the last keep.",
                 "right": "A long early interval can block two short ones. Sort by end so you keep the one that frees the line first.",
             },
@@ -235,6 +273,50 @@ class Solution {
                 "space_why": "The answer list holds one range per merged block.",
                 "when_to_use": "The version to write. Sort, then sweep once.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Line sweep over start and end events",
+                "idea": "Forget the pairs. Walk along the timeline and count how many intervals are open right now; a block runs from the moment the count leaves 0 until it comes back to 0.",
+                "steps": [
+                    "Turn each interval into two events on the timeline: its start opens one, its end closes one.",
+                    "Sort the events by time. At the same time, opens come before closes, so touching blocks join.",
+                    "Walk the events in order, adding one to a running count for an open and taking one away for a close.",
+                    "When the count rises from 0, remember that time as the start of a block. When it falls back to 0, close the block there.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[][] merge(int[][] intervals) {
+        int n = intervals.length;
+        int[][] events = new int[n * 2][2];
+        for (int i = 0; i < n; i++) {
+            events[i * 2] = new int[] {intervals[i][0], 1};
+            events[i * 2 + 1] = new int[] {intervals[i][1], -1};
+        }
+        // Same time: open (1) before close (-1), so [1,4] and [4,5] become one block.
+        Arrays.sort(events, (a, b) -> a[0] == b[0] ? b[1] - a[1] : a[0] - b[0]);
+        List<int[]> merged = new ArrayList<>();
+        int open = 0, blockStart = 0;
+        for (int[] event : events) {
+            if (open == 0) {
+                blockStart = event[0];
+            }
+            open += event[1];
+            if (open == 0) {
+                merged.add(new int[] {blockStart, event[0]});
+            }
+        }
+        return merged.toArray(new int[merged.size()][]);
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "Sorting the 2n events costs the same as sorting the intervals; the walk is one pass.",
+                "space_complexity": "O(n)",
+                "space_why": "The event list holds two entries per interval.",
+                "when_to_use": "When the question turns into counting, not merging: how many meetings overlap at once, or when the room is busiest. The same sweep answers all of those with one extra line.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -398,7 +480,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Stopping the merge too early",
+                "name": "The Early Stop Trap",
                 "wrong": "Merging only the first overlap, then copying the rest even when they still overlap the new end.",
                 "right": "Keep stretching while `intervals[i][0] <= end`. One new range can swallow several old ones.",
             },

@@ -105,7 +105,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using OR or AND",
+                "name": "The OR Trap",
                 "wrong": "Mixing values with `|` or `&`, which does not cancel a pair.",
                 "right": "XOR is the operation that sends x ^ x to 0 and leaves the singleton.",
             },
@@ -210,6 +210,40 @@ class Solution {
                 "when_to_use": "The version to write. Zeros are skipped.",
                 "is_optimal": True,
             },
+            {
+                "name": "Lookup table, one byte at a time",
+                "idea": "Work out the answer for all 256 possible bytes once, then read any int off the table as four bytes.",
+                "steps": [
+                    "Make a table of 256 slots, where slot `i` holds the number of ones in the byte `i`.",
+                    "Fill it once at the start: the ones in `i` are the ones in `i >> 1` plus the last bit of `i`.",
+                    "An int is four bytes, so pull each one out with `(n >>> shift) & 0xFF` for shifts 0, 8, 16 and 24.",
+                    "Add the four table slots together and return that.",
+                ],
+                "code": """class Solution {
+    private static final int[] ONES_IN_BYTE = new int[256];
+
+    static {
+        for (int i = 1; i < 256; i++) {
+            ONES_IN_BYTE[i] = ONES_IN_BYTE[i >> 1] + (i & 1);
+        }
+    }
+
+    public int hammingWeight(int n) {
+        return ONES_IN_BYTE[n & 0xFF]
+             + ONES_IN_BYTE[(n >>> 8) & 0xFF]
+             + ONES_IN_BYTE[(n >>> 16) & 0xFF]
+             + ONES_IN_BYTE[(n >>> 24) & 0xFF];
+    }
+}
+""",
+                "time_complexity": "O(1)",
+                "time_why": "Four table reads per number, whatever n is. The 256 slots are filled once, before any call.",
+                "space_complexity": "O(1)",
+                "space_why": "The table is a fixed 256 slots, shared by every call.",
+                "when_to_use": "When you count bits for millions of numbers, the way a real library does: the table is paid for once and every number after that costs four reads, with no loop that depends on n.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "n = 11 (binary 1011)",
@@ -223,7 +257,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Arithmetic shift",
+                "name": "The Arithmetic Shift Trap",
                 "wrong": "Using `n >>= 1`. On a negative n the sign bit stays 1 and the loop never ends.",
                 "right": "Use `n >>>= 1`, or avoid shifting and drop bits with n & (n - 1).",
             },
@@ -364,7 +398,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Forgetting to xor n",
+                "name": "The Forgotten n Trap",
                 "wrong": "Only xoring indices 0..n-1 with the values, so n itself can never appear.",
                 "right": "Start at n, or xor n at the end. The range is 0..n, one past the last index.",
             },
@@ -486,7 +520,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Array of length n",
+                "name": "The Length n Trap",
                 "wrong": "Allocating `new int[n]`, so index n is missing.",
                 "right": "`new int[n + 1]`. You need a slot for every i from 0 through n.",
             },
@@ -640,7 +674,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Wrong place for the ones digit",
+                "name": "The Ones Place Trap",
                 "wrong": "Writing the product of i and j into digits[i+j].",
                 "right": "The ones place is digits[i+j+1]. The carry goes to digits[i+j].",
             },
@@ -801,7 +835,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Negating Integer.MIN_VALUE as an int",
+                "name": "The MIN_VALUE Trap",
                 "wrong": "Writing `n = -n` when n is -2147483648. That value has no positive int partner, so n stays negative.",
                 "right": "Copy n into a long first, then negate the long.",
             },
@@ -923,7 +957,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Keeping a trailing zero",
+                "name": "The Trailing Zero Trap",
                 "wrong": "Reversing 10 into 01, which becomes 1, then comparing 1 with 10 and missing the fail.",
                 "right": "If x ends in 0 and x is not 0, return false at the start. The reverse would drop that zero.",
             },

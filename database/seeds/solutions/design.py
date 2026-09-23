@@ -189,6 +189,67 @@ class LRUCache {
                 "space_why": "The map and linked nodes store up to capacity items.",
                 "when_to_use": "The optimal interview design combining a hash map and a two-way list.",
             },
+            {
+                "name": "LinkedHashMap with access order",
+                "is_optimal": False,
+                "is_alternative": True,
+                "idea": "Java already ships this structure: a `LinkedHashMap` built in access order keeps the keys sorted from least recently used to most recently used for you.",
+                "steps": [
+                    "Extend `LinkedHashMap<Integer, Integer>` and call `super(capacity, 0.75f, true)`. The `true` turns on access order.",
+                    "With access order on, every `get` and every `put` moves that key to the newest end by itself.",
+                    "Override `removeEldestEntry` to return true when `size()` is above the capacity, and the map drops its oldest key.",
+                    "Write `get` as `getOrDefault(key, -1)` so a key that is not there gives -1.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[] process(String[] operations, int[][] args) {
+        LRUCache cache = null;
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < operations.length; i++) {
+            switch (operations[i]) {
+                case "LRUCache" -> cache = new LRUCache(args[i][0]);
+                case "put" -> cache.put(args[i][0], args[i][1]);
+                case "get" -> out.add(cache.get(args[i][0]));
+                default -> {}
+            }
+        }
+        int[] arr = new int[out.size()];
+        for (int i = 0; i < out.size(); i++) {
+            arr[i] = out.get(i);
+        }
+        return arr;
+    }
+}
+
+class LRUCache extends LinkedHashMap<Integer, Integer> {
+    private final int capacity;
+
+    public LRUCache(int capacity) {
+        // The third argument is access order: a read moves the key to the newest end.
+        super(capacity, 0.75f, true);
+        this.capacity = capacity;
+    }
+
+    public int get(int key) {
+        return super.getOrDefault(key, -1);
+    }
+
+    public void put(int key, int value) {
+        super.put(key, value);
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
+        return size() > capacity;
+    }
+}""",
+                "time_complexity": "O(1)",
+                "time_why": "The map hashes the key, and its own links move one entry from the middle in a fixed number of steps.",
+                "space_complexity": "O(capacity)",
+                "space_why": "The map holds up to capacity entries plus the links between them.",
+                "when_to_use": "In real code, where ten lines beat fifty. In an interview, name it to show you know the library, then build the map and two-way list by hand, because that is the part they want to watch.",
+            },
         ],
         "walkthrough": {
             "input": 'capacity = 2, put(1, 1), put(2, 2), get(1), put(3, 3), get(2)',
@@ -453,7 +514,7 @@ class Twitter {
         },
         "mistakes": [
             {
-                "name": "Excluding the user's own tweets from their feed",
+                "name": "The Missing Author Trap",
                 "wrong": "Only fetching tweets from followed users leaves out the user's own published tweets.",
                 "right": "Always include userId in the list of tweet sources alongside followed users.",
             },
@@ -655,7 +716,7 @@ class HitCounter {
         },
         "mistakes": [
             {
-                "name": "Failing to overwrite stale second values",
+                "name": "The Stale Bucket Trap",
                 "wrong": "Incrementing count without checking if seconds[slot] matches timestamp adds to numbers from 300 seconds ago.",
                 "right": "Check if seconds[slot] == timestamp: if different, overwrite seconds[slot] and reset count to 1.",
             },
@@ -870,7 +931,7 @@ class RandomizedSet {
         },
         "mistakes": [
             {
-                "name": "Updating map index before removing target",
+                "name": "The Premature Update Trap",
                 "wrong": "When removing the last element itself, putting it back into the map resurrects the deleted key.",
                 "right": "Check if `last != val` before updating indexOf with the moved element.",
             },
@@ -1054,7 +1115,7 @@ class Codec {
         },
         "mistakes": [
             {
-                "name": "Hashing without collision handling",
+                "name": "The Hash Collision Trap",
                 "wrong": "Using Java String.hashCode directly produces collisions where two different URLs overwrite each other.",
                 "right": "Use an incremental counter or check existing keys to guarantee distinct short tokens for distinct URLs.",
             },
@@ -1290,7 +1351,7 @@ class MyHashMap {
         },
         "mistakes": [
             {
-                "name": "Adding duplicate keys during put",
+                "name": "The Duplicate Key Trap",
                 "wrong": "Inserting a new node without first scanning the bucket chain creates duplicate keys in the same bucket.",
                 "right": "Scan the bucket chain first: if an entry with matching key exists, update its value and return.",
             },
@@ -1496,7 +1557,7 @@ class FreqStack {
         },
         "mistakes": [
             {
-                "name": "Moving elements between stacks on push",
+                "name": "The Element Move Trap",
                 "wrong": "Removing an element from stack f - 1 when pushing to stack f destroys the recency history at lower frequencies.",
                 "right": "Keep elements at all lower frequency stacks: an element with frequency 3 resides in stacks 1, 2, and 3.",
             },
@@ -1711,7 +1772,7 @@ class TimeMap {
         },
         "mistakes": [
             {
-                "name": "Returning exact match only",
+                "name": "The Exact Match Trap",
                 "wrong": "Returning empty string when target timestamp is not exact violates the 'earlier timestamp' requirement.",
                 "right": "Find the largest timestamp that is less than or equal to the query timestamp: history.get(mid) <= target.",
             },

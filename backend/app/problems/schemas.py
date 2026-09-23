@@ -83,6 +83,7 @@ class SolutionApproachOut(BaseModel):
     space_why: str
     when_to_use: str
     is_optimal: bool
+    is_alternative: bool = False
 
 
 class SolutionWalkthroughOut(BaseModel):

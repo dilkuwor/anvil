@@ -142,5 +142,7 @@ class ProblemSolutionApproach(Base):
     # When you would mention this one in an interview.
     when_to_use: Mapped[str] = mapped_column(Text, nullable=False, default="")
     is_optimal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # A different algorithm that also solves the problem, shown after the best one for breadth.
+    is_alternative: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     solution = relationship("ProblemSolution", back_populates="approaches")

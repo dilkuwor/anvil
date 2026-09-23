@@ -231,6 +231,8 @@ export type SolutionApproach = {
   space_why: string;
   when_to_use: string;
   is_optimal: boolean;
+  /** A different algorithm that also solves the problem, shown after the best one. */
+  is_alternative?: boolean;
 };
 
 /** The written reference for a problem. Fetched only when the reader reveals it. */

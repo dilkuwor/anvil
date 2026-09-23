@@ -99,7 +99,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using default min-heap in Java",
+                "name": "The Upside-Down Trap",
                 "wrong": "Writing `new PriorityQueue<>()` which retrieves the smallest stones first.",
                 "right": "Pass `Comparator.reverseOrder()` so the queue pulls the largest stones first.",
             },
@@ -207,6 +207,61 @@ class Solution {
                 "space_why": "The min-heap never holds more than k plus one items.",
                 "when_to_use": "Optimal in an interview when k is much smaller than n or input arrives as a stream.",
             },
+            {
+                "name": "Quickselect on the k-th position",
+                "idea": "Sorting the whole array does far more than the question asks: pick one value as a pivot, push everything smaller to its left and everything larger to its right, then keep only the side that holds the position you want.",
+                "steps": [
+                    "In ascending order the answer sits at position `nums.length - k`, so that is the position to hunt for.",
+                    "Pick a value from the live range at random and call it the pivot.",
+                    "Rearrange the range into three blocks: values below the pivot, values equal to it, then values above it.",
+                    "If the wanted position lands inside the equal block, the pivot is the answer.",
+                    "Otherwise narrow the range to the one side that still holds the position, and pick a new pivot there.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int findKthLargest(int[] nums, int k) {
+        int target = nums.length - k;
+        int lo = 0, hi = nums.length - 1;
+        Random random = new Random(42);
+        while (true) {
+            int pivot = nums[lo + random.nextInt(hi - lo + 1)];
+            // Three blocks: [lo, lt) below the pivot, [lt, gt] equal, (gt, hi] above.
+            int lt = lo, gt = hi, i = lo;
+            while (i <= gt) {
+                if (nums[i] < pivot) {
+                    swap(nums, i++, lt++);
+                } else if (nums[i] > pivot) {
+                    swap(nums, i, gt--);
+                } else {
+                    i++;
+                }
+            }
+            if (target < lt) {
+                hi = lt - 1;
+            } else if (target > gt) {
+                lo = gt + 1;
+            } else {
+                return pivot;
+            }
+        }
+    }
+
+    private void swap(int[] a, int i, int j) {
+        int tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
+    }
+}
+""",
+                "time_complexity": "O(n) average, O(n²) worst",
+                "time_why": "Each round looks at the live range once, and a random pivot halves that range on average, so the passes add up to about 2n.",
+                "space_complexity": "O(1)",
+                "space_why": "The blocks are built inside the input array, and the loop replaces the recursive calls.",
+                "when_to_use": "When they ask for linear time, or for the whole top k and not one value: the same run leaves the k largest sitting in the last k slots. It needs the array in memory, so a stream still wants the heap.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [3, 2, 1, 5, 6, 4], k = 2",
@@ -223,7 +278,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using a max-heap of size n",
+                "name": "The Keep-Everything Trap",
                 "wrong": "Storing all n elements in a max-heap, taking O(n) memory.",
                 "right": "Use a min-heap bounded by size k so memory is only O(k) and runtime is O(n log k).",
             },
@@ -363,6 +418,56 @@ class Solution {
                 "space_why": "The priority queue holds at most k node references simultaneously.",
                 "when_to_use": "The classic, optimal interview solution for k-way list merging.",
             },
+            {
+                "name": "Divide and conquer, merging in pairs",
+                "idea": "Pair the lists up and merge each pair, which halves how many lists are left; after log k rounds only one list remains.",
+                "steps": [
+                    "If the array of lists is empty, return null.",
+                    "Take the lists two at a time and merge each pair with the ordinary two-list merge, writing the result back to the front of the array.",
+                    "An odd list left over at the end of a round has nothing to pair with, so carry it forward untouched.",
+                    "The count of lists halves each round, so repeat until one list is left and return it.",
+                ],
+                "code": """class Solution {
+    public ListNode mergeKLists(ListNode[] lists) {
+        if (lists == null || lists.length == 0) return null;
+        int remaining = lists.length;
+        while (remaining > 1) {
+            int written = 0;
+            for (int i = 0; i < remaining; i += 2) {
+                ListNode second = i + 1 < remaining ? lists[i + 1] : null;
+                lists[written++] = mergeTwo(lists[i], second);
+            }
+            remaining = written;
+        }
+        return lists[0];
+    }
+
+    private ListNode mergeTwo(ListNode a, ListNode b) {
+        ListNode dummy = new ListNode(0);
+        ListNode tail = dummy;
+        while (a != null && b != null) {
+            if (a.val <= b.val) {
+                tail.next = a;
+                a = a.next;
+            } else {
+                tail.next = b;
+                b = b.next;
+            }
+            tail = tail.next;
+        }
+        tail.next = a != null ? a : b;
+        return dummy.next;
+    }
+}
+""",
+                "time_complexity": "O(N log k)",
+                "time_why": "Each round moves all N nodes once, and the number of lists halves, so there are log k rounds.",
+                "space_complexity": "O(1)",
+                "space_why": "Merging rewires the nodes that are already there, and the rounds are a loop, not nested calls.",
+                "when_to_use": "When no priority queue is on hand, or comparing two items is expensive and you want plain pairwise compares. It is the shape of an external merge sort, which joins sorted files on disk two at a time.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "lists = [[1, 4, 5], [1, 3, 4], [2, 6]]",
@@ -377,7 +482,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Adding null list heads to heap",
+                "name": "The Empty List Trap",
                 "wrong": "Pushing list heads into the heap without checking `if (node != null)`.",
                 "right": "Filter out null heads before adding them to avoid a null pointer error inside the comparator.",
             },
@@ -508,6 +613,52 @@ class Solution {
                 "space_why": "In the worst case with all overlapping meetings, the heap stores n end times.",
                 "when_to_use": "The optimal interview approach for meeting room scheduling.",
             },
+            {
+                "name": "Line sweep over start and end times",
+                "idea": "Forget which meeting uses which room: walk along the clock and count how many meetings are running at once, because the busiest moment is exactly how many rooms you need.",
+                "steps": [
+                    "Pull the start times into one array and the end times into another, then sort both on their own.",
+                    "Walk the sorted starts with one pointer and the sorted ends with a second pointer.",
+                    "Before a meeting begins, free a room for every end time at or before its start, taking one off the running count.",
+                    "Add one to the running count for the meeting that just began.",
+                    "The largest count seen along the way is the answer.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int minMeetingRooms(int[][] intervals) {
+        if (intervals == null || intervals.length == 0) return 0;
+        int n = intervals.length;
+        int[] starts = new int[n];
+        int[] ends = new int[n];
+        for (int i = 0; i < n; i++) {
+            starts[i] = intervals[i][0];
+            ends[i] = intervals[i][1];
+        }
+        Arrays.sort(starts);
+        Arrays.sort(ends);
+        int running = 0, most = 0, end = 0;
+        for (int start = 0; start < n; start++) {
+            // A room that frees exactly when the next meeting starts can be reused.
+            while (end < n && ends[end] <= starts[start]) {
+                running--;
+                end++;
+            }
+            running++;
+            most = Math.max(most, running);
+        }
+        return most;
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "Sorting the two arrays dominates; each pointer then moves forward n times in total.",
+                "space_complexity": "O(n)",
+                "space_why": "The two arrays of times hold one entry per meeting.",
+                "when_to_use": "When the question turns into counting rather than assigning: how many meetings run at once, or when the building is busiest. It is the same sweep Merge Intervals uses, keeping the peak count instead of the blocks.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "intervals = [[0, 30], [5, 10], [15, 20]]",
@@ -521,7 +672,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Strict inequality on room reuse",
+                "name": "The Back-to-Back Trap",
                 "wrong": "Requiring `ends.peek() < meeting[0]` before reusing a room.",
                 "right": "Two meetings can share a room if one ends exactly when the other starts: check `<= meeting[0]`.",
             },
@@ -688,7 +839,7 @@ class MedianFinder {
         },
         "mistakes": [
             {
-                "name": "Integer division truncating median",
+                "name": "The Chopped Half Trap",
                 "wrong": "Writing `(low.peek() + high.peek()) / 2` which performs integer truncation.",
                 "right": "Divide by `2.0` to return an accurate floating-point double value.",
             },
@@ -807,6 +958,66 @@ class Solution {
                 "space_why": "The priority queue never holds more than k plus one points.",
                 "when_to_use": "The optimal interview approach when k is smaller than n.",
             },
+            {
+                "name": "Quickselect on the squared distance",
+                "idea": "The question does not ask for the k points in order, only for which k they are, so shuffle them around one pivot distance until the k closest happen to sit in the first k slots.",
+                "steps": [
+                    "Pick one point from the live range at random and take its squared distance as the pivot.",
+                    "Move the points around so that closer ones come first, points at the pivot distance sit in the middle, and farther ones go last.",
+                    "If the cut after position k falls inside that middle block, the first k slots already hold the k closest, so stop.",
+                    "Otherwise narrow the range to the side the cut falls in and pick a new pivot there.",
+                    "Return a copy of the first k points.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[][] kClosest(int[][] points, int k) {
+        int lo = 0, hi = points.length - 1;
+        Random random = new Random(42);
+        while (lo < hi) {
+            int pivot = dist(points[lo + random.nextInt(hi - lo + 1)]);
+            // Three blocks: [lo, lt) closer, [lt, gt] at the pivot distance, (gt, hi] farther.
+            int lt = lo, gt = hi, i = lo;
+            while (i <= gt) {
+                int d = dist(points[i]);
+                if (d < pivot) {
+                    swap(points, i++, lt++);
+                } else if (d > pivot) {
+                    swap(points, i, gt--);
+                } else {
+                    i++;
+                }
+            }
+            if (k <= lt) {
+                hi = lt - 1;
+            } else if (k > gt + 1) {
+                lo = gt + 1;
+            } else {
+                break;
+            }
+        }
+        return Arrays.copyOfRange(points, 0, k);
+    }
+
+    private int dist(int[] p) {
+        return p[0] * p[0] + p[1] * p[1];
+    }
+
+    private void swap(int[][] a, int i, int j) {
+        int[] tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
+    }
+}
+""",
+                "time_complexity": "O(n) average, O(n²) worst",
+                "time_why": "Each round measures the live range once, and a random pivot cuts that range roughly in half.",
+                "space_complexity": "O(1)",
+                "space_why": "The points are swapped inside the input array; only the returned copy is new.",
+                "when_to_use": "When n is huge and k is close to it, where a heap of size k is no better than sorting. It is the same partition trick as Kth Largest Element, with the distance standing in for the value.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "points = [[1, 3], [-2, 2]], k = 1",
@@ -820,7 +1031,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Computing square roots unnecessarily",
+                "name": "The Square Root Trap",
                 "wrong": "Calling `Math.sqrt` to calculate distances.",
                 "right": "Compare squared distance `x * x + y * y` directly to avoid floating point inaccuracies.",
             },

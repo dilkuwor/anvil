@@ -115,7 +115,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Capacity below the heaviest package",
+                "name": "The Split Package Trap",
                 "wrong": "Starting the search at 1, or at the average weight.",
                 "right": "One package cannot be split. Low must be the heaviest package, or a day can never hold it.",
             },
@@ -235,7 +235,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Comparing mid with the left end",
+                "name": "The Left-End Trap",
                 "wrong": "Using nums[mid] > nums[low] to decide, which is true on a row that was never rotated.",
                 "right": "Compare with the right end. If mid is bigger than high, the min is strictly right of mid.",
             },
@@ -357,7 +357,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Reading nums[mid + 1] when mid is the last index",
+                "name": "The Off-the-End Trap",
                 "wrong": "Using while (low <= high), so mid can equal high and mid+1 falls off the array.",
                 "right": "Use while (low < high). Then mid is always strictly left of high, so mid+1 exists.",
             },
@@ -490,7 +490,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Overflow in the middle index",
+                "name": "The Overflow Trap",
                 "wrong": "Using (low + high) / 2 when n is near two billion, so low + high wraps to a negative index.",
                 "right": "Use mid = low + (high - low) / 2. The large test n = 2126753390 needs this.",
             },
@@ -829,7 +829,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "One search, then a linear walk",
+                "name": "The Walk-Out Trap",
                 "wrong": "Binary search to any 8, then walk left and right to the ends of the run.",
                 "right": "A long run of the target makes that walk O(n). Use a second bound search.",
             },
@@ -997,7 +997,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Searching the longer array",
+                "name": "The Long Row Trap",
                 "wrong": "Binary searching the longer row, so j = half - i can go negative.",
                 "right": "Always search on the shorter array. Then j stays inside the longer one.",
             },
@@ -1118,7 +1118,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Overflow in the middle index",
+                "name": "The Overflow Trap",
                 "wrong": "Using (low + high) / 2 on huge indices, so the sum wraps negative.",
                 "right": "Use low + (high - low) / 2.",
             },
@@ -1276,7 +1276,7 @@ SOLUTIONS: list[dict] = [
         },
         "mistakes": [
             {
-                "name": "Using the wrong column count in the map",
+                "name": "The Column Trap",
                 "wrong": "Writing matrix[mid / rows][mid % rows], which picks the wrong cell.",
                 "right": "A flat index k is row k / cols and column k % cols.",
             },

@@ -81,7 +81,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using the same index twice",
+                "name": "The Same-Index Trap",
                 "wrong": "Storing the value before looking up, so 3 + 3 uses index 0 twice when target is 6.",
                 "right": "Look up first, then store. The partner must be a different earlier index.",
             },
@@ -202,6 +202,73 @@ class Solution {
                 "when_to_use": "The version to write when they ask for linear time.",
                 "is_optimal": True,
             },
+            {
+                "name": "Union find over neighbouring values",
+                "idea": "Treat each distinct value as its own group, then join the group of v to the group of v + 1 whenever both are present; the answer is the size of the biggest group left.",
+                "steps": [
+                    "Give every distinct value a slot of its own, and start each slot as a group of one.",
+                    "For each value, look for value + 1. If it is there, join the two groups and add their sizes together.",
+                    "Joining is done through a leader: each slot points at another slot, and following those links reaches the group's leader.",
+                    "When two groups join, the smaller leader is pointed at the larger one, which keeps the chains short.",
+                    "The largest group size is the length of the longest run.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    private int[] parent;
+    private int[] size;
+
+    public int longestConsecutive(int[] nums) {
+        Map<Integer, Integer> slot = new HashMap<>();
+        for (int value : nums) {
+            if (!slot.containsKey(value)) slot.put(value, slot.size());
+        }
+        int n = slot.size();
+        if (n == 0) return 0;
+        parent = new int[n];
+        size = new int[n];
+        for (int i = 0; i < n; i++) {
+            parent[i] = i;
+            size[i] = 1;
+        }
+        for (Map.Entry<Integer, Integer> entry : slot.entrySet()) {
+            Integer next = slot.get(entry.getKey() + 1);
+            if (next != null) join(entry.getValue(), next);
+        }
+        int best = 0;
+        for (int i = 0; i < n; i++) best = Math.max(best, size[leader(i)]);
+        return best;
+    }
+
+    private int leader(int x) {
+        while (parent[x] != x) {
+            parent[x] = parent[parent[x]];
+            x = parent[x];
+        }
+        return x;
+    }
+
+    private void join(int a, int b) {
+        int ra = leader(a), rb = leader(b);
+        if (ra == rb) return;
+        if (size[ra] < size[rb]) {
+            int tmp = ra;
+            ra = rb;
+            rb = tmp;
+        }
+        parent[rb] = ra;
+        size[ra] += size[rb];
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Each distinct value is joined at most once, and following the links back to a leader costs almost nothing once the chains are flattened.",
+                "space_complexity": "O(n)",
+                "space_why": "One map entry, one leader link and one size per distinct value.",
+                "when_to_use": "When the numbers arrive one at a time and each answer must be given straight away. A new value can glue two runs into one, and union find does that join in a single step, while the set scan would have to walk the run again.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [100,4,200,1,3,2]",
@@ -218,7 +285,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Starting a run at every value",
+                "name": "The Every-Start Trap",
                 "wrong": "From every number, walking forward in the set.",
                 "right": "Only start when value - 1 is missing. That is what keeps the total walk O(n).",
             },
@@ -368,7 +435,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Sorting in place without asking",
+                "name": "The Scramble Trap",
                 "wrong": "Calling Arrays.sort(nums) when the caller still needs the original order.",
                 "right": "Sort a copy, or use a set and leave the array alone.",
             },
@@ -495,7 +562,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Skipping the length check",
+                "name": "The Length-Skip Trap",
                 "wrong": "Counting without comparing lengths, then hoping the scan catches it.",
                 "right": "Different lengths cannot be anagrams. Return false first. It also keeps the two loops in lockstep.",
             },
@@ -669,7 +736,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Max-heap of size n",
+                "name": "The Full-Heap Trap",
                 "wrong": "Pushing every value into a max-heap and popping k times.",
                 "right": "To keep the k highest counts, use a min-heap of size k so the weakest of the best sits on top.",
             },
@@ -811,7 +878,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using a set of letters as the key",
+                "name": "The Letter-Set Trap",
                 "wrong": "Keying on the distinct letters, so aab and ab land in the same group.",
                 "right": "Counts (or the fully sorted word) must be part of the key.",
             },
@@ -939,7 +1006,7 @@ class Solution {
         },
         "mistakes": [
             {
-                "name": "Using a sliding window",
+                "name": "The Window Trap",
                 "wrong": "Growing and shrinking a window as if sums only increase.",
                 "right": "Negatives break that. Prefix sums plus a map work for any sign.",
             },

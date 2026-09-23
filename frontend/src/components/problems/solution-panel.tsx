@@ -93,7 +93,9 @@ export function SolutionPanel({
   }
 
   const data = solution.data;
-  const best = data.approaches.find((item) => item.is_optimal) ?? data.approaches.at(-1);
+  const main = data.approaches.filter((item) => !item.is_alternative);
+  const alternatives = data.approaches.filter((item) => item.is_alternative);
+  const best = main.find((item) => item.is_optimal) ?? main.at(-1);
 
   return (
     <div className="space-y-3 text-[13.5px] leading-6">
@@ -120,13 +122,27 @@ export function SolutionPanel({
         ) : null}
       </div>
 
-      <Section title="Approaches, from the obvious way to the best" count={data.approaches.length} defaultOpen>
+      <Section title="Approaches, from the obvious way to the best" count={main.length} defaultOpen>
         <div className="space-y-2.5">
-          {data.approaches.map((approach) => (
+          {main.map((approach) => (
             <Approach key={approach.position} approach={approach} onLoadCode={onLoadCode} />
           ))}
         </div>
       </Section>
+
+      {/* Breadth, not ranking: these are different algorithms that also work, worth recognising by name. */}
+      {alternatives.length ? (
+        <Section title="Other algorithms that also solve this" count={alternatives.length}>
+          <p className="mb-2.5 text-muted-foreground">
+            Not better or worse than the one above, just a different idea. Knowing the name is often enough.
+          </p>
+          <div className="space-y-2.5">
+            {alternatives.map((approach) => (
+              <Approach key={approach.position} approach={approach} onLoadCode={onLoadCode} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
 
       {data.walkthrough.rows.length ? (
         <Section title="Walk through one example" defaultOpen>
@@ -283,9 +299,12 @@ function Approach({ approach, onLoadCode }: { approach: SolutionApproach; onLoad
   return (
     <details open={approach.is_optimal} className={cn("group/approach rounded-lg border bg-steel-950/40", approach.is_optimal ? "border-teal/40" : "border-steel-800/80")}>
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-3 py-2.5">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-steel-800 text-[11px] font-semibold text-foreground/90">{approach.position + 1}</span>
+        {approach.is_alternative ? null : (
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-steel-800 text-[11px] font-semibold text-foreground/90">{approach.position + 1}</span>
+        )}
         <span className="font-semibold text-foreground">{approach.name}</span>
         {approach.is_optimal ? <span className="rounded-full border border-teal/50 bg-teal/10 px-2 py-0.5 text-[10.5px] font-semibold text-teal">Best</span> : null}
+        {approach.is_alternative ? <span className="rounded-full border border-accent/50 bg-accent/10 px-2 py-0.5 text-[10.5px] font-semibold text-accent">Another way</span> : null}
         <span className="ml-auto font-mono text-[12px] text-muted-foreground">
           {approach.time_complexity} · {approach.space_complexity}
         </span>
