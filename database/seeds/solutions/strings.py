@@ -844,6 +844,73 @@ class Solution {
                 "when_to_use": "The version to write. Overflow is decided before the multiply, not after.",
                 "is_optimal": True,
             },
+            {
+                "name": "A state machine with named states",
+                "idea": "Give the reader four named states and let each character say which state comes next, instead of hiding the rules in a chain of loops.",
+                "steps": [
+                    "Name the states: skipping spaces, just after a sign, inside the digits, and finished.",
+                    "Read one character at a time and let the state you are in decide what that character means.",
+                    "While skipping spaces: a space stays put, a sign moves to the sign state, a digit starts the number, anything else finishes.",
+                    "Just after a sign only a digit may follow. Anything else finishes.",
+                    "Inside the digits a digit is added to the running value and anything else finishes. Clamp as soon as the value passes the 32-bit edge.",
+                ],
+                "code": """class Solution {
+    private enum State { SKIPPING, SIGNED, DIGITS, DONE }
+
+    public int myAtoi(String s) {
+        State state = State.SKIPPING;
+        int sign = 1;
+        long value = 0;
+        for (int i = 0; i < s.length() && state != State.DONE; i++) {
+            char c = s.charAt(i);
+            switch (state) {
+                case SKIPPING -> {
+                    if (c == '+' || c == '-') {
+                        sign = c == '-' ? -1 : 1;
+                        state = State.SIGNED;
+                    } else if (Character.isDigit(c)) {
+                        value = c - '0';
+                        state = State.DIGITS;
+                    } else if (c != ' ') {
+                        state = State.DONE;
+                    }
+                }
+                case SIGNED -> {
+                    if (Character.isDigit(c)) {
+                        value = c - '0';
+                        state = State.DIGITS;
+                    } else {
+                        state = State.DONE;
+                    }
+                }
+                case DIGITS -> {
+                    if (!Character.isDigit(c)) {
+                        state = State.DONE;
+                    } else {
+                        value = value * 10 + (c - '0');
+                        // 2147483648 is the size of the most negative 32-bit value.
+                        long limit = sign == 1 ? Integer.MAX_VALUE : 2147483648L;
+                        if (value > limit) {
+                            value = limit;
+                            state = State.DONE;
+                        }
+                    }
+                }
+                default -> {}
+            }
+        }
+        return (int) (value * sign);
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Each character moves the machine on once, and the machine never goes back.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the current state, the sign, and the running value, held in a long so the clamp can be checked.",
+                "when_to_use": "When the format grows: a decimal point, an exponent, a hex prefix. Each addition is one more state and its moves, not another branch buried in the loop, which is how real number readers are written.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 's = "   -42"',

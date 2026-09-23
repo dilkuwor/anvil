@@ -223,6 +223,51 @@ class Solution {
                 "when_to_use": "The version to write. One pass.",
                 "is_optimal": True,
             },
+            {
+                "name": "Recursion from the last token",
+                "idea": "The very last token is the operator that finishes the whole expression, and the two things it works on are the expressions that end just before it.",
+                "steps": [
+                    "Keep one position that starts at the last token and only ever moves left.",
+                    "Ask for a value: read the token at the position and step left.",
+                    "If that token is a number, it is the value and you are done.",
+                    "If it is an operator, ask for a value again to get its right side, then once more for its left side, and apply the operator to the two.",
+                    "The value that comes back from the first ask is the answer.",
+                ],
+                "code": """class Solution {
+    private int position;
+
+    public int evalRPN(String[] tokens) {
+        position = tokens.length - 1;
+        return value(tokens);
+    }
+
+    private int value(String[] tokens) {
+        String token = tokens[position--];
+        if (!isOperator(token)) return Integer.parseInt(token);
+        // Postfix puts the right side nearest the operator, so it is read back first.
+        int right = value(tokens);
+        int left = value(tokens);
+        return switch (token) {
+            case "+" -> left + right;
+            case "-" -> left - right;
+            case "*" -> left * right;
+            default -> left / right;
+        };
+    }
+
+    private boolean isOperator(String token) {
+        return token.length() == 1 && "+-*/".indexOf(token.charAt(0)) >= 0;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The shared position moves left once per token, and each token is read exactly once.",
+                "space_complexity": "O(n)",
+                "space_why": "The unfinished calls stand in for the stack: a long chain of operators can hold half the tokens open at once, and a very long expression can run that call stack out.",
+                "when_to_use": "When you want the shape an interpreter really uses: one function per rule, with the call chain doing the remembering. Prefix (Polish) notation is then the same function read from the left, with the left side worked out first.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 'tokens = ["2","1","+","3","*"]',
@@ -717,6 +762,74 @@ class Solution {
                 "when_to_use": "The version to write. One pass, no second list of operators.",
                 "is_optimal": True,
             },
+            {
+                "name": "Recursive descent, one function per level",
+                "idea": "Write the rules down and give each one a function: a sum is terms joined by + and -, a term is numbers joined by * and /.",
+                "steps": [
+                    "Keep one position in the string that every function shares and only moves forward.",
+                    "The number function skips spaces and reads one run of digits.",
+                    "The term function reads a number, then while the next character is * or /, reads another number and combines them at once.",
+                    "The sum function reads a term, then while the next character is + or -, reads another term and adds or subtracts it.",
+                    "Calling the sum function once reads the whole string and returns the answer.",
+                ],
+                "code": """class Solution {
+    private String text;
+    private int position;
+
+    public int calculate(String s) {
+        text = s;
+        position = 0;
+        return sum();
+    }
+
+    // sum := term (('+' | '-') term)*
+    private int sum() {
+        int value = term();
+        while (true) {
+            char c = nextSymbol();
+            if (c != '+' && c != '-') return value;
+            position++;
+            int right = term();
+            value = c == '+' ? value + right : value - right;
+        }
+    }
+
+    // term := number (('*' | '/') number)*
+    private int term() {
+        int value = number();
+        while (true) {
+            char c = nextSymbol();
+            if (c != '*' && c != '/') return value;
+            position++;
+            int right = number();
+            value = c == '*' ? value * right : value / right;
+        }
+    }
+
+    private int number() {
+        char c = nextSymbol();
+        int value = 0;
+        while (position < text.length() && Character.isDigit(text.charAt(position))) {
+            value = value * 10 + (text.charAt(position) - '0');
+            position++;
+        }
+        return value;
+    }
+
+    private char nextSymbol() {
+        while (position < text.length() && text.charAt(position) == ' ') position++;
+        return position < text.length() ? text.charAt(position) : 0;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The shared position never goes backwards, so every character of the string is read once.",
+                "space_complexity": "O(1)",
+                "space_why": "The three functions sit at most three deep, and only the position and one running value are kept.",
+                "when_to_use": "When the expression grows past two levels of binding: powers, comparisons, a function call. Each new level is one more function, while the single stack of numbers only knows + - against * /.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 's = "3+2*2"',
@@ -863,6 +976,55 @@ class Solution {
                 "when_to_use": "The version to write. No shared index, one left-to-right pass.",
                 "is_optimal": True,
             },
+            {
+                "name": "Recursion, one call per bracket level",
+                "idea": "One call decodes text until it meets a ']', and a 'k[' hands the inside to a fresh call that returns the text it decoded.",
+                "steps": [
+                    "Keep one position in the string that every call shares and only moves forward.",
+                    "A call appends letters to its own builder until it reaches a ']' or the end of the string.",
+                    "On digits, read the whole count, step over the '[', and ask a new call for the text inside.",
+                    "Step over the matching ']' and append the returned text to this call's builder that many times.",
+                    "The text the first call returns is the answer.",
+                ],
+                "code": """class Solution {
+    private int position;
+
+    public String decodeString(String s) {
+        position = 0;
+        return decode(s);
+    }
+
+    private String decode(String s) {
+        StringBuilder out = new StringBuilder();
+        while (position < s.length() && s.charAt(position) != ']') {
+            char c = s.charAt(position);
+            if (Character.isDigit(c)) {
+                int count = 0;
+                while (Character.isDigit(s.charAt(position))) {
+                    count = count * 10 + (s.charAt(position) - '0');
+                    position++;
+                }
+                position++;              // step over '['
+                String inner = decode(s);
+                position++;              // step over the matching ']'
+                for (int k = 0; k < count; k++) out.append(inner);
+            } else {
+                out.append(c);
+                position++;
+            }
+        }
+        return out.toString();
+    }
+}
+""",
+                "time_complexity": "O(n + L)",
+                "time_why": "Every character of s is read once, and each letter of the decoded text is appended once at the level that makes it.",
+                "space_complexity": "O(n + L)",
+                "space_why": "The unfinished calls go as deep as the nesting, and each one holds the text it has built so far.",
+                "when_to_use": "When the characters arrive one at a time from a reader, or the encoding grows more rules. Each call carries its own count and its own text, so nothing has to be kept in step across two stacks.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 's = "3[a2[c]]"',
@@ -1000,6 +1162,56 @@ class Solution {
                 "space_why": "The stack holds the folders that remain.",
                 "when_to_use": "The version to write. One split, one join.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Scan from the right with a skip count",
+                "idea": "A folder is cancelled by a '..' that comes after it, so if you read the path backwards you already know how many folders are still to be dropped.",
+                "steps": [
+                    "Walk the path from the last character to the first, cutting out one name at a time between slashes.",
+                    "Keep a count of folders still owed to a '..'. It starts at 0.",
+                    "A '.' changes nothing. A '..' adds one to the count. Any other name is dropped if the count is positive, and takes one off it.",
+                    "A name that survives is written into the answer buffer from the back, with its slash in front of it.",
+                    "If nothing was written, the answer is '/'.",
+                ],
+                "code": """class Solution {
+    public String simplifyPath(String path) {
+        char[] out = new char[path.length() + 1];
+        int write = out.length;
+        int skip = 0;
+        int i = path.length() - 1;
+        while (i >= 0) {
+            if (path.charAt(i) == '/') {
+                i--;
+                continue;
+            }
+            int end = i;
+            while (i >= 0 && path.charAt(i) != '/') i--;
+            int start = i + 1;
+            int length = end - start + 1;
+            if (length == 1 && path.charAt(start) == '.') continue;
+            if (length == 2 && path.charAt(start) == '.' && path.charAt(start + 1) == '.') {
+                skip++;
+                continue;
+            }
+            if (skip > 0) {
+                skip--;
+                continue;
+            }
+            write -= length;
+            for (int k = 0; k < length; k++) out[write + k] = path.charAt(start + k);
+            out[--write] = '/';
+        }
+        return write == out.length ? "/" : new String(out, write, out.length - write);
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Each character of the path is read once on the way back, and each surviving folder is copied once.",
+                "space_complexity": "O(n)",
+                "space_why": "Only the answer buffer and one count. No folder name is ever stored twice.",
+                "when_to_use": "When you may not keep the names: the path is handed to you backwards, or the answer must go straight into a buffer of a fixed size. A count of folders still owed is the whole memory this needs.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -1545,6 +1757,77 @@ class MinStack {
                 "space_why": "values stores every push; mins stores each new or tied min.",
                 "when_to_use": "The version to write. Two stacks, no scan, no pairs.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Store each value as its distance from the minimum",
+                "idea": "Keep one stack and one minimum. A stored entry is not the value itself but how far it sits from the minimum at the moment it was pushed, which is enough to rebuild both.",
+                "steps": [
+                    "The first push stores 0 and makes that value the minimum.",
+                    "A later push stores `val - min`, and if val is the new minimum, min becomes val.",
+                    "A stored entry is negative only when its value was a new minimum, so on pop the minimum underneath is `min - entry`.",
+                    "top is `min + entry` when the entry is positive, and the minimum itself when it is not.",
+                    "Do the arithmetic in `long`: the gap between two ints can be too big for an int.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[] process(String[] operations, int[] values) {
+        MinStack stack = new MinStack();
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < operations.length; i++) {
+            switch (operations[i]) {
+                case "push" -> stack.push(values[i]);
+                case "pop" -> stack.pop();
+                case "top" -> out.add(stack.top());
+                case "getMin" -> out.add(stack.getMin());
+                default -> {}
+            }
+        }
+        int[] arr = new int[out.size()];
+        for (int i = 0; i < out.size(); i++) arr[i] = out.get(i);
+        return arr;
+    }
+}
+
+class MinStack {
+    private final Deque<Long> gaps = new ArrayDeque<>();
+    private long min;
+
+    public MinStack() {}
+
+    public void push(int val) {
+        if (gaps.isEmpty()) {
+            gaps.push(0L);
+            min = val;
+            return;
+        }
+        gaps.push(val - min);
+        if (val < min) min = val;
+    }
+
+    public void pop() {
+        long gap = gaps.pop();
+        // A negative gap means this value was the minimum, so the one below it comes back.
+        if (gap < 0) min = min - gap;
+    }
+
+    public int top() {
+        long gap = gaps.peek();
+        return (int) (gap > 0 ? min + gap : min);
+    }
+
+    public int getMin() {
+        return (int) min;
+    }
+}
+""",
+                "time_complexity": "O(1)",
+                "time_why": "Each call is one push or pop plus a little arithmetic on the current minimum.",
+                "space_complexity": "O(n)",
+                "space_why": "One number per pushed value, and the minimum. That is half of what a pair or a second stack costs.",
+                "when_to_use": "When memory is what is being tested: one number per value instead of two. It is the trick to name when the interviewer asks for no second stack and no pairs.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {

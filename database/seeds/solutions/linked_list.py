@@ -316,6 +316,62 @@ class Solution {
                 "when_to_use": "The version to write. Constant extra space.",
                 "is_optimal": True,
             },
+            {
+                "name": "Brent's cycle detection, in doubling bursts",
+                "idea": "One pointer stands still while the other walks ahead in bursts that keep doubling in length, and a loop shows itself when the walker comes round onto the one standing.",
+                "steps": [
+                    "Leave one pointer on the head and put the walker on the node after it. Set the burst length to 1 and the step count to 0.",
+                    "Step the walker one node at a time, adding one to the step count.",
+                    "When the step count reaches the burst length, move the standing pointer up to the walker, double the burst length, and set the count back to 0.",
+                    "If the walker reaches null, the track ends: there is no loop.",
+                    "If the walker lands on the standing pointer, the track loops, and the step count is the loop's length.",
+                ],
+                "code": """class Solution {
+    public boolean hasCycle(int[] values, int pos) {
+        return detect(build(values, pos));
+    }
+
+    public boolean detect(ListNode head) {
+        if (head == null) return false;
+        ListNode standing = head;
+        ListNode walker = head.next;
+        int burst = 1;
+        int steps = 0;
+        while (walker != null && standing != walker) {
+            if (steps == burst) {
+                standing = walker;
+                burst *= 2;
+                steps = 0;
+            }
+            walker = walker.next;
+            steps++;
+        }
+        return walker != null;
+    }
+
+    private ListNode build(int[] values, int pos) {
+        if (values.length == 0) return null;
+        ListNode dummy = new ListNode(0);
+        ListNode cur = dummy;
+        ListNode cycle = null;
+        for (int i = 0; i < values.length; i++) {
+            cur.next = new ListNode(values[i]);
+            cur = cur.next;
+            if (i == pos) cycle = cur;
+        }
+        cur.next = cycle;
+        return dummy.next;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The burst doubles, so it passes the loop's length after a few rounds, and the walker takes about twice the steps it needs.",
+                "space_complexity": "O(1)",
+                "space_why": "Two pointers, the burst length, and the step count.",
+                "when_to_use": "When taking a step is expensive: a chase over disk, or a number sequence you must work out each time. Only one pointer moves, so fewer nodes are touched than with two walkers, and the step count is the loop's length already.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "values = [3,2,0,-4], pos = 1",
@@ -1515,6 +1571,41 @@ class Solution {
                 "space_why": "Only the pointers. The reverse is in place.",
                 "when_to_use": "The version to write. Mention that it mutates the list, and offer to reverse the half back.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Recursion with a pointer held at the front",
+                "idea": "Go all the way to the end first. As the calls come back they hand you the nodes from the end, while a separate pointer walks forward from the head to meet them.",
+                "steps": [
+                    "Keep one pointer, `front`, on the head of the list.",
+                    "Walk down the list with a call per node until you fall off the end, then start checking on the way back.",
+                    "Each call comes back holding a node from the end. Compare its value with the value at `front`.",
+                    "If the two differ, answer no, and let that no pass straight back through every waiting call.",
+                    "If they match, step `front` forward one node and answer yes.",
+                ],
+                "code": """class Solution {
+    private ListNode front;
+
+    public boolean isPalindrome(ListNode head) {
+        front = head;
+        return check(head);
+    }
+
+    private boolean check(ListNode node) {
+        if (node == null) return true;
+        if (!check(node.next)) return false;
+        if (node.val != front.val) return false;
+        front = front.next;
+        return true;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "One call per node going down, and one compare per node coming back.",
+                "space_complexity": "O(n)",
+                "space_why": "The call stack holds one frame per node.",
+                "when_to_use": "When the list may not be changed. The best approach reverses half of it and has to put it back, while this one only reads. It is also how you compare any forward-only walk with itself from both ends, such as a tree read in order.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {

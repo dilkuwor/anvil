@@ -527,6 +527,69 @@ class Solution {
                 "space_why": "The recursion stack depth and StringBuilder buffer never exceed 2 * n characters.",
                 "when_to_use": "The optimal interview approach guaranteeing that every generated string is valid.",
             },
+            {
+                "name": "Lexicographic successor, one string at a time",
+                "idea": "Start from the smallest valid string and work out the next one in dictionary order, the way next permutation steps through arrangements of an array.",
+                "steps": [
+                    "Start with the smallest valid string: n open brackets followed by n close brackets.",
+                    "To find the next one, walk from the right and stop at an open bracket that has more opens than closes before it.",
+                    "Turn that bracket into a close bracket. The count in front of it keeps the string valid.",
+                    "Fill everything after it with all the open brackets still owed, then all the close brackets. That tail is the smallest possible ending.",
+                    "Write the string down and repeat. When no bracket can be turned, the last string has been reached.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<String> generateParenthesis(int n) {
+        List<String> out = new ArrayList<>();
+        char[] current = new char[2 * n];
+        for (int i = 0; i < n; i++) {
+            current[i] = '(';
+            current[n + i] = ')';
+        }
+        while (true) {
+            out.add(new String(current));
+            if (!step(current, n)) {
+                return out;
+            }
+        }
+    }
+
+    // Rewrites current as the next valid string in dictionary order, or reports there is none.
+    private boolean step(char[] current, int n) {
+        int opensRight = 0;
+        int closesRight = 0;
+        for (int i = current.length - 1; i >= 0; i--) {
+            if (current[i] == ')') {
+                closesRight++;
+                continue;
+            }
+            opensRight++;
+            int opensBefore = n - opensRight;
+            int closesBefore = n - closesRight;
+            if (opensBefore > closesBefore && closesBefore < n) {
+                current[i] = ')';
+                int pos = i + 1;
+                for (int owed = n - opensBefore; owed > 0; owed--) {
+                    current[pos++] = '(';
+                }
+                while (pos < current.length) {
+                    current[pos++] = ')';
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+}""",
+                "time_complexity": "O(n · C(n))",
+                "time_why": "Each string is produced by one walk over 2n characters, and there are C(n) of them, the nth Catalan number.",
+                "space_complexity": "O(n)",
+                "space_why": "One buffer of 2n characters is rewritten in place, with no call stack and no queue.",
+                "when_to_use": "When the answers should arrive one at a time instead of all at once: hand out the next string, or carry on from the last one seen. They come in dictionary order with no recursion.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "n = 2",
@@ -700,6 +763,49 @@ class Solution {
                 "space_why": "The deque and call stack hold at most target / min elements.",
                 "when_to_use": "The optimal interview approach pruning fruitless branches early with sorted candidates.",
             },
+            {
+                "name": "Coin change table over every amount",
+                "idea": "Work out the combinations for every amount from 0 up to the target, each one built from the combinations of a smaller amount.",
+                "steps": [
+                    "Keep a list of combinations for every amount from 0 to the target. Amount 0 starts with one empty combination.",
+                    "Take the candidate numbers one at a time, smallest first.",
+                    "For the current number, walk the amounts upward from that number to the target.",
+                    "At each amount, copy every combination stored at the amount minus that number, add the number to the copy, and store it here.",
+                    "Handling one number at a time keeps every combination in sorted order, so no combination is built twice.",
+                    "The answer is the list sitting at the target.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<List<Integer>> combinationSum(int[] candidates, int target) {
+        List<List<List<Integer>>> table = new ArrayList<>();
+        for (int amount = 0; amount <= target; amount++) {
+            table.add(new ArrayList<>());
+        }
+        table.get(0).add(new ArrayList<>());
+
+        int[] sorted = candidates.clone();
+        Arrays.sort(sorted);
+        for (int value : sorted) {
+            for (int amount = value; amount <= target; amount++) {
+                for (List<Integer> smaller : table.get(amount - value)) {
+                    List<Integer> longer = new ArrayList<>(smaller);
+                    longer.add(value);
+                    table.get(amount).add(longer);
+                }
+            }
+        }
+        return table.get(target);
+    }
+}""",
+                "time_complexity": "O(N · target · K)",
+                "time_why": "Each of the N candidates sweeps the whole table, and every stored combination is copied in full, K being how many combinations appear on the way.",
+                "space_complexity": "O(target · K)",
+                "space_why": "Every amount up to the target keeps its own list of combinations, not only the target.",
+                "when_to_use": "When the question is about the target itself rather than one list: how many ways reach each amount, or the fewest numbers that do. The table has already answered those.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "candidates = [2,3,5], target = 5",
@@ -869,6 +975,69 @@ class Solution {
                 "space_complexity": "O(n)",
                 "space_why": "The boolean used array, path list, and call stack each scale linearly with n.",
                 "when_to_use": "The optimal interview approach using an O(1) lookup array to avoid linear list scanning.",
+            },
+            {
+                "name": "Next permutation in dictionary order",
+                "idea": "Sort the numbers, then keep rearranging them into the next ordering in dictionary order until no later ordering exists.",
+                "steps": [
+                    "Sort the numbers so the smallest ordering comes first, and write it down.",
+                    "To step forward, scan from the right for the first slot holding a number smaller than the one just after it.",
+                    "Swap that number with the smallest number to its right that is still larger than it.",
+                    "Reverse everything after that slot, which turns the tail into its smallest ordering.",
+                    "Write down the new ordering and repeat. When the scan finds no such slot, the last ordering has been reached.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<List<Integer>> permute(int[] nums) {
+        int[] order = nums.clone();
+        Arrays.sort(order);
+        List<List<Integer>> out = new ArrayList<>();
+        while (true) {
+            List<Integer> snapshot = new ArrayList<>();
+            for (int value : order) {
+                snapshot.add(value);
+            }
+            out.add(snapshot);
+            if (!step(order)) {
+                return out;
+            }
+        }
+    }
+
+    // Rewrites order as the next ordering in dictionary order, or reports there is none.
+    private boolean step(int[] order) {
+        int slot = order.length - 2;
+        while (slot >= 0 && order[slot] > order[slot + 1]) {
+            slot--;
+        }
+        if (slot < 0) {
+            return false;
+        }
+        int bigger = order.length - 1;
+        while (order[bigger] < order[slot]) {
+            bigger--;
+        }
+        swap(order, slot, bigger);
+        for (int left = slot + 1, right = order.length - 1; left < right; left++, right--) {
+            swap(order, left, right);
+        }
+        return true;
+    }
+
+    private void swap(int[] order, int i, int j) {
+        int keep = order[i];
+        order[i] = order[j];
+        order[j] = keep;
+    }
+}""",
+                "time_complexity": "O(n · n!)",
+                "time_why": "Each step scans and reverses at most n slots, and there are `n!` orderings to reach.",
+                "space_complexity": "O(n)",
+                "space_why": "One copy of the numbers is rearranged in place, with no used array and no call stack.",
+                "when_to_use": "When the orderings should come in dictionary order, or the question is only what comes straight after a given ordering. Nothing is held between answers, so a run can stop and pick up again.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -1234,6 +1403,48 @@ class Solution {
                 "space_complexity": "O(n)",
                 "space_why": "The recursion stack depth and path list require at most n elements.",
                 "when_to_use": "The optimal interview approach exploring subsets depth-first with O(n) auxiliary stack space.",
+            },
+            {
+                "name": "Gray code order, one element changed at a time",
+                "idea": "List the subsets so that each one differs from the one before it by a single element going in or coming out.",
+                "steps": [
+                    "Keep a flag for each number saying whether it is in the current subset. Start with every flag off and save the empty subset.",
+                    "Count the steps from 1 up to 2^n - 1.",
+                    "At step k, flip the flag of the number whose position matches how many zeros sit at the end of k written in binary.",
+                    "The step number only picks which flag to flip. It is never read as the subset itself, which is what makes this different from letting the bits of k stand for the numbers.",
+                    "Read the flags in order to write down the subset that the flip produced, and save it.",
+                    "Every subset shows up exactly once, and each one is a single flip away from the one before it.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<List<Integer>> subsets(int[] nums) {
+        int n = nums.length;
+        List<List<Integer>> out = new ArrayList<>();
+        boolean[] inSubset = new boolean[n];
+        out.add(new ArrayList<>());
+
+        for (int step = 1; step < (1 << n); step++) {
+            int flipped = Integer.numberOfTrailingZeros(step);
+            inSubset[flipped] = !inSubset[flipped];
+            List<Integer> subset = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                if (inSubset[i]) {
+                    subset.add(nums[i]);
+                }
+            }
+            out.add(subset);
+        }
+        return out;
+    }
+}""",
+                "time_complexity": "O(n · 2^n)",
+                "time_why": "There are 2^n subsets, and reading the n flags to write each one down costs n.",
+                "space_complexity": "O(n)",
+                "space_why": "One flag per number is kept, with no call stack and no copies of earlier subsets.",
+                "when_to_use": "When the answer for a subset can be updated from the previous one instead of worked out afresh: add or drop one number and adjust a running total. It is also the order for testing settings one change at a time.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {

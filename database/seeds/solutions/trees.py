@@ -2111,7 +2111,75 @@ SOLUTIONS = [   {   'approaches': [   {   'code': 'import java.util.*;\n'
                               'time_complexity': 'O(n)',
                               'time_why': 'We visit every node at most once in the tree.',
                               'when_to_use': 'The standard interview answer: one clean pass with no extra '
-                                             'data structures.'}],
+                                             'data structures.'},
+                          {   'code': 'import java.util.*;\n'
+                                      '\n'
+                                      'class Solution {\n'
+                                      '    private List<int[]> tour = new ArrayList<>();\n'
+                                      '\n'
+                                      '    public int lowestCommonAncestor(TreeNode root, int p, int q) {\n'
+                                      '        walk(root, 0);\n'
+                                      '        int first = -1, second = -1;\n'
+                                      '        for (int i = 0; i < tour.size(); i++) {\n'
+                                      '            int val = tour.get(i)[0];\n'
+                                      '            if (val == p && first < 0) first = i;\n'
+                                      '            if (val == q && second < 0) second = i;\n'
+                                      '        }\n'
+                                      '        if (first > second) {\n'
+                                      '            int swap = first;\n'
+                                      '            first = second;\n'
+                                      '            second = swap;\n'
+                                      '        }\n'
+                                      '        int best = tour.get(first)[0];\n'
+                                      '        int bestDepth = tour.get(first)[1];\n'
+                                      '        for (int i = first; i <= second; i++) {\n'
+                                      '            if (tour.get(i)[1] < bestDepth) {\n'
+                                      '                bestDepth = tour.get(i)[1];\n'
+                                      '                best = tour.get(i)[0];\n'
+                                      '            }\n'
+                                      '        }\n'
+                                      '        return best;\n'
+                                      '    }\n'
+                                      '\n'
+                                      '    private void walk(TreeNode node, int depth) {\n'
+                                      '        if (node == null) return;\n'
+                                      '        tour.add(new int[] {node.val, depth});\n'
+                                      '        if (node.left != null) {\n'
+                                      '            walk(node.left, depth + 1);\n'
+                                      '            tour.add(new int[] {node.val, depth});\n'
+                                      '        }\n'
+                                      '        if (node.right != null) {\n'
+                                      '            walk(node.right, depth + 1);\n'
+                                      '            tour.add(new int[] {node.val, depth});\n'
+                                      '        }\n'
+                                      '    }\n'
+                                      '}\n',
+                              'idea': 'Write down every node as you walk down and back up, then look at the '
+                                      'stretch of that list between the two targets: the node closest to the '
+                                      'root in that stretch is the answer.',
+                              'is_alternative': True,
+                              'is_optimal': False,
+                              'name': 'Euler tour and the shallowest node in between',
+                              'space_complexity': 'O(n)',
+                              'space_why': 'The list holds one entry for arriving at a node plus one for '
+                                           'each child it comes back from.',
+                              'steps': [   "Walk the whole tree once, adding the current node's value and "
+                                           'its depth to a list each time you arrive at it and each time you '
+                                           'come back to it from a child.',
+                                           'Find the first place `p` appears in that list and the first '
+                                           'place `q` appears.',
+                                           'Any route from `p` to `q` has to pass through their shared '
+                                           'ancestor, so nothing in the stretch between those two places '
+                                           'sits higher than it.',
+                                           'Scan that stretch and return the value of the entry with the '
+                                           'smallest depth.'],
+                              'time_complexity': 'O(n)',
+                              'time_why': 'The walk adds fewer than two entries per node, and the scan '
+                                          'crosses part of that list once.',
+                              'when_to_use': 'When many pairs are asked about the same tree. The list is '
+                                             'built once, and a smallest-in-a-range table over it then '
+                                             'answers each pair in constant time instead of searching the '
+                                             'tree again for every question.'}],
         'edge_cases': [   {   'expected': '3',
                               'input': 'root = [3, 5, 1], p = 5, q = 1',
                               'why': 'The two targets sit in different subtrees of the root.'},
@@ -2446,7 +2514,76 @@ SOLUTIONS = [   {   'approaches': [   {   'code': 'import java.util.*;\n'
                                            'caller.'],
                               'time_complexity': 'O(n)',
                               'time_why': 'Every node is visited once during the post-order depth search.',
-                              'when_to_use': 'Best standard way to compute tree diameter in linear time.'}],
+                              'when_to_use': 'Best standard way to compute tree diameter in linear time.'},
+                          {   'code': 'import java.util.*;\n'
+                                      '\n'
+                                      'class Solution {\n'
+                                      '    private int steps = 0;\n'
+                                      '\n'
+                                      '    public int diameterOfBinaryTree(TreeNode root) {\n'
+                                      '        if (root == null) return 0;\n'
+                                      '        Map<TreeNode, List<TreeNode>> links = new HashMap<>();\n'
+                                      '        connect(root, null, links);\n'
+                                      '        TreeNode end = farthest(root, links);\n'
+                                      '        farthest(end, links);\n'
+                                      '        return steps;\n'
+                                      '    }\n'
+                                      '\n'
+                                      '    private void connect(TreeNode node, TreeNode parent, '
+                                      'Map<TreeNode, List<TreeNode>> links) {\n'
+                                      '        if (node == null) return;\n'
+                                      '        links.computeIfAbsent(node, key -> new ArrayList<>());\n'
+                                      '        if (parent != null) {\n'
+                                      '            links.get(node).add(parent);\n'
+                                      '            links.get(parent).add(node);\n'
+                                      '        }\n'
+                                      '        connect(node.left, node, links);\n'
+                                      '        connect(node.right, node, links);\n'
+                                      '    }\n'
+                                      '\n'
+                                      '    private TreeNode farthest(TreeNode start, Map<TreeNode, '
+                                      'List<TreeNode>> links) {\n'
+                                      '        Set<TreeNode> seen = new HashSet<>();\n'
+                                      '        Queue<TreeNode> queue = new ArrayDeque<>();\n'
+                                      '        queue.add(start);\n'
+                                      '        seen.add(start);\n'
+                                      '        steps = -1;\n'
+                                      '        TreeNode last = start;\n'
+                                      '        while (!queue.isEmpty()) {\n'
+                                      '            int count = queue.size();\n'
+                                      '            steps++;\n'
+                                      '            for (int i = 0; i < count; i++) {\n'
+                                      '                TreeNode node = queue.poll();\n'
+                                      '                last = node;\n'
+                                      '                for (TreeNode next : links.get(node)) {\n'
+                                      '                    if (seen.add(next)) queue.add(next);\n'
+                                      '                }\n'
+                                      '            }\n'
+                                      '        }\n'
+                                      '        return last;\n'
+                                      '    }\n'
+                                      '}\n',
+                              'idea': 'Treat the tree as a plain network of links: step outward from any '
+                                      'node to find the one farthest away, then step outward from that one, '
+                                      'and the distance reached is the diameter.',
+                              'is_alternative': True,
+                              'is_optimal': False,
+                              'name': 'Two breadth-first sweeps from the farthest node',
+                              'space_complexity': 'O(n)',
+                              'space_why': 'The link map and the queue each hold up to one entry per node.',
+                              'steps': [   'Give every node a link back to its parent as well as to its '
+                                           'children, so the search can move up as well as down.',
+                                           'Spread out from the root one step at a time, counting the steps, '
+                                           'and keep the last node reached.',
+                                           'That last node is one end of the longest path in the tree.',
+                                           'Spread out from it the same way, and the number of steps in this '
+                                           'second spread is the diameter.'],
+                              'time_complexity': 'O(n)',
+                              'time_why': 'Each spread reaches every node once, and there are two spreads.',
+                              'when_to_use': 'When the shape is a general tree or arrives as a list of '
+                                             'edges, so there is no left and right child whose heights you '
+                                             'could add. It also hands you both ends of the longest path, '
+                                             'not only its length.'}],
         'edge_cases': [   {   'expected': '0',
                               'input': 'root = [1]',
                               'why': 'A single node has no edges, so diameter is 0.'},
@@ -3096,7 +3233,51 @@ SOLUTIONS = [   {   'approaches': [   {   'code': 'import java.util.*;\n'
                               'time_complexity': 'O(n)',
                               'time_why': 'Every node in the tree is checked at most once.',
                               'when_to_use': 'Best standard way to validate a binary search tree with early '
-                                             'termination.'}],
+                                             'termination.'},
+                          {   'code': 'class Solution {\n'
+                                      '    public boolean isValidBST(TreeNode root) {\n'
+                                      '        return check(root) != null;\n'
+                                      '    }\n'
+                                      '\n'
+                                      '    // Returns {smallest, largest} for a valid search tree, or null '
+                                      'when it is not one.\n'
+                                      '    private long[] check(TreeNode node) {\n'
+                                      '        if (node == null) return new long[] {Long.MAX_VALUE, '
+                                      'Long.MIN_VALUE};\n'
+                                      '        long[] left = check(node.left);\n'
+                                      '        long[] right = check(node.right);\n'
+                                      '        if (left == null || right == null) return null;\n'
+                                      '        if (node.left != null && left[1] >= node.val) return null;\n'
+                                      '        if (node.right != null && right[0] <= node.val) return null;\n'
+                                      '        long smallest = node.left != null ? left[0] : node.val;\n'
+                                      '        long largest = node.right != null ? right[1] : node.val;\n'
+                                      '        return new long[] {smallest, largest};\n'
+                                      '    }\n'
+                                      '}\n',
+                              'idea': 'Instead of handing limits down, let every subtree report back its own '
+                                      'smallest and largest value, so each node checks itself against what '
+                                      'is really below it.',
+                              'is_alternative': True,
+                              'is_optimal': False,
+                              'name': "Bottom-up report of each subtree's smallest and largest",
+                              'space_complexity': 'O(h)',
+                              'space_why': 'Only the chain of waiting calls from the root down to the '
+                                           'current node is held.',
+                              'steps': [   'Ask the left subtree and the right subtree for their reports '
+                                           'before checking the current node.',
+                                           'If either side reports a problem, report a problem here as well.',
+                                           "The left side's largest value must be below this node's value "
+                                           "and the right side's smallest must be above it, or this is not a "
+                                           'search tree.',
+                                           'Otherwise report back the smallest value from the left side and '
+                                           "the largest from the right, using this node's own value when a "
+                                           'side is empty.'],
+                              'time_complexity': 'O(n)',
+                              'time_why': 'Every node reports once, and each report compares two values.',
+                              'when_to_use': 'When the question turns into finding the largest search tree '
+                                             'hidden inside a tree. Limits handed down cannot answer that, '
+                                             'since a broken ancestor rules out a good subtree below it, '
+                                             'while a report climbing up lets each subtree judge itself.'}],
         'edge_cases': [   {   'expected': 'true',
                               'input': 'root = [2,1,3]',
                               'why': 'Standard valid BST with 3 nodes.'},

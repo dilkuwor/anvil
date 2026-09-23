@@ -467,6 +467,59 @@ class Solution {
                 "when_to_use": "The version to write. The input is already sorted and non-overlapping.",
                 "is_optimal": True,
             },
+            {
+                "name": "Binary search for the run that overlaps",
+                "idea": "The list is already sorted, so the ranges the new one touches sit in one block, and both edges of that block can be found by halving instead of walking.",
+                "steps": [
+                    "Binary search for the first range whose end is at or after the new start. The block begins there.",
+                    "Binary search for the first range whose start is after the new end. The block stops just before it.",
+                    "If the block holds anything, pull the new start down to the block's first start and push the new end up to the block's last end.",
+                    "Copy the ranges before the block, add the stretched range, then copy the ranges after the block.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[][] insert(int[][] intervals, int[] newInterval) {
+        int n = intervals.length;
+        // First range whose end is at or after the new start.
+        int lo = 0, hi = n;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (intervals[mid][1] < newInterval[0]) lo = mid + 1;
+            else hi = mid;
+        }
+        int blockStart = lo;
+        // First range whose start is after the new end.
+        lo = 0;
+        hi = n;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (intervals[mid][0] <= newInterval[1]) lo = mid + 1;
+            else hi = mid;
+        }
+        int blockEnd = lo;
+        int start = newInterval[0];
+        int end = newInterval[1];
+        if (blockStart < blockEnd) {
+            start = Math.min(start, intervals[blockStart][0]);
+            end = Math.max(end, intervals[blockEnd - 1][1]);
+        }
+        List<int[]> out = new ArrayList<>();
+        for (int i = 0; i < blockStart; i++) out.add(intervals[i]);
+        out.add(new int[] { start, end });
+        for (int i = blockEnd; i < n; i++) out.add(intervals[i]);
+        return out.toArray(new int[0][]);
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The two searches take about log n steps each, but the answer still holds every old range, so the copying sets the cost.",
+                "space_complexity": "O(n)",
+                "space_why": "The answer list holds the old ranges plus the merged one.",
+                "when_to_use": "When the ranges live somewhere you can splice into, like a balanced tree of bookings: the search finds the affected block in about log n steps and only that block is rebuilt, so one insert costs log n plus the block.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "intervals = [[1,3],[6,9]], newInterval = [2,5]",

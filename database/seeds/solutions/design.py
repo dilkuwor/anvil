@@ -1101,6 +1101,77 @@ class Codec {
                 "space_why": "The hash map stores one string entry for each of the N registered URLs.",
                 "when_to_use": "The optimal interview design for deterministic, collision-free short URLs with constant time lookup.",
             },
+            {
+                "name": "Hash the URL itself into the key",
+                "is_optimal": False,
+                "is_alternative": True,
+                "idea": "Take the key from the URL rather than from a counter: run the URL through MD5 and keep the first few characters, so the same URL always gives the same short link.",
+                "steps": [
+                    "Run the long URL through MD5, which turns any text into a fixed block of bytes.",
+                    "Read the first six bytes as one number and write that number in base 62. That is the six-character key.",
+                    "If the key is free, store the URL under it. If it already holds this same URL, hand back that short link again.",
+                    "If it holds a different URL, the two have collided: add a marker to the text, hash once more, and try the key that comes out.",
+                    "On decode, cut the key off after the last slash and read the stored URL, the same as before.",
+                ],
+                "code": """import java.security.MessageDigest;
+import java.util.*;
+
+class Solution {
+    public String roundtrip(String url) {
+        Codec codec = new Codec();
+        return codec.decode(codec.encode(url));
+    }
+}
+
+class Codec {
+    private static final String ALPHABET =
+            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private final Map<String, String> byKey = new HashMap<>();
+
+    public String encode(String longUrl) {
+        for (int attempt = 0; ; attempt++) {
+            String key = shortKey(attempt == 0 ? longUrl : longUrl + "#" + attempt);
+            String stored = byKey.get(key);
+            if (stored == null) {
+                byKey.put(key, longUrl);
+                return "http://tinyurl.com/" + key;
+            }
+            // Same URL: hand back the key it already has. Different URL: try the next one.
+            if (stored.equals(longUrl)) {
+                return "http://tinyurl.com/" + key;
+            }
+        }
+    }
+
+    public String decode(String shortUrl) {
+        return byKey.get(shortUrl.substring(shortUrl.lastIndexOf('/') + 1));
+    }
+
+    private String shortKey(String text) {
+        byte[] digest;
+        try {
+            digest = MessageDigest.getInstance("MD5").digest(text.getBytes());
+        } catch (Exception error) {
+            throw new RuntimeException(error);
+        }
+        long value = 0;
+        for (int i = 0; i < 6; i++) {
+            value = value * 256 + (digest[i] & 0xFF);
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
+            sb.append(ALPHABET.charAt((int) (value % 62)));
+            value /= 62;
+        }
+        return sb.toString();
+    }
+}""",
+                "time_complexity": "O(L)",
+                "time_why": "MD5 reads the L characters of the URL once, and the six base-62 characters are written in a fixed six steps.",
+                "space_complexity": "O(N)",
+                "space_why": "The map holds one entry per stored URL, and nothing else is kept between calls.",
+                "when_to_use": "When there is no single counter to share, such as ten servers handing out links at once. Each one hashes the URL and gets the same key, and the same URL is never stored twice.",
+            },
         ],
         "walkthrough": {
             "input": 'encode("https://leetcode.com/problems/design-tinyurl")',

@@ -99,6 +99,47 @@ SOLUTIONS: list[dict] = [
                 "when_to_use": "The version to write. Same check as the slow loop, on a dial instead of every value.",
                 "is_optimal": True,
             },
+            {
+                "name": "Dynamic programming over the day splits",
+                "idea": "Forget capacities. Work out, for each number of days and each stretch of the belt, the smallest possible heaviest day.",
+                "steps": [
+                    "Add the weights into running totals first, so the load of any stretch is one subtraction.",
+                    "With a single day, the answer for the first i packages is their total weight.",
+                    "For each extra day, try every place that last day could start.",
+                    "The cost of a choice is the heavier of two things: the best the earlier days can do, and that last day's load.",
+                    "Keep the smallest cost for each i. The answer for all n packages with D days is the last value worked out.",
+                ],
+                "code": """class Solution {
+    public int shipWithinDays(int[] weights, int days) {
+        int n = weights.length;
+        long[] total = new long[n + 1];
+        for (int i = 0; i < n; i++) total[i + 1] = total[i] + weights[i];
+        long[] best = new long[n + 1];
+        for (int i = 0; i <= n; i++) best[i] = total[i];
+        for (int day = 2; day <= days; day++) {
+            long[] next = new long[n + 1];
+            for (int i = 1; i <= n; i++) {
+                long smallest = Long.MAX_VALUE;
+                for (int cut = 0; cut < i; cut++) {
+                    long heaviest = Math.max(best[cut], total[i] - total[cut]);
+                    smallest = Math.min(smallest, heaviest);
+                }
+                next[i] = smallest;
+            }
+            best = next;
+        }
+        return (int) best[n];
+    }
+}
+""",
+                "time_complexity": "O(D · n²)",
+                "time_why": "For each of the D days and each of the n stopping points, every earlier cut is tried.",
+                "space_complexity": "O(n)",
+                "space_why": "Two rows of n + 1 numbers: the day before and the day being worked out.",
+                "when_to_use": "When bigger is no longer always better: days that cost different amounts, or a limit that changes from day to day. The dial needs that rule to hold, and this one does not.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "weights = [1,2,3,4,5,6,7,8,9,10], days = 5",
@@ -476,6 +517,48 @@ SOLUTIONS: list[dict] = [
                 "space_why": "Only the two search ends and the stored bad version.",
                 "when_to_use": "The version to write. Copy the isBadVersion helper the starter needs.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Exponential search: double the probe, then binary search",
+                "idea": "Do not start from the whole range. Probe version 1, then 2, then 4, then 8, and only search the gap you jumped over.",
+                "steps": [
+                    "Ask about version 1. If it is bad, that is the answer.",
+                    "Otherwise keep doubling the version you ask about, remembering the last good one, until a probe comes back bad or the doubling passes n.",
+                    "The first bad version now sits after the last good probe and at or before the probe that stopped you.",
+                    "Binary search that gap the usual way, keeping mid when it is bad.",
+                ],
+                "code": """class Solution {
+    private int badVersion;
+
+    public int firstBadVersion(int n, int bad) {
+        badVersion = bad;
+        int low = 1;
+        long probe = 1;
+        while (probe < n && !isBadVersion((int) probe)) {
+            low = (int) probe + 1;
+            probe = probe * 2;
+        }
+        int high = (int) Math.min(probe, n);
+        while (low < high) {
+            int mid = low + (high - low) / 2;
+            if (isBadVersion(mid)) high = mid;
+            else low = mid + 1;
+        }
+        return low;
+    }
+
+    private boolean isBadVersion(int version) {
+        return version >= badVersion;
+    }
+}
+""",
+                "time_complexity": "O(log p)",
+                "time_why": "p is the first bad version. The doubling takes about log2(p) calls, and the gap it leaves takes about as many again.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the probe, the two search ends and the stored bad version.",
+                "when_to_use": "When there is no n at all: versions keep arriving and nobody can name the last one. Doubling finds a range first, so a search can start. It also makes fewer calls when the first bad version is near the start.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -1104,6 +1187,41 @@ SOLUTIONS: list[dict] = [
                 "space_why": "Only the two search ends.",
                 "when_to_use": "The version to write. This is the template the other problems in this topic build on.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Interpolation search: guess where the value should sit",
+                "idea": "Open a phone book near the back for a name starting with S, rather than always in the middle: guess the index from how far the target sits between the two end values.",
+                "steps": [
+                    "Keep a low end and a high end, and give up as soon as the target sits outside their two values.",
+                    "Work out how far the target lies between the value at low and the value at high, as a fraction.",
+                    "Read the index that same fraction of the way along, instead of the middle one.",
+                    "If the value there is smaller than the target, move low past it. If it is larger, move high below it.",
+                ],
+                "code": """class Solution {
+    public int search(int[] nums, int target) {
+        int low = 0, high = nums.length - 1;
+        while (low <= high && target >= nums[low] && target <= nums[high]) {
+            if (nums[low] == nums[high]) {
+                return nums[low] == target ? low : -1;
+            }
+            long span = (long) nums[high] - nums[low];
+            long along = (long) (high - low) * (target - nums[low]) / span;
+            int guess = low + (int) along;
+            if (nums[guess] == target) return guess;
+            if (nums[guess] < target) low = guess + 1;
+            else high = guess - 1;
+        }
+        return -1;
+    }
+}
+""",
+                "time_complexity": "O(log log n) on evenly spread values, O(n) at worst",
+                "time_why": "A guess lands near the target when the gaps between values are alike. Values bunched at one end make it crawl one index at a time.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the two ends and the guessed index.",
+                "when_to_use": "When the values are spread evenly, such as timestamps or ids handed out in order: the guess lands close, so few reads are needed. Never on bunched values, where it decays to a scan.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {

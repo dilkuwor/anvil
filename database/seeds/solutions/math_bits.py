@@ -660,6 +660,102 @@ class Solution {
                 "when_to_use": "The version to write. One array, no extra string rows.",
                 "is_optimal": True,
             },
+            {
+                "name": "Karatsuba's divide and conquer",
+                "idea": "Cut both numbers in half and buy the four half-size products for the price of three, then put the pieces back together.",
+                "steps": [
+                    "When either number is short, multiply it with the digit array above and stop there.",
+                    "Otherwise cut both numbers at the same place, k digits from the right: `x` becomes `a` and `b`, `y` becomes `c` and `d`.",
+                    "Work out three products the same way: `a*c`, `b*d`, and `(a+b)*(c+d)`.",
+                    "The middle piece `a*d + b*c` is `(a+b)*(c+d)` minus `a*c` minus `b*d`, so a fourth multiplication is never needed.",
+                    "Add the pieces back with zeros on the end: `a*c` with 2k zeros, the middle with k zeros, then `b*d`.",
+                ],
+                "code": """class Solution {
+    public String multiply(String num1, String num2) {
+        return strip(karatsuba(strip(num1), strip(num2)));
+    }
+
+    private String karatsuba(String x, String y) {
+        if (x.equals("0") || y.equals("0")) return "0";
+        if (x.length() <= 4 || y.length() <= 4) return schoolbook(x, y);
+        int k = Math.max(x.length(), y.length()) / 2;
+        String a = high(x, k), b = low(x, k);
+        String c = high(y, k), d = low(y, k);
+        String ac = karatsuba(a, c);
+        String bd = karatsuba(b, d);
+        // The middle piece a*d + b*c, without a fourth multiplication.
+        String middle = sub(karatsuba(add(a, b), add(c, d)), add(ac, bd));
+        return add(add(shift(ac, 2 * k), shift(middle, k)), bd);
+    }
+
+    private String high(String s, int k) {
+        return s.length() > k ? strip(s.substring(0, s.length() - k)) : "0";
+    }
+
+    private String low(String s, int k) {
+        return strip(s.length() > k ? s.substring(s.length() - k) : s);
+    }
+
+    private String shift(String s, int zeros) {
+        return s.equals("0") ? "0" : s + "0".repeat(zeros);
+    }
+
+    private String strip(String s) {
+        int i = 0;
+        while (i + 1 < s.length() && s.charAt(i) == '0') i++;
+        return s.substring(i);
+    }
+
+    private String add(String a, String b) {
+        StringBuilder sb = new StringBuilder();
+        int i = a.length() - 1, j = b.length() - 1, carry = 0;
+        while (i >= 0 || j >= 0 || carry > 0) {
+            int sum = carry;
+            if (i >= 0) sum += a.charAt(i--) - '0';
+            if (j >= 0) sum += b.charAt(j--) - '0';
+            sb.append(sum % 10);
+            carry = sum / 10;
+        }
+        return sb.reverse().toString();
+    }
+
+    private String sub(String a, String b) {
+        StringBuilder sb = new StringBuilder();
+        int i = a.length() - 1, j = b.length() - 1, borrow = 0;
+        while (i >= 0) {
+            int diff = (a.charAt(i--) - '0') - borrow - (j >= 0 ? b.charAt(j--) - '0' : 0);
+            borrow = diff < 0 ? 1 : 0;
+            sb.append(diff < 0 ? diff + 10 : diff);
+        }
+        return strip(sb.reverse().toString());
+    }
+
+    private String schoolbook(String x, String y) {
+        int m = x.length(), n = y.length();
+        int[] digits = new int[m + n];
+        for (int i = m - 1; i >= 0; i--) {
+            for (int j = n - 1; j >= 0; j--) {
+                int total = (x.charAt(i) - '0') * (y.charAt(j) - '0') + digits[i + j + 1];
+                digits[i + j + 1] = total % 10;
+                digits[i + j] += total / 10;
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int digit : digits) {
+            if (sb.length() > 0 || digit != 0) sb.append(digit);
+        }
+        return sb.length() == 0 ? "0" : sb.toString();
+    }
+}
+""",
+                "time_complexity": "O(n^1.585)",
+                "time_why": "Each cut buys three half-size products instead of four, so the count of digit multiplications grows like n to the power log 3 / log 2.",
+                "space_complexity": "O(n log n)",
+                "space_why": "Every cut builds new strings for the halves and the three products, and the chain of unfinished calls is log n deep.",
+                "when_to_use": "When the numbers run to thousands of digits, the way a big-number library works: n² digit products become about n^1.585. Below a few dozen digits the extra adding makes it the slower one.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": 'num1 = "12", num2 = "34"',

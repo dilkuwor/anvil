@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronDown, Copy, Eye, PlayCircle, X } from "lucide-react";
+import { Check, ChevronDown, Code2, Eye, PlayCircle, X } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { NotesPanel } from "@/components/notes/notes-drawer";
+import { CodeViewer } from "@/components/problems/code-viewer";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageLoader } from "@/components/ui/state";
@@ -286,15 +287,7 @@ export function SolutionPanel({
 
 function Approach({ approach, onLoadCode }: { approach: SolutionApproach; onLoadCode: (code: string) => void }) {
   const [showCode, setShowCode] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(approach.code);
-      toast.message("Code copied.");
-    } catch {
-      toast.error("Unable to copy.");
-    }
-  }
+  const lineCount = approach.code.trim().split("\n").length;
 
   return (
     <details open={approach.is_optimal} className={cn("group/approach rounded-lg border bg-steel-950/40", approach.is_optimal ? "border-teal/40" : "border-steel-800/80")}>
@@ -338,25 +331,40 @@ function Approach({ approach, onLoadCode }: { approach: SolutionApproach; onLoad
         </dl>
         {/* The words come before the code on purpose: read the plan, then check it against the code. */}
         {showCode ? (
-          <div>
-            <pre className="overflow-x-auto rounded-lg border border-steel-800/80 bg-steel-950/70 p-3 font-mono text-[12px] leading-5 text-foreground">{approach.code.trim()}</pre>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={copy}>
-                <Copy className="h-3.5 w-3.5" aria-hidden />
-                Copy
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => onLoadCode(approach.code.trim() + "\n")}>
-                Load into editor
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowCode(false)}>
-                Hide code
-              </Button>
-            </div>
-          </div>
+          <CodeViewer
+            code={approach.code}
+            language="Java"
+            filename="Solution.java"
+            onLoadCode={onLoadCode}
+            onClose={() => setShowCode(false)}
+          />
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setShowCode(true)}>
-            Show the Java code
-          </Button>
+          <button
+            type="button"
+            onClick={() => setShowCode(true)}
+            className="group/code-preview flex w-full items-center justify-between gap-3 rounded-lg border border-steel-700/70 bg-white/70 dark:border-steel-800/90 dark:bg-steel-900/60 px-3.5 py-2.5 text-left transition-all hover:border-steel-600 dark:hover:border-steel-700 hover:bg-steel-100/70 dark:hover:bg-steel-800/60 active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md border border-steel-300 dark:border-steel-700/60 bg-white dark:bg-steel-950 text-accent group-hover/code-preview:border-accent/40 group-hover/code-preview:text-accent-light transition-colors">
+                <Code2 className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[13px] font-semibold text-foreground">Solution.java</span>
+                  <span className="rounded bg-steel-200/80 dark:bg-steel-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Java
+                  </span>
+                </div>
+                <div className="text-[12px] text-muted-foreground">
+                  {lineCount} lines · click to view code
+                </div>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 font-mono text-[12px] font-medium text-accent group-hover/code-preview:text-accent-light group-hover/code-preview:underline">
+              Show code
+              <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+          </button>
         )}
       </div>
     </details>

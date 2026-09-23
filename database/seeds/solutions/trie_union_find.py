@@ -148,6 +148,62 @@ class Trie {
                 "space_why": "We allocate at most 26 references per node across all inserted characters.",
                 "when_to_use": "The standard interview design for dictionary prefix queries.",
             },
+            {
+                "name": "Hash set of every prefix",
+                "is_optimal": False,
+                "is_alternative": True,
+                "idea": "Drop the tree: keep one set of the complete words and one set holding every prefix of every word, and each question becomes a single lookup.",
+                "steps": [
+                    "Keep two sets of strings, one for the complete words and one for the prefixes.",
+                    "On insert, add the word to the word set, then add each prefix of it, from the first letter up to the whole word, to the prefix set.",
+                    "search asks whether the word set holds that exact string.",
+                    "startsWith asks whether the prefix set holds that string.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public String[] process(String[] operations, String[][] args) {
+        Trie trie = new Trie();
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < operations.length; i++) {
+            switch (operations[i]) {
+                case "insert" -> trie.insert(args[i][0]);
+                case "search" -> out.add(String.valueOf(trie.search(args[i][0])));
+                case "startsWith" -> out.add(String.valueOf(trie.startsWith(args[i][0])));
+                default -> {}
+            }
+        }
+        return out.toArray(new String[0]);
+    }
+}
+
+class Trie {
+    private final Set<String> words = new HashSet<>();
+    private final Set<String> prefixes = new HashSet<>();
+
+    public Trie() {}
+
+    public void insert(String word) {
+        words.add(word);
+        for (int end = 1; end <= word.length(); end++) {
+            prefixes.add(word.substring(0, end));
+        }
+    }
+
+    public boolean search(String word) {
+        return words.contains(word);
+    }
+
+    public boolean startsWith(String prefix) {
+        return prefixes.contains(prefix);
+    }
+}""",
+                "time_complexity": "O(L²) per insert, O(L) per query",
+                "time_why": "An insert cuts and hashes L prefixes whose letters add up to about L², and a query hashes one string of length L.",
+                "space_complexity": "O(N · L²)",
+                "space_why": "Each word stores L prefixes instead of sharing nodes, and their letters add up to about L² per word.",
+                "when_to_use": "When the questions are only yes or no and the characters are not 26 letters but anything at all. The tree wins back as soon as you need what sits under a prefix, such as listing every word that starts with it.",
+            },
         ],
         "walkthrough": {
             "input": 'insert("apple"), search("apple"), search("app"), startsWith("app"), insert("app"), search("app")',
@@ -960,6 +1016,67 @@ class Solution {
                 "space_complexity": "O(n)",
                 "space_why": "Only a single parent array of size n + 1 is needed.",
                 "when_to_use": "The optimal interview approach for cycle detection in incremental edge additions.",
+            },
+            {
+                "name": "Peel the leaves until only the ring is left",
+                "is_optimal": False,
+                "is_alternative": True,
+                "idea": "A node with a single edge cannot sit on a ring, so strip those away over and over; what is left standing is exactly the ring.",
+                "steps": [
+                    "Build a neighbour list and count how many edges touch each node.",
+                    "Put every node with exactly one edge into a queue. Those are the leaves.",
+                    "Take a leaf off the queue, mark it as off the ring, and lower the count of each neighbour still standing.",
+                    "A neighbour whose count drops to one is a leaf now, so add it to the queue. Stop when the queue empties.",
+                    "Read the edges from last to first and return the first one whose two ends are both still standing.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[] findRedundantConnection(int[][] edges) {
+        int n = edges.length;
+        List<List<Integer>> graph = new ArrayList<>();
+        for (int i = 0; i <= n; i++) {
+            graph.add(new ArrayList<>());
+        }
+        int[] degree = new int[n + 1];
+        for (int[] edge : edges) {
+            graph.get(edge[0]).add(edge[1]);
+            graph.get(edge[1]).add(edge[0]);
+            degree[edge[0]]++;
+            degree[edge[1]]++;
+        }
+
+        boolean[] standing = new boolean[n + 1];
+        Arrays.fill(standing, true);
+        Deque<Integer> leaves = new ArrayDeque<>();
+        for (int node = 1; node <= n; node++) {
+            if (degree[node] == 1) {
+                leaves.add(node);
+            }
+        }
+        while (!leaves.isEmpty()) {
+            int leaf = leaves.poll();
+            standing[leaf] = false;
+            for (int next : graph.get(leaf)) {
+                if (standing[next] && --degree[next] == 1) {
+                    leaves.add(next);
+                }
+            }
+        }
+
+        for (int i = edges.length - 1; i >= 0; i--) {
+            if (standing[edges[i][0]] && standing[edges[i][1]]) {
+                return edges[i];
+            }
+        }
+        return new int[0];
+    }
+}""",
+                "time_complexity": "O(n)",
+                "time_why": "Each node leaves the queue at most once and each edge is looked at from both of its ends.",
+                "space_complexity": "O(n)",
+                "space_why": "The neighbour lists hold 2n entries, plus the degree counts and the queue of leaves.",
+                "when_to_use": "When the question is about the ring itself rather than which edge to drop: which nodes lie on it, or how long it is. The same leaf stripping trims any tree down to its centre.",
             },
         ],
         "walkthrough": {

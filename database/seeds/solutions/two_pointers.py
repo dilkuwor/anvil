@@ -1362,6 +1362,43 @@ class Solution {
                 "when_to_use": "The version to write. Linear, in place.",
                 "is_optimal": True,
             },
+            {
+                "name": "The gap method, from shell sort",
+                "idea": "Lay the two sorted runs end to end and compare values a fixed distance apart, halving that distance each round, until neighbours are in order.",
+                "steps": [
+                    "Copy nums2 into the spare slots so the row is two sorted runs, one after the other.",
+                    "Start with a gap of half the total length, rounded up.",
+                    "Walk the row comparing each value with the one a gap ahead, and swap the pair when the earlier one is larger.",
+                    "Halve the gap, rounding up, and walk again. Stop after the round with a gap of 1.",
+                    "Each round pushes large values further right, and the last round leaves every neighbour in order.",
+                ],
+                "code": """class Solution {
+    public int[] merge(int[] nums1, int m, int[] nums2, int n) {
+        System.arraycopy(nums2, 0, nums1, m, n);
+        int total = m + n;
+        int gap = (total + 1) / 2;
+        while (gap > 0) {
+            for (int i = 0, j = gap; j < total; i++, j++) {
+                if (nums1[i] > nums1[j]) {
+                    int temp = nums1[i];
+                    nums1[i] = nums1[j];
+                    nums1[j] = temp;
+                }
+            }
+            gap = gap == 1 ? 0 : (gap + 1) / 2;
+        }
+        return nums1;
+    }
+}
+""",
+                "time_complexity": "O((m+n) log(m+n))",
+                "time_why": "The gap halves each round, so there are about log(m+n) rounds, and each round walks the whole row once.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the gap and the two indices. Every swap happens inside the row.",
+                "when_to_use": "When neither row has spare slots: two sorted arrays that must be merged in place, which the back-fill cannot do because it has nowhere to write. It costs a log factor and needs no room at all.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums1 = [1,2,3,0,0,0], m = 3, nums2 = [2,5,6], n = 3",

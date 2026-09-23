@@ -720,6 +720,63 @@ class Solution {
                 "when_to_use": "The version to aim for. Same extra memory as the map, and no log factor.",
                 "is_optimal": True,
             },
+            {
+                "name": "Quickselect on the k-th count",
+                "idea": "Only which k values are most common matters, not their order, so pick one count as a pivot and recurse into the side that holds position k.",
+                "steps": [
+                    "Count how often each value appears, then copy the distinct values into an array.",
+                    "Pick one at random. Move every value whose count is higher in front of it, and the rest behind.",
+                    "That pivot has now landed in its final place. If that place is k - 1, the first k slots are the answer.",
+                    "Otherwise repeat on the one side that still holds position k - 1.",
+                    "Return the first k values.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[] topKFrequent(int[] nums, int k) {
+        Map<Integer, Integer> counts = new HashMap<>();
+        for (int value : nums) counts.put(value, counts.getOrDefault(value, 0) + 1);
+        int[] values = new int[counts.size()];
+        int at = 0;
+        for (int value : counts.keySet()) values[at++] = value;
+        Random pick = new Random(1);
+        int low = 0;
+        int high = values.length - 1;
+        while (low < high) {
+            int landed = partition(values, counts, low, high, low + pick.nextInt(high - low + 1));
+            if (landed == k - 1) break;
+            if (landed < k - 1) low = landed + 1;
+            else high = landed - 1;
+        }
+        return Arrays.copyOf(values, k);
+    }
+
+    private int partition(int[] values, Map<Integer, Integer> counts, int low, int high, int pivotAt) {
+        int pivot = counts.get(values[pivotAt]);
+        swap(values, pivotAt, high);
+        int store = low;
+        for (int i = low; i < high; i++) {
+            if (counts.get(values[i]) > pivot) swap(values, i, store++);
+        }
+        swap(values, store, high);
+        return store;
+    }
+
+    private void swap(int[] values, int i, int j) {
+        int hold = values[i];
+        values[i] = values[j];
+        values[j] = hold;
+    }
+}
+""",
+                "time_complexity": "O(n) on average",
+                "time_why": "Each round scans the values still in play, and that range roughly halves, so the scans add up to about 2n. A bad run of pivots is O(n²).",
+                "space_complexity": "O(n)",
+                "space_why": "The count map and one slot per distinct value. The moving happens inside that array.",
+                "when_to_use": "When the score you rank by is not a small whole number: an average, a distance, a price. Buckets need an index, and there is none, but this still pulls out the top k. It is the same tool as Kth Largest Element.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [1,1,1,2,2,3], k = 2",
@@ -861,6 +918,51 @@ class Solution {
                 "space_why": "The map stores every word and one key per group.",
                 "when_to_use": "The version to aim for when words are long. Same grouping idea, no sort per word.",
                 "is_optimal": True,
+            },
+            {
+                "name": "Group by sorting the list, with no map",
+                "idea": "Tag every word with its sorted letters and sort the whole list by that tag: each group of anagrams then sits together as one run of neighbours.",
+                "steps": [
+                    "For each word, sort a copy of its letters and keep that string as its tag.",
+                    "Sort the tagged list by the tag, breaking ties by the word itself.",
+                    "Words that share a tag are now neighbours.",
+                    "Walk the sorted list once and start a new group each time the tag changes.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<List<String>> groupAnagrams(String[] strs) {
+        String[][] tagged = new String[strs.length][2];
+        for (int i = 0; i < strs.length; i++) {
+            char[] letters = strs[i].toCharArray();
+            Arrays.sort(letters);
+            tagged[i][0] = new String(letters);
+            tagged[i][1] = strs[i];
+        }
+        Arrays.sort(tagged, (one, other) ->
+            one[0].equals(other[0]) ? one[1].compareTo(other[1]) : one[0].compareTo(other[0]));
+        List<List<String>> out = new ArrayList<>();
+        int start = 0;
+        while (start < tagged.length) {
+            List<String> group = new ArrayList<>();
+            int end = start;
+            while (end < tagged.length && tagged[end][0].equals(tagged[start][0])) {
+                group.add(tagged[end++][1]);
+            }
+            out.add(group);
+            start = end;
+        }
+        return out;
+    }
+}
+""",
+                "time_complexity": "O(n·k log k + n·k log n)",
+                "time_why": "Each of n words of length k is sorted, then the n tags are sorted, and comparing two tags costs up to k.",
+                "space_complexity": "O(n·k)",
+                "space_why": "A tag and a word per entry, plus the output lists.",
+                "when_to_use": "When the words do not fit in memory. Sorting is what an external sort or a database does, and the groups then arrive one run at a time, never needing every key held at once. It also gives the same group order on every run.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {

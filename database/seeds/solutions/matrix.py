@@ -145,7 +145,7 @@ SOLUTIONS: list[dict] = [
             {
                 "name": "Mixing up four-way cycle coordinates",
                 "wrong": "Rotating cell by cell in rings and miscalculating the four corner offsets.",
-                "right": "Use diagonal flip followed by horizontal row reversal to avoid tricky ring indexing.",
+                "right": "Write one ring out on paper and read the four offsets off it before coding, or sidestep the offsets altogether with the diagonal flip and row reversal.",
             },
         ],
         "edge_cases": [
@@ -311,6 +311,46 @@ class Solution {
                 "space_complexity": "O(1)",
                 "space_why": "Only four boundary integers are kept, using constant extra memory beyond the output list.",
                 "when_to_use": "The standard interview answer for reading a rectangular grid in spiral order.",
+            },
+            {
+                "name": "Peel the top row, then turn the grid",
+                "idea": "Read the whole top row, drop it, turn what is left a quarter turn anticlockwise, and the next part of the spiral is the new top row.",
+                "steps": [
+                    "If the grid has no rows or no columns, stop.",
+                    "Add every number in the top row to the answer, left to right.",
+                    "Take the rows below it and build a new grid turned a quarter turn anticlockwise, so the old right column becomes the new top row.",
+                    "Repeat on the new grid until nothing is left.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<Integer> spiralOrder(int[][] matrix) {
+        List<Integer> out = new ArrayList<>();
+        int[][] grid = matrix;
+        while (grid.length > 0 && grid[0].length > 0) {
+            for (int value : grid[0]) {
+                out.add(value);
+            }
+            int rows = grid.length - 1;
+            int cols = grid[0].length;
+            int[][] turned = new int[cols][rows];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    turned[cols - 1 - c][r] = grid[r + 1][c];
+                }
+            }
+            grid = turned;
+        }
+        return out;
+    }
+}""",
+                "time_complexity": "O(m × n × (m + n))",
+                "time_why": "Every round copies what is left of the grid, and one round goes per row and per column.",
+                "space_complexity": "O(m × n)",
+                "space_why": "Each round builds a fresh turned copy of the rest of the grid.",
+                "when_to_use": "When you would rather not carry four walls at all. There is nothing to shrink and nothing to check, so the single-row and single-column grids that break the wall version cannot go wrong here.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -503,6 +543,56 @@ class Solution {
                 "space_complexity": "O(1)",
                 "space_why": "We use the grid itself for storage plus two primitive boolean flags.",
                 "when_to_use": "The optimal interview solution achieving true constant auxiliary memory.",
+            },
+            {
+                "name": "Mark with a stand-in value the grid cannot hold",
+                "idea": "Pick one value the grid can never contain and write it over every cell that must end up zero, so the real zeroes are still the only zeroes while you work.",
+                "steps": [
+                    "Agree one value the grid cannot hold, such as `Integer.MIN_VALUE` when the numbers are known to be larger.",
+                    "Go over every cell. When you find a real zero, write the stand-in value over each non-zero cell in its row and in its column.",
+                    "Leave real zeroes alone while marking, so they still say where the work is.",
+                    "Go over the grid once more and turn every stand-in value into a zero.",
+                ],
+                "code": """class Solution {
+    public int[][] setZeroes(int[][] matrix) {
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+        int mark = Integer.MIN_VALUE;
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if (matrix[r][c] == 0) {
+                    for (int k = 0; k < cols; k++) {
+                        if (matrix[r][k] != 0) {
+                            matrix[r][k] = mark;
+                        }
+                    }
+                    for (int k = 0; k < rows; k++) {
+                        if (matrix[k][c] != 0) {
+                            matrix[k][c] = mark;
+                        }
+                    }
+                }
+            }
+        }
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if (matrix[r][c] == mark) {
+                    matrix[r][c] = 0;
+                }
+            }
+        }
+        return matrix;
+    }
+}""",
+                "time_complexity": "O(m × n × (m + n))",
+                "time_why": "Every real zero sweeps its whole row and column, and a zero can sit in every cell.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the stand-in value is kept. The marks live in the grid itself.",
+                "when_to_use": "When the first row and column are not yours to borrow, because they hold headers or the grid is shared. Ask what values the grid can hold first: this needs one spare value, and it is slower.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {

@@ -722,6 +722,50 @@ class Solution {
                 "space_why": "The tails array stores at most n tail elements.",
                 "when_to_use": "The optimal interview approach using patience sorting to achieve O(n log n) time.",
             },
+            {
+                "name": "Longest common subsequence with the sorted values",
+                "idea": "A rising run in the row is exactly a run the row shares, in order, with a sorted copy of its own distinct values.",
+                "steps": [
+                    "Sort a copy of the numbers and drop repeats, so the copy rises strictly.",
+                    "Line the original row up against that copy and look for the longest run of numbers both hold in the same order.",
+                    "Fill the usual shared-run table: equal numbers step diagonally and add 1, otherwise take the larger neighbour from above or the left.",
+                    "Two rolling rows are enough, and the last cell holds the length.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int lengthOfLIS(int[] nums) {
+        int[] rising = nums.clone();
+        Arrays.sort(rising);
+        int distinct = 0;
+        for (int i = 0; i < rising.length; i++) {
+            if (i == 0 || rising[i] != rising[i - 1]) rising[distinct++] = rising[i];
+        }
+        int[] prev = new int[distinct + 1];
+        int[] cur = new int[distinct + 1];
+        for (int i = 1; i <= nums.length; i++) {
+            for (int j = 1; j <= distinct; j++) {
+                if (nums[i - 1] == rising[j - 1]) {
+                    cur[j] = prev[j - 1] + 1;
+                } else {
+                    cur[j] = Math.max(prev[j], cur[j - 1]);
+                }
+            }
+            int[] swap = prev;
+            prev = cur;
+            cur = swap;
+        }
+        return prev[distinct];
+    }
+}""",
+                "time_complexity": "O(n²)",
+                "time_why": "Every number in the row is matched against every distinct value in the sorted copy.",
+                "space_complexity": "O(n)",
+                "space_why": "The sorted copy, plus two rows as long as the count of distinct values.",
+                "when_to_use": "When a second list arrives and the question becomes the longest run that rises and appears in both. Sorting is what turns this problem into that one, and the shared-run table then answers both.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [10, 9, 2, 5, 3, 7, 101, 18]",
@@ -868,6 +912,48 @@ class Solution {
                 "space_complexity": "O(n)",
                 "space_why": "The boolean reachability array and HashSet require linear auxiliary space.",
                 "when_to_use": "The optimal interview approach building reachability prefix by prefix in polynomial time.",
+            },
+            {
+                "name": "Breadth-first search over cut positions",
+                "idea": "Each position in the string is a place, and each dictionary word is one step from one place to a later one, so the question is whether the end is reachable from the start.",
+                "steps": [
+                    "Put the dictionary words in a HashSet, and mark position 0 as reached.",
+                    "Keep a queue of positions, which hands them back in the order they arrived, starting with 0.",
+                    "Take a position off the queue. If it is the end of the string, the answer is true.",
+                    "For every later position whose text from here is a dictionary word, mark it reached and add it to the queue.",
+                    "A position is only ever opened once, so an empty queue means the string cannot be split.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public boolean wordBreak(String s, List<String> wordDict) {
+        Set<String> words = new HashSet<>(wordDict);
+        boolean[] reached = new boolean[s.length() + 1];
+        Deque<Integer> queue = new ArrayDeque<>();
+        queue.add(0);
+        reached[0] = true;
+        while (!queue.isEmpty()) {
+            int start = queue.poll();
+            if (start == s.length()) {
+                return true;
+            }
+            for (int end = start + 1; end <= s.length(); end++) {
+                if (!reached[end] && words.contains(s.substring(start, end))) {
+                    reached[end] = true;
+                    queue.add(end);
+                }
+            }
+        }
+        return false;
+    }
+}""",
+                "time_complexity": "O(n³)",
+                "time_why": "Each position is opened once, tries every later cut, and each cut copies a substring.",
+                "space_complexity": "O(n)",
+                "space_why": "One reached flag per position and a queue holding at most one entry per position, plus the word set.",
+                "when_to_use": "When the question turns into the fewest words, or the shortest sentence: take the queue one layer at a time and the layer that first touches the end is the answer. It also stops the moment the end is reached.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -1193,6 +1279,87 @@ class Solution {
                 "space_why": "Only two rows of length n + 1 are kept in memory.",
                 "when_to_use": "The optimal interview approach keeping only two rows in linear memory.",
             },
+            {
+                "name": "Hirschberg's divide and conquer on the middle row",
+                "idea": "Cut the first word in half, work out where the second word has to be cut to match it, then solve the two smaller pairs the same way.",
+                "steps": [
+                    "Cut the first word at its middle letter.",
+                    "For every split point of the second word, work out the best match of the two left parts, keeping one row at a time.",
+                    "Do the same for the two right parts, reading both words backwards from their ends.",
+                    "The split point where those two numbers add up to the most is where the second word gets cut.",
+                    "Solve the left pair and the right pair the same way and glue their shared letters together.",
+                    "A one-letter piece is easy: keep that letter if the other side holds it anywhere.",
+                ],
+                "code": """class Solution {
+    public int longestCommonSubsequence(String text1, String text2) {
+        StringBuilder shared = new StringBuilder();
+        build(text1, 0, text1.length(), text2, 0, text2.length(), shared);
+        return shared.length();
+    }
+
+    private void build(String a, int a0, int a1, String b, int b0, int b1, StringBuilder shared) {
+        if (a1 - a0 == 0 || b1 - b0 == 0) {
+            return;
+        }
+        if (a1 - a0 == 1) {
+            for (int j = b0; j < b1; j++) {
+                if (b.charAt(j) == a.charAt(a0)) {
+                    shared.append(a.charAt(a0));
+                    return;
+                }
+            }
+            return;
+        }
+        int mid = (a0 + a1) / 2;
+        int cut = bestCut(a, a0, mid, a1, b, b0, b1);
+        build(a, a0, mid, b, b0, cut, shared);
+        build(a, mid, a1, b, cut, b1, shared);
+    }
+
+    private int bestCut(String a, int a0, int mid, int a1, String b, int b0, int b1) {
+        int[] left = row(a, a0, mid, b, b0, b1, false);
+        int[] right = row(a, mid, a1, b, b0, b1, true);
+        int n = b1 - b0;
+        int cut = b0;
+        int best = -1;
+        for (int j = 0; j <= n; j++) {
+            if (left[j] + right[n - j] > best) {
+                best = left[j] + right[n - j];
+                cut = b0 + j;
+            }
+        }
+        return cut;
+    }
+
+    private int[] row(String a, int from, int to, String b, int b0, int b1, boolean backwards) {
+        int n = b1 - b0;
+        int[] prev = new int[n + 1];
+        int[] cur = new int[n + 1];
+        for (int i = 1; i <= to - from; i++) {
+            char letter = backwards ? a.charAt(to - i) : a.charAt(from + i - 1);
+            for (int j = 1; j <= n; j++) {
+                char other = backwards ? b.charAt(b1 - j) : b.charAt(b0 + j - 1);
+                if (letter == other) {
+                    cur[j] = prev[j - 1] + 1;
+                } else {
+                    cur[j] = Math.max(prev[j], cur[j - 1]);
+                }
+            }
+            int[] swap = prev;
+            prev = cur;
+            cur = swap;
+        }
+        return prev;
+    }
+}""",
+                "time_complexity": "O(m · n)",
+                "time_why": "Each split reads two rows across the whole second word, and the work halves at every level, so it adds up to about twice the plain table.",
+                "space_complexity": "O(n)",
+                "space_why": "Only two rows live at once, plus the shared letters and a stack of cut points about log m deep.",
+                "when_to_use": "When you want the shared letters themselves and the words are too long for an m by n table. This is how `diff` compares large files, and it is the answer when the follow-up asks for the sequence without the memory.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "text1 = \"abcde\", text2 = \"ace\"",
@@ -1338,6 +1505,64 @@ class Solution {
                 "space_complexity": "O(n)",
                 "space_why": "Only two 1D arrays of length n + 1 are maintained in memory.",
                 "when_to_use": "The optimal interview solution that achieves linear space using two rolling rows.",
+            },
+            {
+                "name": "Shortest path across the grid (0-1 BFS)",
+                "idea": "Stand at the start of both words and walk to the end of both: matching letters let you step diagonally for free, every edit costs one, and the cheapest route is the distance.",
+                "steps": [
+                    "Treat the pair (i, j) as a place: i letters of word1 and j letters of word2 are already handled.",
+                    "A delete steps down, an insert steps right, and a replace steps diagonally, each costing one.",
+                    "When the two letters at that place match, the diagonal step is free.",
+                    "Walk with a double-ended queue: free steps go on the front and paid steps on the back, so places still come out cheapest first.",
+                    "The cost carried by the far corner when it comes out is the edit distance.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int minDistance(String word1, String word2) {
+        int m = word1.length();
+        int n = word2.length();
+        int[] best = new int[(m + 1) * (n + 1)];
+        Arrays.fill(best, Integer.MAX_VALUE);
+        Deque<Integer> queue = new ArrayDeque<>();
+        best[0] = 0;
+        queue.add(0);
+        while (!queue.isEmpty()) {
+            int at = queue.pollFirst();
+            int i = at / (n + 1);
+            int j = at % (n + 1);
+            int steps = best[at];
+            if (i == m && j == n) {
+                return steps;
+            }
+            if (i < m && j < n && word1.charAt(i) == word2.charAt(j)) {
+                relax(best, queue, at + n + 2, steps, true);
+            }
+            if (i < m && j < n) relax(best, queue, at + n + 2, steps + 1, false);
+            if (i < m) relax(best, queue, at + n + 1, steps + 1, false);
+            if (j < n) relax(best, queue, at + 1, steps + 1, false);
+        }
+        return best[best.length - 1];
+    }
+
+    private void relax(int[] best, Deque<Integer> queue, int to, int steps, boolean free) {
+        if (steps < best[to]) {
+            best[to] = steps;
+            if (free) {
+                queue.addFirst(to);
+            } else {
+                queue.addLast(to);
+            }
+        }
+    }
+}""",
+                "time_complexity": "O(m · n)",
+                "time_why": "Every place settles once and has at most four steps leading out of it.",
+                "space_complexity": "O(m · n)",
+                "space_why": "One best cost per place, plus the queue. That is more memory than the two rolling rows.",
+                "when_to_use": "When you only need to know whether the words are within a few edits: the walk reaches the corner and stops, having touched only the cheap places. It is also the way in when the moves themselves are the puzzle, as on a grid of free and paid steps.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
@@ -2123,6 +2348,59 @@ class Solution {
                 "space_complexity": "O(n)",
                 "space_why": "Only two rows of length cols + 1 are kept in memory.",
                 "when_to_use": "The optimal interview approach that reduces memory from quadratic grid to linear column size.",
+            },
+            {
+                "name": "Binary search on the side, with a 2D prefix sum",
+                "idea": "If a square of side k fits somewhere, so does every smaller one, so the side can be searched — and a running count of 1s says in one step whether a given block is solid.",
+                "steps": [
+                    "Build a table where each entry holds the number of 1s from the top-left corner down to that cell.",
+                    "The count inside any block is then four reads: the far corner, minus the two strips above and left, plus the overlap added back.",
+                    "A block of side k is solid when its count is k times k.",
+                    "Binary search k between 0 and the smaller side of the grid, sweeping every block of that size for each guess.",
+                    "Return the largest side that fits, squared.",
+                ],
+                "code": """class Solution {
+    public int maximalSquare(String[] matrix) {
+        if (matrix == null || matrix.length == 0) return 0;
+        int rows = matrix.length;
+        int cols = matrix[0].length();
+        int[][] ones = new int[rows + 1][cols + 1];
+        for (int r = 1; r <= rows; r++) {
+            for (int c = 1; c <= cols; c++) {
+                int cell = matrix[r - 1].charAt(c - 1) == '1' ? 1 : 0;
+                ones[r][c] = cell + ones[r - 1][c] + ones[r][c - 1] - ones[r - 1][c - 1];
+            }
+        }
+        int low = 0;
+        int high = Math.min(rows, cols);
+        while (low < high) {
+            int side = low + (high - low + 1) / 2;
+            if (fits(ones, rows, cols, side)) {
+                low = side;
+            } else {
+                high = side - 1;
+            }
+        }
+        return low * low;
+    }
+
+    private boolean fits(int[][] ones, int rows, int cols, int side) {
+        for (int r = side; r <= rows; r++) {
+            for (int c = side; c <= cols; c++) {
+                int total = ones[r][c] - ones[r - side][c] - ones[r][c - side] + ones[r - side][c - side];
+                if (total == side * side) return true;
+            }
+        }
+        return false;
+    }
+}""",
+                "time_complexity": "O(m · n · log(min(m, n)))",
+                "time_why": "Each guessed side sweeps every cell once, and the guesses halve the range of sides.",
+                "space_complexity": "O(m · n)",
+                "space_why": "The running-count table holds one number per cell.",
+                "when_to_use": "When the rule changes to one a corner-by-corner count cannot carry, such as the largest square holding at most t zeros. The count table answers any block in one step, and the search still works because a bigger square is always harder to fit.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {

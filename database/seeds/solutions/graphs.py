@@ -141,7 +141,96 @@ SOLUTIONS = [   {   'approaches': [   {   'code': 'import java.util.*;\n'
                               'time_why': 'There are up to `n` words visited, and for each word we check `26 '
                                           '* L` mutations taking `O(L)` to hash.',
                               'when_to_use': 'Best for shortest path between two specific states with a '
-                                             'known target state.'}],
+                                             'known target state.'},
+                          {   'code': 'import java.util.*;\n'
+                                      '\n'
+                                      'class Solution {\n'
+                                      '    private static class Step {\n'
+                                      '        String word;\n'
+                                      '        int used;\n'
+                                      '        int guess;\n'
+                                      '\n'
+                                      '        Step(String word, int used, int guess) {\n'
+                                      '            this.word = word;\n'
+                                      '            this.used = used;\n'
+                                      '            this.guess = guess;\n'
+                                      '        }\n'
+                                      '    }\n'
+                                      '\n'
+                                      '    public int ladderLength(String beginWord, String endWord, '
+                                      'List<String> wordList) {\n'
+                                      '        Set<String> dictionary = new HashSet<>(wordList);\n'
+                                      '        if (!dictionary.contains(endWord)) {\n'
+                                      '            return 0;\n'
+                                      '        }\n'
+                                      '        PriorityQueue<Step> queue = new PriorityQueue<>((a, b) -> '
+                                      'a.guess - b.guess);\n'
+                                      '        Set<String> seen = new HashSet<>();\n'
+                                      '        queue.add(new Step(beginWord, 1, 1 + wrongLetters(beginWord, '
+                                      'endWord)));\n'
+                                      '        seen.add(beginWord);\n'
+                                      '\n'
+                                      '        while (!queue.isEmpty()) {\n'
+                                      '            Step current = queue.poll();\n'
+                                      '            if (current.word.equals(endWord)) {\n'
+                                      '                return current.used;\n'
+                                      '            }\n'
+                                      '            char[] letters = current.word.toCharArray();\n'
+                                      '            for (int i = 0; i < letters.length; i++) {\n'
+                                      '                char original = letters[i];\n'
+                                      "                for (char letter = 'a'; letter <= 'z'; letter++) {\n"
+                                      '                    letters[i] = letter;\n'
+                                      '                    String next = new String(letters);\n'
+                                      '                    if (dictionary.contains(next) && seen.add(next)) '
+                                      '{\n'
+                                      '                        int used = current.used + 1;\n'
+                                      '                        queue.add(new Step(next, used, used + '
+                                      'wrongLetters(next, endWord)));\n'
+                                      '                    }\n'
+                                      '                }\n'
+                                      '                letters[i] = original;\n'
+                                      '            }\n'
+                                      '        }\n'
+                                      '        return 0;\n'
+                                      '    }\n'
+                                      '\n'
+                                      '    // How many letters of this word still differ from the target.\n'
+                                      '    private int wrongLetters(String word, String endWord) {\n'
+                                      '        int wrong = 0;\n'
+                                      '        for (int i = 0; i < word.length(); i++) {\n'
+                                      '            if (word.charAt(i) != endWord.charAt(i)) {\n'
+                                      '                wrong++;\n'
+                                      '            }\n'
+                                      '        }\n'
+                                      '        return wrong;\n'
+                                      '    }\n'
+                                      '}',
+                              'idea': 'Take words out of a priority queue by steps used so far plus how many '
+                                      'letters still differ from the target, so words that look closer are '
+                                      'opened first.',
+                              'is_alternative': True,
+                              'is_optimal': False,
+                              'name': 'A* search guided by the letters still wrong',
+                              'space_complexity': 'O(n · L)',
+                              'space_why': 'The dictionary set, the queue and the seen set each hold up to n '
+                                           'words of length L.',
+                              'steps': [   'Put the start word in a priority queue, scored by steps used '
+                                           'plus the letters that still differ from the target.',
+                                           'Take out the word with the smallest score. If it is the target, '
+                                           'return its step count.',
+                                           'Otherwise change each of its letters through the alphabet and '
+                                           'keep the results that are in the dictionary.',
+                                           'Score each new word the same way and put it in the queue, '
+                                           'marking it seen so it is opened once.',
+                                           'One step can fix at most one letter, so the score never '
+                                           'overshoots and the first arrival at the target is the shortest.'],
+                              'time_complexity': 'O(n · L² · log n)',
+                              'time_why': 'Each word opened builds 26 · L neighbour words of length L, and '
+                                          'every push into the queue costs log n.',
+                              'when_to_use': 'When most of the dictionary is beside the point: the count of '
+                                             'wrong letters pulls the search straight at the target instead '
+                                             'of spreading evenly. It is also the shape to keep when steps '
+                                             'start costing different amounts.'}],
         'edge_cases': [   {   'expected': '0',
                               'input': 'beginWord = "hit", endWord = "cog", wordList = ["cog"]',
                               'why': 'No intermediate words exist to link start and end.'},
@@ -1629,7 +1718,85 @@ SOLUTIONS = [   {   'approaches': [   {   'code': 'import java.util.*;\n'
                               'time_why': 'Each cell is enqueued and written to at most once because all '
                                           'gates expand in lockstep.',
                               'when_to_use': 'Best standard way to find nearest distances from multiple '
-                                             'source points.'}],
+                                             'source points.'},
+                          {   'code': 'class Solution {\n'
+                                      '    public int[][] wallsAndGates(int[][] rooms) {\n'
+                                      '        if (rooms == null || rooms.length == 0) {\n'
+                                      '            return rooms;\n'
+                                      '        }\n'
+                                      '        int m = rooms.length, n = rooms[0].length;\n'
+                                      '\n'
+                                      '        boolean changed = true;\n'
+                                      '        while (changed) {\n'
+                                      '            changed = false;\n'
+                                      '            for (int r = 0; r < m; r++) {\n'
+                                      '                for (int c = 0; c < n; c++) {\n'
+                                      '                    changed |= lower(rooms, r, c);\n'
+                                      '                }\n'
+                                      '            }\n'
+                                      '            for (int r = m - 1; r >= 0; r--) {\n'
+                                      '                for (int c = n - 1; c >= 0; c--) {\n'
+                                      '                    changed |= lower(rooms, r, c);\n'
+                                      '                }\n'
+                                      '            }\n'
+                                      '        }\n'
+                                      '        return rooms;\n'
+                                      '    }\n'
+                                      '\n'
+                                      '    // One room takes one more than its best neighbour, when that is '
+                                      'an improvement.\n'
+                                      '    private boolean lower(int[][] rooms, int r, int c) {\n'
+                                      '        if (rooms[r][c] <= 0) {\n'
+                                      '            return false;  // a wall (-1) and a gate (0) never move\n'
+                                      '        }\n'
+                                      '        int best = rooms[r][c];\n'
+                                      '        int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};\n'
+                                      '        for (int[] d : dirs) {\n'
+                                      '            int nr = r + d[0], nc = c + d[1];\n'
+                                      '            if (nr < 0 || nr >= rooms.length || nc < 0 || nc >= '
+                                      'rooms[0].length) {\n'
+                                      '                continue;\n'
+                                      '            }\n'
+                                      '            int near = rooms[nr][nc];\n'
+                                      '            if (near >= 0 && near != Integer.MAX_VALUE && near + 1 < '
+                                      'best) {\n'
+                                      '                best = near + 1;\n'
+                                      '            }\n'
+                                      '        }\n'
+                                      '        if (best == rooms[r][c]) {\n'
+                                      '            return false;\n'
+                                      '        }\n'
+                                      '        rooms[r][c] = best;\n'
+                                      '        return true;\n'
+                                      '    }\n'
+                                      '}',
+                              'idea': 'Sweep the whole grid forwards and then backwards, each time lowering '
+                                      'a room to one more than its best neighbour, until a sweep changes '
+                                      'nothing.',
+                              'is_alternative': True,
+                              'is_optimal': False,
+                              'name': 'Distance transform by sweeping the grid',
+                              'space_complexity': 'O(1)',
+                              'space_why': 'The grid is rewritten in place, with no queue and no second '
+                                           'grid.',
+                              'steps': [   'Sweep from the top left to the bottom right. Lower each room to '
+                                           'one more than its smallest neighbour when that is an '
+                                           'improvement.',
+                                           'Sweep back from the bottom right to the top left in the same '
+                                           'way, so distances can also travel up and left.',
+                                           'Leave walls at -1 and gates at 0; only rooms holding a positive '
+                                           'number ever move.',
+                                           'Note whether either sweep lowered anything, and run the pair '
+                                           'again while something keeps changing.',
+                                           'When a full pair of sweeps changes nothing, every room holds the '
+                                           'distance to its nearest gate.'],
+                              'time_complexity': 'O((m · n)²)',
+                              'time_why': 'Each pair of sweeps costs m · n and straightens at least one more '
+                                          'turn in a winding path, so a maze-like grid needs many pairs.',
+                              'when_to_use': 'When there is no room for a queue holding every cell. Image '
+                                             'tools measure distances this way, sweeping a picture row by '
+                                             'row, which also suits a grid too large to hold and read only '
+                                             'in order.'}],
         'edge_cases': [   {   'expected': '[[0]]',
                               'input': 'rooms = [[0]]',
                               'why': 'A single gate cell requires no changes.'},

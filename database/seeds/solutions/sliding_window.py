@@ -397,6 +397,49 @@ class Solution {
                 "when_to_use": "The version to write when all values are positive.",
                 "is_optimal": True,
             },
+            {
+                "name": "Running totals with a binary search for each end",
+                "idea": "Because the values are positive, the running totals only ever rise, so for each end you can binary search the furthest start that still leaves enough sum.",
+                "steps": [
+                    "Build the running totals first: total[i] is the sum of the first i values.",
+                    "Positive values make that row of totals rise, which is what a binary search needs.",
+                    "For each end, you want the last start whose total is at most total[end] minus the target.",
+                    "Binary search the totals for that start. The window length is end minus it.",
+                    "Keep the shortest length seen, and return 0 if no end ever found a start.",
+                ],
+                "code": """class Solution {
+    public int minSubArrayLen(int target, int[] nums) {
+        int n = nums.length;
+        long[] total = new long[n + 1];
+        for (int i = 0; i < n; i++) total[i + 1] = total[i] + nums[i];
+        int best = Integer.MAX_VALUE;
+        for (int end = 1; end <= n; end++) {
+            long room = total[end] - target;
+            if (room < 0) continue;
+            int lo = 0, hi = end, start = 0;
+            while (lo <= hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (total[mid] <= room) {
+                    start = mid;
+                    lo = mid + 1;
+                } else {
+                    hi = mid - 1;
+                }
+            }
+            best = Math.min(best, end - start);
+        }
+        return best == Integer.MAX_VALUE ? 0 : best;
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "One binary search over the n + 1 totals for each of the n ends.",
+                "space_complexity": "O(n)",
+                "space_why": "The row of running totals holds one entry per value, plus the leading zero.",
+                "when_to_use": "The problem itself asks for this slower one as a second answer, so have it ready. It is also the shape that survives many targets on the same row: build the totals once, then every target is a set of searches.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "target = 7, nums = [2,3,1,2,4,3]",
@@ -793,6 +836,43 @@ class Solution {
                 "when_to_use": "The version to write.",
                 "is_optimal": True,
             },
+            {
+                "name": "Index the zeros, then measure across k of them",
+                "idea": "Write down where the zeros are. The run you can make is then the stretch from one zero to the zero that sits k + 1 places later in that list.",
+                "steps": [
+                    "Walk once and record the index of every zero, with an imagined zero just before the row and another just after it.",
+                    "If the row holds k zeros or fewer, every zero can be flipped, so the answer is the whole length.",
+                    "Otherwise take each recorded zero in turn and look at the one k + 1 places further on in the list.",
+                    "Everything strictly between those two is ones plus exactly k zeros, so its length is a candidate.",
+                    "The answer is the largest of those lengths.",
+                ],
+                "code": """class Solution {
+    public int longestOnes(int[] nums, int k) {
+        int n = nums.length;
+        int[] spots = new int[n + 2];
+        int count = 0;
+        spots[count++] = -1;
+        for (int i = 0; i < n; i++) {
+            if (nums[i] == 0) spots[count++] = i;
+        }
+        spots[count++] = n;
+        if (count - 2 <= k) return n;
+        int best = 0;
+        for (int i = 0; i + k + 1 < count; i++) {
+            best = Math.max(best, spots[i + k + 1] - spots[i] - 1);
+        }
+        return best;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "One pass records the zeros, then one pass over that shorter list reads a fixed distance ahead.",
+                "space_complexity": "O(z)",
+                "space_why": "The list holds one index per zero (z of them), plus the two imagined ends.",
+                "when_to_use": "When k changes but the row does not: the list of zero positions is built once, and each new budget is answered by reading a different distance ahead. It also hands you which zeros to flip, not only the length.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
         ],
         "walkthrough": {
             "input": "nums = [1,1,1,0,0,0,1,1,1,1,0], k = 2",
@@ -922,6 +1002,42 @@ class Solution {
                 "space_why": "26 counters.",
                 "when_to_use": "The version to write.",
                 "is_optimal": True,
+            },
+            {
+                "name": "One window per letter, at most k others",
+                "idea": "Fix the letter the run should be made of, and the question becomes the longest stretch holding at most k characters that are not it.",
+                "steps": [
+                    "Pick a letter from A to Z and pretend it is the only one that counts.",
+                    "Slide a window over the string, adding one to a counter for each character that is not that letter.",
+                    "While that counter is above k, drop characters from the left until it is back inside the budget.",
+                    "Record the widest window for this letter, then start again with the next letter.",
+                    "The answer is the widest window found over all 26 letters.",
+                ],
+                "code": """class Solution {
+    public int characterReplacement(String s, int k) {
+        int best = 0;
+        for (char letter = 'A'; letter <= 'Z'; letter++) {
+            int left = 0, others = 0;
+            for (int right = 0; right < s.length(); right++) {
+                if (s.charAt(right) != letter) others++;
+                while (others > k) {
+                    if (s.charAt(left) != letter) others--;
+                    left++;
+                }
+                best = Math.max(best, right - left + 1);
+            }
+        }
+        return best;
+    }
+}
+""",
+                "time_complexity": "O(26 n)",
+                "time_why": "Each of the 26 letters gets its own pass, and in each pass every character enters and leaves the window once.",
+                "space_complexity": "O(1)",
+                "space_why": "One counter and one left edge per pass, with no count array at all.",
+                "when_to_use": "When you cannot convince yourself on the spot that a stale top count is safe. Here each pass tracks one number against one budget, which is the same window as Max Consecutive Ones III run once per letter.",
+                "is_optimal": False,
+                "is_alternative": True,
             },
         ],
         "walkthrough": {
