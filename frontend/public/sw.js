@@ -154,34 +154,61 @@ async function saveAssets(html) {
   );
 }
 
-/** Fetch each address and keep it, so it can be read with the network gone. */
-async function save(urls) {
+/**
+ * Fetch each address and keep it, so it can be read with the network gone.
+ *
+ * Saving every problem is well over five hundred fetches, so progress is reported as it goes and
+ * the page can say how far along it is rather than showing a spinner for minutes.
+ */
+async function save(urls, report) {
   const pages = await caches.open(PAGES);
   const data = await caches.open(DATA);
   let saved = 0;
   const failed = [];
 
-  for (const raw of urls) {
-    const url = new URL(raw, self.location.origin);
-    if (url.origin !== self.location.origin) continue;
-    const target = url.pathname.startsWith("/api/") ? data : pages;
-    try {
-      // `reload` skips the browser's own cache, so a save always stores the current version.
-      const response = await fetch(url.toString(), { cache: "reload", credentials: "same-origin" });
-      if (response.ok && response.status === 200) {
-        await target.put(url.toString(), response.clone());
-        saved += 1;
-        if ((response.headers.get("Content-Type") || "").includes("text/html")) {
-          await saveAssets(await response.clone().text());
+  for (let index = 0; index < urls.length; index += 1) {
+    const url = new URL(urls[index], self.location.origin);
+    if (url.origin === self.location.origin) {
+      const target = url.pathname.startsWith("/api/") ? data : pages;
+      try {
+        // `reload` skips the browser's own cache, so a save always stores the current version.
+        const response = await fetch(url.toString(), { cache: "reload", credentials: "same-origin" });
+        if (response.ok && response.status === 200) {
+          await target.put(url.toString(), response.clone());
+          saved += 1;
+          if ((response.headers.get("Content-Type") || "").includes("text/html")) {
+            await saveAssets(await response.clone().text());
+          }
+        } else {
+          failed.push(url.pathname);
         }
-      } else {
+      } catch {
         failed.push(url.pathname);
       }
-    } catch {
-      failed.push(url.pathname);
+    }
+    if (report && (index % 4 === 0 || index === urls.length - 1)) {
+      report({ done: index + 1, total: urls.length });
     }
   }
   return { saved, failed };
+}
+
+/**
+ * Forget one section's addresses, leaving everything else alone.
+ *
+ * Scripts and stylesheets are deliberately kept: their names carry a hash of their contents, they
+ * are shared by every page, and dropping one would break a section that is still saved.
+ */
+async function remove(urls) {
+  const pages = await caches.open(PAGES);
+  const data = await caches.open(DATA);
+  let removed = 0;
+  for (const raw of urls) {
+    const url = new URL(raw, self.location.origin).toString();
+    const gone = (await pages.delete(url)) || (await data.delete(url));
+    if (gone) removed += 1;
+  }
+  return { removed };
 }
 
 async function clear() {
@@ -195,10 +222,21 @@ self.addEventListener("message", (event) => {
   const reply = (payload) => (port ? port.postMessage(payload) : event.source?.postMessage(payload));
 
   if (message.type === "anvil-save") {
+    const report = (progress) => reply({ type: "anvil-progress", ...progress });
     event.waitUntil(
-      save(message.urls || []).then(
+      save(message.urls || [], report).then(
         (result) => reply({ type: "anvil-saved", ...result }),
         (error) => reply({ type: "anvil-saved", saved: 0, failed: [], error: String(error) }),
+      ),
+    );
+    return;
+  }
+
+  if (message.type === "anvil-remove") {
+    event.waitUntil(
+      remove(message.urls || []).then(
+        (result) => reply({ type: "anvil-removed", ...result }),
+        (error) => reply({ type: "anvil-removed", removed: 0, error: String(error) }),
       ),
     );
     return;

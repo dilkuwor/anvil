@@ -17,6 +17,7 @@ import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import { actionLabel, type LearningCategoryDetail, type LearningTopicDetail, type LearningTopicSummary } from "@/lib/learn";
+import { learnCategoryUrls } from "@/lib/offline-targets";
 import { queryKeys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -82,20 +83,7 @@ export function CategoryView({ slug }: { slug: string }) {
             <SaveOfflineButton
               storageKey={`learn-category:${data.slug}`}
               label={`Save all ${data.lesson_count} lessons`}
-              urls={async () => {
-                const list = [`/learn/${data.slug}`, `/api/v1/learn/categories/${data.slug}`];
-                for (const topic of data.topics) {
-                  list.push(topic.href, `/api/v1/learn/topics/${topic.slug}`);
-                  // The topic reply is what names its lessons, so read it before listing them.
-                  const detail = await api
-                    .get<LearningTopicDetail>(`/api/v1/learn/topics/${topic.slug}`)
-                    .catch(() => null);
-                  for (const lesson of detail?.lessons ?? []) {
-                    list.push(lesson.href, `/api/v1/learn/lessons/${lesson.slug}`);
-                  }
-                }
-                return list;
-              }}
+              urls={() => learnCategoryUrls(data.slug)}
             />
           </div>
         </div>

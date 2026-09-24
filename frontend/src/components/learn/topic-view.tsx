@@ -17,6 +17,7 @@ import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import { actionLabel, type LearningCategoryDetail, type LearningLessonSummary, type LearningTopicDetail } from "@/lib/learn";
+import { topicUrls } from "@/lib/offline-targets";
 import { queryKeys } from "@/lib/queries";
 import {
   DESIGN_LEARN_TOPIC,
@@ -105,11 +106,7 @@ export function TopicView({ slug }: { slug: string }) {
                 <SaveOfflineButton
                   storageKey={`learn-topic:${data.slug}`}
                   label="Save for offline"
-                  urls={[
-                    `/learn/${data.category_slug}/${data.slug}`,
-                    `/api/v1/learn/topics/${data.slug}`,
-                    ...data.lessons.flatMap((lesson) => [lesson.href, `/api/v1/learn/lessons/${lesson.slug}`]),
-                  ]}
+                  urls={topicUrls(data.category_slug, data)}
                 />
               </div>
             </div>

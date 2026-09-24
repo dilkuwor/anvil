@@ -17,6 +17,7 @@ import { InterviewerPanel } from "@/components/interview/interviewer-panel";
 import { getStory } from "@/components/story/registry";
 import { isStoryRecalled, isStoryWatched, StoryPlayer } from "@/components/story/story-player";
 import { SaveOfflineButton } from "@/components/offline/save-offline-button";
+import { problemUrls } from "@/lib/offline-targets";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { SolutionPanel } from "@/components/problems/solution-panel";
 import { StatusPip } from "@/components/problems/status-pip";
@@ -304,13 +305,9 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
               <SaveOfflineButton
                 storageKey={`problem:${problem.slug}`}
                 label="Save"
-                urls={[
-                  `/problems/${problem.slug}`,
-                  `/api/v1/problems/${problem.slug}`,
-                  // The Visual Story is part of the app itself, so it needs no saving. The
-                  // written solution does, because it is read from the database.
-                  `/api/v1/problems/${problem.slug}/solution`,
-                ]}
+                // The Visual Story is part of the app itself, so it needs no saving. The written
+                // solution does, because it is read from the database.
+                urls={problemUrls(problem.slug)}
               />
             )}
             <NotesPanel

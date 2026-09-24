@@ -12,7 +12,8 @@
 
 const NOTE_KEY = "anvil.offline.saved";
 
-export type SavedNote = { at: number; pages: number };
+/** `urls` is kept so one section can be forgotten without disturbing the others. */
+export type SavedNote = { at: number; pages: number; urls?: string[] };
 export type SavedNotes = Record<string, SavedNote>;
 
 /** Browser storage throws in private windows and when site data is blocked, so never let it escape. */
@@ -73,7 +74,13 @@ export function registerOfflineWorker() {
   });
 }
 
-async function ask<T>(message: Record<string, unknown>, timeoutMs = 120_000): Promise<T> {
+export type SaveProgress = { done: number; total: number };
+
+async function ask<T>(
+  message: Record<string, unknown>,
+  onProgress?: (progress: SaveProgress) => void,
+  timeoutMs = 600_000,
+): Promise<T> {
   if (!offlineSupported()) throw new Error("This browser cannot save pages for offline use.");
   const registration = await navigator.serviceWorker.ready;
   const worker = registration.active;
@@ -87,6 +94,11 @@ async function ask<T>(message: Record<string, unknown>, timeoutMs = 120_000): Pr
     }, timeoutMs);
 
     channel.port1.onmessage = (event) => {
+      // Progress arrives on the same port as the answer, so only the answer ends the wait.
+      if (event.data?.type === "anvil-progress") {
+        onProgress?.(event.data as SaveProgress);
+        return;
+      }
       window.clearTimeout(timer);
       channel.port1.close();
       resolve(event.data as T);
@@ -106,14 +118,52 @@ export type SaveResult = { saved: number; failed: string[]; error?: string };
 const SHELL_URLS = ["/api/v1/auth/me"];
 
 /** Fetch and keep every address, then note the section as saved. */
-export async function saveForOffline(key: string, urls: string[]): Promise<SaveResult> {
+export async function saveForOffline(
+  key: string,
+  urls: string[],
+  onProgress?: (progress: SaveProgress) => void,
+): Promise<SaveResult> {
   const unique = Array.from(new Set([...SHELL_URLS, ...urls]));
-  const result = await ask<SaveResult>({ type: "anvil-save", urls: unique });
+  const result = await ask<SaveResult>({ type: "anvil-save", urls: unique }, onProgress);
   if (result.saved > 0) {
-    writeNotes({ ...readNotes(), [key]: { at: Date.now(), pages: result.saved } });
+    writeNotes({ ...readNotes(), [key]: { at: Date.now(), pages: result.saved, urls: unique } });
     announceSaved();
   }
   return result;
+}
+
+/**
+ * Which of a section's addresses are safe to forget: the ones no other saved section still needs.
+ *
+ * Sections overlap. A topic saved on its own holds the same lessons as the category it belongs to,
+ * and every section holds the shared session reply. Dropping those with the first removal would
+ * quietly empty a section the reader still expects to have, so they are kept until nothing wants
+ * them. Pure, and tested, because getting it wrong loses saved content without saying so.
+ */
+export function urlsToDrop(notes: SavedNotes, key: string): string[] {
+  const going = notes[key];
+  if (!going) return [];
+
+  const stillNeeded = new Set<string>(SHELL_URLS);
+  for (const [other, note] of Object.entries(notes)) {
+    if (other === key) continue;
+    for (const url of note.urls ?? []) stillNeeded.add(url);
+  }
+  return (going.urls ?? []).filter((url) => !stillNeeded.has(url));
+}
+
+/** Forget one section, leaving anything shared with a still-saved section in place. */
+export async function removeOffline(key: string): Promise<void> {
+  const notes = readNotes();
+  if (!notes[key]) return;
+
+  const drop = urlsToDrop(notes, key);
+  if (drop.length > 0) await ask({ type: "anvil-remove", urls: drop });
+
+  const rest = { ...notes };
+  delete rest[key];
+  writeNotes(rest);
+  announceSaved();
 }
 
 export async function clearOffline(): Promise<void> {
