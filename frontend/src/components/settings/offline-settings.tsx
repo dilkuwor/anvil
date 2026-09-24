@@ -68,7 +68,8 @@ export function OfflineSettings() {
         {!supported ? (
           <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
             <CloudOff className="h-4 w-4 shrink-0" aria-hidden />
-            This browser cannot store pages for offline use.
+            Saving pages is not available here. It needs a browser that supports it, and the built
+            app rather than the development server.
           </p>
         ) : (
           <>

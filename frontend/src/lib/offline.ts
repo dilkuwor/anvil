@@ -1,7 +1,9 @@
-"use client";
-
 /**
  * Talking to the offline worker in `public/sw.js`, and remembering what has been saved.
+ *
+ * No "use client" here, and deliberately so. This is a plain helper, like the rest of `lib/`:
+ * every caller is already a client component, and nothing runs at import time. Marking it as a
+ * client boundary makes the bundler hand back proxied exports instead of these functions.
  *
  * The worker owns the copies themselves. This file only sends it instructions and keeps a short
  * note of which sections were saved and when, so a button can read "Saved" without asking the
@@ -31,20 +33,40 @@ function writeNotes(notes: SavedNotes) {
   }
 }
 
-export function savedNotes(): SavedNotes {
-  return readNotes();
-}
-
-export function savedNote(key: string): SavedNote | null {
-  return readNotes()[key] ?? null;
-}
-
+/**
+ * Whether pages can be saved here at all. False on a dev server as well as in a browser without
+ * workers, so nothing offers a button that could not work. See `registerOfflineWorker` for why
+ * development is left out.
+ */
 export function offlineSupported(): boolean {
-  return typeof navigator !== "undefined" && "serviceWorker" in navigator;
+  return (
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    process.env.NODE_ENV === "production"
+  );
 }
 
 export function registerOfflineWorker() {
-  if (!offlineSupported()) return;
+  // Deliberately not `offlineSupported()`, which is false in development: the clean-up below is
+  // exactly what development needs to run.
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+
+  if (process.env.NODE_ENV !== "production") {
+    // Never run the worker against a dev server. It serves scripts straight from its cache
+    // because a built file's name contains a hash of its contents and so can never go stale --
+    // but in development those names are reused as the code behind them changes, so a cached
+    // copy would hide every edit. Clear anything a production run left on this address.
+    void navigator.serviceWorker
+      .getRegistrations()
+      .then((all) => Promise.all(all.map((one) => one.unregister())))
+      .catch(() => {});
+    void caches
+      ?.keys?.()
+      .then((names) => Promise.all(names.filter((n) => n.startsWith("anvil-")).map((n) => caches.delete(n))))
+      .catch(() => {});
+    return;
+  }
+
   // `updateViaCache: "none"` keeps the browser from serving a stale copy of the worker itself.
   navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => {
     /* Without a worker the app simply needs the network, which is how it behaved before. */
@@ -184,18 +206,6 @@ export function neverChanges(): () => void {
 export function subscribeSaved(onChange: () => void): () => void {
   savedListeners.add(onChange);
   return () => savedListeners.delete(onChange);
-}
-
-/**
- * When a section was saved, as a plain number so repeated reads compare equal. Returning a fresh
- * object here would make `useSyncExternalStore` re-render forever.
- */
-export function savedAtSnapshot(key: string): number {
-  return readNotes()[key]?.at ?? 0;
-}
-
-export function savedAtServerSnapshot(): number {
-  return 0;
 }
 
 export function formatBytes(bytes: number): string {

@@ -1,16 +1,17 @@
 "use client";
 
 import { Check, Download, Loader2 } from "lucide-react";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  emptyNotesJson,
   offlineSupported,
   saveForOffline,
-  savedAtServerSnapshot,
-  savedAtSnapshot,
+  savedNotesJson,
   subscribeSaved,
+  type SavedNotes,
 } from "@/lib/offline";
 
 /**
@@ -41,12 +42,12 @@ export function SaveOfflineButton({
   const [busy, setBusy] = useState<"no" | "saving" | "error">("no");
   const [detail, setDetail] = useState<string>("");
 
-  // Read straight from storage. On the server this is 0, so the button renders as unsaved and
-  // corrects itself on hydration without an effect.
-  const savedAt = useSyncExternalStore(
-    subscribeSaved,
-    useCallback(() => savedAtSnapshot(storageKey), [storageKey]),
-    savedAtServerSnapshot,
+  // Read straight from storage, through the same accessor the Settings panel uses. On the server
+  // it is empty, so the button renders as unsaved and corrects itself on hydration, with no effect.
+  const notesJson = useSyncExternalStore(subscribeSaved, savedNotesJson, emptyNotesJson);
+  const savedAt = useMemo(
+    () => (JSON.parse(notesJson) as SavedNotes)[storageKey]?.at ?? 0,
+    [notesJson, storageKey],
   );
 
   if (!offlineSupported()) return null;

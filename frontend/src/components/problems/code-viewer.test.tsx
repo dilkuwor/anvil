@@ -59,4 +59,10 @@ describe("CodeViewer", () => {
 
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it("renders the Download button", () => {
+    render(<CodeViewer code={sampleCode} filename="Solution.java" />);
+
+    expect(screen.getByText("Download")).toBeInTheDocument();
+  });
 });

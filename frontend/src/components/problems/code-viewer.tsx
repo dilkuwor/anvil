@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpRight, Check, ChevronUp, Code2, Copy } from "lucide-react";
+import { ArrowUpRight, Check, ChevronUp, Code2, Copy, Download } from "lucide-react";
 import { toast } from "sonner";
+import { downloadFile } from "@/lib/download";
 import { cn } from "@/lib/utils";
 
 export type TokenType =
@@ -280,6 +281,11 @@ export function CodeViewer({
     toast.success("Loaded into code editor.");
   }
 
+  function handleDownload() {
+    downloadFile(filename, code.trim() + "\n", "text/x-java-source");
+    toast.success(`Downloaded ${filename}`);
+  }
+
   return (
     <div
       className={cn(
@@ -319,6 +325,17 @@ export function CodeViewer({
                 <span>Copy</span>
               </>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="inline-flex items-center gap-1.5 rounded-md border border-steel-700/80 bg-white dark:border-steel-700 dark:bg-steel-800/80 px-2.5 py-1 text-[12px] font-medium text-foreground shadow-2xs transition-all hover:bg-steel-100 dark:hover:bg-steel-700 active:scale-95"
+            aria-label="Download solution file"
+            title={`Download ${filename} for offline reading`}
+          >
+            <Download className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span className="hidden sm:inline">Download</span>
           </button>
 
           {onLoadCode ? (

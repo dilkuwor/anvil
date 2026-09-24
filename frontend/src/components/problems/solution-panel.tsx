@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronDown, Code2, Eye, PlayCircle, X } from "lucide-react";
+import { Check, ChevronDown, Code2, Download, Eye, PlayCircle, X } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
@@ -11,6 +11,7 @@ import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Button } from "@/components/ui/button";
 import { ErrorState, PageLoader } from "@/components/ui/state";
 import { api, ApiError, type ProblemDetail, type ProblemSolution, type SolutionApproach } from "@/lib/api";
+import { downloadFile, generateSolutionMarkdown } from "@/lib/download";
 import { queryKeys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -101,9 +102,23 @@ export function SolutionPanel({
     <div className="space-y-3 text-[13.5px] leading-6">
       {/* 1. The idea: the two sentences worth remembering, always open. */}
       <div className="rounded-xl border border-accent/40 bg-accent/10 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">The idea</span>
-          {data.pattern ? <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] font-medium text-accent">{data.pattern}</span> : null}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">The idea</span>
+            {data.pattern ? <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] font-medium text-accent">{data.pattern}</span> : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const md = generateSolutionMarkdown(problem, data);
+              downloadFile(`${problem.slug}-solution.md`, md, "text/markdown");
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-accent/40 bg-accent/15 px-2.5 py-1 text-[11.5px] font-medium text-accent transition-all hover:bg-accent/25 active:scale-95"
+            title="Download complete solution guide as Markdown for offline reading"
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Download .md</span>
+          </button>
         </div>
         <p className="mt-1.5 text-[15px] font-medium leading-7 text-foreground">
           <Inline text={data.summary} />
