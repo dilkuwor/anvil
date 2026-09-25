@@ -6,9 +6,7 @@ record them; writes only the four study tables.
 
 from __future__ import annotations
 
-import sys
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -16,23 +14,18 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from database.seeds.study_path import BOX_DAYS, DAILY_REVIEW_CAP, UNITS  # noqa: E402
-
-from app.common.enums import LearningProgressStatus, NoteKind, NoteSourceType, ProgressStatus  # noqa: E402
-from app.common.errors import NotFoundError  # noqa: E402
-from app.email.resend import is_configured as email_configured  # noqa: E402
-from app.interviews.models import InterviewSession  # noqa: E402
-from app.interviews.scenarios import get_scenario  # noqa: E402
-from app.learn.models import LearningLesson, LearningTopic, UserLearningProgress  # noqa: E402
-from app.notes.models import Note  # noqa: E402
-from app.problems.models import Problem, ProblemSolution  # noqa: E402
-from app.progress.models import UserProblemProgress  # noqa: E402
-from app.study.models import ReviewCard, StudyCompletion, StudyDay, StudySettings  # noqa: E402
-from app.study.schemas import (  # noqa: E402
+from app.common.enums import LearningProgressStatus, NoteKind, NoteSourceType, ProgressStatus
+from app.common.errors import NotFoundError
+from app.email.resend import is_configured as email_configured
+from app.interviews.models import InterviewSession
+from app.interviews.scenarios import get_scenario
+from app.learn.models import LearningLesson, LearningTopic, UserLearningProgress
+from app.notes.models import Note
+from app.problems.models import Problem, ProblemSolution
+from app.progress.models import UserProblemProgress
+from app.study.models import ReviewCard, StudyCompletion, StudyDay, StudySettings
+from app.study.path import BOX_DAYS, DAILY_REVIEW_CAP, UNITS
+from app.study.schemas import (
     DesignOutlineIn,
     DesignOutlineOut,
     PathDesignOut,

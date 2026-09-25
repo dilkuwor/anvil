@@ -10,8 +10,12 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+# database.seeds lives next to backend/. The API process must not add this
+# itself: the deployed image does not contain that package.
+REPO_ROOT = ROOT.parent
+for entry in (str(ROOT), str(REPO_ROOT)):
+    if entry not in sys.path:
+        sys.path.insert(0, entry)
 
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
 os.environ.setdefault("APP_ENV", "test")

@@ -14,10 +14,10 @@ from app.problems.seed_catalog import seed_problem_catalog
 from app.progress.models import UserProblemProgress
 from app.study import reminders, service
 from app.study.models import ReviewCard, StudySettings
+from app.study.path import BOX_DAYS, UNITS, validate_path
 from app.study.schemas import DesignOutlineIn, StudySettingsUpdate
 from app.users.models import User
 from database.seeds.catalog import PROBLEMS as CATALOG
-from database.seeds.study_path import BOX_DAYS, UNITS, validate_path
 
 TODAY = date(2026, 10, 1)
 
