@@ -87,6 +87,17 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The Next.js dev server proxies `/api/*`, `/mcp`, and OAuth discovery/token routes to `http://localhost:8000`.
 
+## Study path, reviews and reminders
+
+Signed-in users get `/today` (the day's plan), `/today/review` (spaced-repetition cards), `/path` (ten units that pair a coding section with system design content) and `/today/settings` (interview date and reminders). The units are defined in `database/seeds/study_path.py`; progress is derived from solved problems, finished lessons and mock interviews, plus four small tables added by migration `0023_study_path`.
+
+Reminder emails go out through Resend. Run the sender from cron every 10–15 minutes; it sends at most one email per user per day, only on their chosen days and only when something is due:
+
+```bash
+cd backend && source .venv/bin/activate
+python -m app.study.reminders
+```
+
 ## Tests
 
 ```bash

@@ -7,6 +7,7 @@ import { useEffect, useId, useState } from "react";
 
 import { UserAvatar } from "@/components/settings/user-avatar";
 import { Button } from "@/components/ui/button";
+import { useToday } from "@/lib/study";
 import { cn } from "@/lib/utils";
 
 export const SITE_NAV = [
@@ -33,12 +34,14 @@ function NavLink({
   pathname,
   onClick,
   className,
+  badge,
 }: {
   href: string;
   label: string;
   pathname: string;
   onClick?: () => void;
   className?: string;
+  badge?: number;
 }) {
   const active = pathname === href || (href !== "/" && pathname.startsWith(href));
   return (
@@ -46,7 +49,7 @@ function NavLink({
       href={href}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center rounded-lg px-2.5 xl:px-3 py-1 text-[12.5px] xl:text-[13px] font-medium transition-all duration-150 select-none whitespace-nowrap",
+        "inline-flex items-center gap-1.5 rounded-lg px-2.5 xl:px-3 py-1 text-[12.5px] xl:text-[13px] font-medium transition-all duration-150 select-none whitespace-nowrap",
         active
           ? "border border-steel-700/70 bg-steel-800/90 font-semibold text-foreground shadow-2xs"
           : "border border-transparent text-muted-foreground hover:bg-steel-800/60 hover:text-foreground",
@@ -54,13 +57,29 @@ function NavLink({
       )}
     >
       {label}
+      {badge ? (
+        <span
+          className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-white"
+          aria-label={`${badge} tasks left today`}
+        >
+          {badge}
+        </span>
+      ) : null}
     </Link>
   );
 }
 
-export function DesktopNav({ pathname }: { pathname: string }) {
+/** The signed-in "Today" link, with how many of today's tasks are still open. */
+function TodayNavLink({ pathname, onClick, className }: { pathname: string; onClick?: () => void; className?: string }) {
+  const today = useToday();
+  const left = today.data ? Math.max(today.data.total - today.data.done_count, 0) : 0;
+  return <NavLink href="/today" label="Today" pathname={pathname} onClick={onClick} className={className} badge={left} />;
+}
+
+export function DesktopNav({ pathname, signedIn = false }: { pathname: string; signedIn?: boolean }) {
   return (
     <nav className="hidden h-8 items-center gap-0.5 xl:gap-1 md:flex" aria-label="Primary">
+      {signedIn ? <TodayNavLink pathname={pathname} className="h-7" /> : null}
       {SITE_NAV.map((item) => (
         <NavLink key={item.href} href={item.href} label={item.label} pathname={pathname} className="h-7" />
       ))}
@@ -149,6 +168,7 @@ export function MobileNavSheet({
   return (
     <div id={menuId} className="border-t border-steel-800 bg-background px-3 py-3 md:hidden">
       <nav className="flex flex-col" aria-label="Primary">
+        {signedIn ? <TodayNavLink pathname={pathname} onClick={onClose} className="px-3 py-2.5 text-sm" /> : null}
         {SITE_NAV.map((item) => (
           <NavLink
             key={item.href}

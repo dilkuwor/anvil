@@ -18,7 +18,7 @@ import { isOfflineServerSnapshot, isOfflineSnapshot, subscribeNetwork } from "@/
 import { queryKeys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-const PRIVATE_PREFIXES = ["/dashboard", "/settings", "/system-design/interview"];
+const PRIVATE_PREFIXES = ["/dashboard", "/settings", "/system-design/interview", "/today", "/path"];
 
 function isPrivatePath(pathname: string): boolean {
   return PRIVATE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -87,7 +87,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link href={signedIn ? "/dashboard" : "/"} className="inline-flex h-8 shrink-0 items-center transition-opacity hover:opacity-90">
                 <BrandMark compact wordmarkClassName="text-[15px] font-bold max-md:sr-only" />
               </Link>
-              <DesktopNav pathname={pathname} />
+              <DesktopNav pathname={pathname} signedIn={signedIn} />
             </div>
             <div className="flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground">
               <ThemeToggle />

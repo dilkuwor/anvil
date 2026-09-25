@@ -331,7 +331,45 @@ _SCENARIOS: list[dict[str, Any]] = [
             "Push on sharding by prefix and why you do not hit the primary search index."
         ),
     },
+    {
+        "slug": "key-value-store",
+        "title": "Design a Key-Value Store",
+        "difficulty": "MEDIUM",
+        "summary": "A distributed store for get and put by key, like DynamoDB or Cassandra.",
+        "prompt": (
+            "Design a key-value store that offers get(key) and put(key, value) to many services. "
+            "Data must survive machine failures and the store must keep working as it grows past one machine."
+        ),
+        "functional_requirements": [
+            "put(key, value) and get(key) with small values (up to a few KB).",
+            "Delete a key.",
+            "Keys and values are opaque bytes; no queries beyond exact key lookup.",
+            "Optional: read your own writes for a single client.",
+        ],
+        "non_functional_requirements": [
+            "Reads and writes in a few milliseconds at the 99th percentile.",
+            "No data loss when one machine dies.",
+            "Scale by adding machines without downtime.",
+            "Tunable consistency: callers pick fast-and-eventual or slower-and-strong.",
+        ],
+        "constraints": [
+            "10 TB of data, 100 million keys.",
+            "Read:write ratio around 3:1, tens of thousands of operations per second.",
+            "Any node may fail at any time; the network can partition.",
+        ],
+        "assumptions": [
+            "Values are small, so a single node holds millions of keys.",
+            "Clients can tolerate a short retry on failover.",
+            "Transactions across keys are out of scope.",
+        ],
+        "interviewer_notes": (
+            "Probe the write path (commit log, memtable, SSTables and binary search over sorted files), "
+            "consistent hashing for partitioning, replication with quorums (W + R > N), "
+            "and how a hinted handoff or read repair heals after a node comes back."
+        ),
+    },
 ]
+
 
 # Modes hang off the same slug: Learn lesson, optional sample graph, simulator seed.
 _CATALOG: dict[str, dict[str, Any]] = {
@@ -378,6 +416,11 @@ _CATALOG: dict[str, dict[str, Any]] = {
         "learn_slug": "sd-autocomplete",
         "sample_slug": "autocomplete",
         "workload": {"dau": 50_000_000, "requests_per_user_day": 40, "read_ratio": 0.99, "peak_multiplier": 3},
+    },
+    "key-value-store": {
+        "learn_slug": "sd-key-value-store",
+        "sample_slug": "key-value-store",
+        "workload": {"dau": 2_000_000, "requests_per_user_day": 200, "read_ratio": 0.75, "peak_multiplier": 3},
     },
 }
 

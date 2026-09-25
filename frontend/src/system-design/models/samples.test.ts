@@ -22,6 +22,7 @@ describe("catalog samples", () => {
     expect(samples.map((item) => item.slug).sort()).toEqual([
       "autocomplete",
       "chat-system",
+      "key-value-store",
       "news-feed",
       "rate-limiter",
       "ride-sharing",

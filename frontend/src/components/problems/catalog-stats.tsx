@@ -1,9 +1,11 @@
 export function CatalogStats({
   total,
+  stories,
   solved,
   remaining,
 }: {
   total: number;
+  stories?: number;
   solved: number;
   remaining: number;
 }) {
@@ -12,6 +14,14 @@ export function CatalogStats({
       <span>
         <span className="font-semibold text-foreground">{total}</span> problems
       </span>
+      {typeof stories === "number" ? (
+        <>
+          <span className="text-steel-700">·</span>
+          <span>
+            <span className="font-semibold text-foreground">{stories}</span> stories
+          </span>
+        </>
+      ) : null}
       <span className="text-steel-700">·</span>
       <span>
         <span className="font-semibold text-success">{solved}</span> solved

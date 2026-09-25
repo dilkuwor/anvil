@@ -15,6 +15,7 @@ from app.learn.models import (
 from app.problems.models import Problem, ProblemSolution, ProblemSolutionApproach, ProblemTag, Tag, TestCase
 from app.progress.models import Activity, UserProblemProgress
 from app.submissions.models import Submission, SubmissionTestResult
+from app.study.models import ReviewCard, StudyCompletion, StudyDay, StudySettings
 from app.mcp.models import McpAccessLog, McpToken
 from app.oauth.models import OAuthAuthorizationCode, OAuthClient, OAuthRefreshToken
 from app.users.models import User, UserLlmKey
@@ -40,6 +41,10 @@ __all__ = [
     "ProblemSolution",
     "ProblemSolutionApproach",
     "ProblemTag",
+    "ReviewCard",
+    "StudyCompletion",
+    "StudyDay",
+    "StudySettings",
     "Submission",
     "SubmissionTestResult",
     "Tag",

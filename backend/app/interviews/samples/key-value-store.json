@@ -1,0 +1,176 @@
+{
+  "slug": "key-value-store",
+  "name": "Key-Value Store",
+  "summary": "Services → DNS → LB → coordinator API. A partitioned NoSQL ring holds the keys with replication; Redis fronts hot keys; a commit log streams writes for replica repair.",
+  "difficulty": "intermediate",
+  "workload": {
+    "dau": 2000000,
+    "concurrent_users": 50000,
+    "requests_per_user_day": 200,
+    "read_ratio": 0.75,
+    "avg_request_bytes": 300,
+    "avg_response_bytes": 1200,
+    "peak_multiplier": 3,
+    "traffic_growth": 0.3,
+    "avg_record_bytes": 1024
+  },
+  "slo": {
+    "availability": 0.9999,
+    "p95_ms": 10,
+    "p99_ms": 25,
+    "error_rate": 0.0005,
+    "rpo_seconds": 0,
+    "rto_seconds": 30
+  },
+  "nodes": [
+    {
+      "id": "services",
+      "type": "client",
+      "label": "Calling Services",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 2,
+        "qps": 100000
+      }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 3,
+        "maxRps": 60000,
+        "algorithm": "least_connections",
+        "baseLatencyMs": 1
+      }
+    },
+    {
+      "id": "coordinator",
+      "type": "api_server",
+      "label": "Coordinator",
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 12,
+        "vcpu": 4,
+        "avgLatencyMs": 2,
+        "p95LatencyMs": 6,
+        "autoscaling": true,
+        "minInstances": 6,
+        "maxInstances": 40
+      }
+    },
+    {
+      "id": "hot",
+      "type": "redis",
+      "label": "Hot Keys",
+      "x": 960,
+      "y": 80,
+      "config": {
+        "memoryGb": 64,
+        "hitRatio": 0.6,
+        "maxOps": 200000,
+        "ttlSec": 300,
+        "replicas": 1
+      }
+    },
+    {
+      "id": "ring",
+      "type": "nosql",
+      "label": "Partitioned Ring",
+      "x": 960,
+      "y": 230,
+      "config": {
+        "vcpu": 16,
+        "storageGb": 12000,
+        "readCapacity": 60000,
+        "writeCapacity": 30000,
+        "replicationFactor": 3,
+        "iops": 60000
+      }
+    },
+    {
+      "id": "log",
+      "type": "kafka",
+      "label": "Commit Log",
+      "x": 960,
+      "y": 380,
+      "config": {
+        "brokers": 3,
+        "partitions": 24,
+        "consumers": 6,
+        "producerThroughput": 40000,
+        "consumerThroughput": 40000
+      }
+    },
+    {
+      "id": "repair",
+      "type": "worker",
+      "label": "Replica Repair",
+      "x": 1190,
+      "y": 380,
+      "config": {
+        "instances": 4,
+        "concurrency": 8,
+        "jobMs": 5,
+        "idempotent": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-services-dns",
+      "source": "services",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-lb",
+      "source": "dns",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-coordinator",
+      "source": "lb",
+      "target": "coordinator"
+    },
+    {
+      "id": "e-coordinator-hot",
+      "source": "coordinator",
+      "target": "hot",
+      "label": "reads",
+      "weight": 0.75
+    },
+    {
+      "id": "e-coordinator-ring",
+      "source": "coordinator",
+      "target": "ring"
+    },
+    {
+      "id": "e-coordinator-log",
+      "source": "coordinator",
+      "target": "log",
+      "label": "writes",
+      "weight": 0.25
+    },
+    {
+      "id": "e-log-repair",
+      "source": "log",
+      "target": "repair"
+    },
+    {
+      "id": "e-repair-ring",
+      "source": "repair",
+      "target": "ring"
+    }
+  ]
+}

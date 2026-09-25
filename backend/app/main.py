@@ -11,6 +11,7 @@ from app.interviews.router import router as interviews_router
 from app.learn.router import router as learn_router
 from app.lists.router import router as lists_router
 from app.notes.router import router as notes_router
+from app.study.router import router as study_router
 from app.problems.router import router as problems_router
 from app.progress.router import router as progress_router
 from app.submissions.router import router as submissions_router
@@ -43,6 +44,7 @@ app.include_router(interviews_router)
 app.include_router(learn_router)
 app.include_router(lists_router)
 app.include_router(notes_router)
+app.include_router(study_router)
 app.include_router(cheatsheets_router)
 app.include_router(users_router)
 app.include_router(tts_router)

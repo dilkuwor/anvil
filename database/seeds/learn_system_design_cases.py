@@ -440,6 +440,181 @@ Metrics: rejection rate per key and per endpoint, limiter decision latency, Redi
     )
 
 
+def _key_value_store() -> dict:
+    return SD(
+        "sd-key-value-store",
+        "Design a Key-Value Store",
+        "The building block under most other designs: get and put by key, spread over many machines, with no data lost when one dies.",
+        16,
+        "**Interviewer:** \"Design a key-value store like DynamoDB or Cassandra. Services call get(key) and put(key, value). It must keep working when machines fail and keep growing past one machine.\"",
+        [
+            (
+                "Why It Matters",
+                """Almost every other design leans on a key-value store: sessions, carts, counters, URL lookups, feature flags. If you can explain how one works inside, you can explain the storage layer of anything else. The problem is also small enough to finish, and deep enough to show three things interviewers care about: how a write becomes durable, how data is split across machines, and what "consistent" really costs.""",
+            ),
+            (
+                "Step 1: Clarify the Requirements",
+                """- *"How big are the values?"* — A few KB keeps the design simple. Large blobs belong in object storage with a key that points to them.
+- *"Do we need anything beyond get, put and delete?"* — No range scans or queries. If the answer is yes, the design changes a lot.
+- *"Strong or eventual consistency?"* — The most important question. The honest answer is usually "tunable per call".
+- *"How much data, how many operations?"* — Decides whether one machine could ever do it (it cannot, here).
+- *"What must never happen?"* — Losing an acknowledged write. That rule shapes the write path.
+
+**Agreed scope:** get, put and delete on small opaque values; tunable consistency; survives any single machine failing; grows by adding machines with no downtime.
+
+**Non-functional:** a few milliseconds at the 99th percentile, no data loss after a write is acknowledged, and adding a node must not pause the service.""",
+            ),
+            (
+                "Step 2: Estimate the Scale",
+                """- 100 million keys, about 1 KB each: 100 GB of live data, 300 GB with three copies.
+- 40,000 operations per second at peak, three reads for every write.
+- Any node can die at any moment; the network can split.
+
+**Consequences:**
+
+- 300 GB does not fit comfortably on one cheap machine with room to grow, so the data must be **partitioned** across nodes.
+- 10,000 writes per second means the write path must be sequential and cheap. Random writes into a big sorted structure on disk would not keep up.
+- Three copies mean every write touches three machines. How many must confirm before we say "done" is the consistency knob.""",
+            ),
+            (
+                "Step 3: API",
+                """- `GET /v1/keys/{key}` → `200` with the value and a version, or `404`.
+- `PUT /v1/keys/{key}` with the value → `200` with the new version.
+- `DELETE /v1/keys/{key}` → `204`.
+- Each call accepts an optional `consistency` setting: `eventual` (fast) or `strong` (slower, always the latest).
+
+Two small details show care: an optional `if-version` on `PUT`, so two writers do not silently overwrite each other, and a `ttl` so a session key can expire on its own.""",
+            ),
+            (
+                "Step 4: One Machine First",
+                """Before spreading data across machines, get one machine right. The standard design is the **log-structured** store, used by Cassandra, RocksDB and LevelDB.
+
+**Write path:** append the write to a **commit log** on disk (sequential, fast, durable), then update an in-memory sorted table called the **memtable**. Acknowledge. Two steps, both cheap.
+
+**Flush:** when the memtable is full, write it to disk as a sorted, immutable file called an **SSTable** (sorted string table). Sorted files are the point: finding a key inside one is a **binary search**, the same idea as the coding problems in this unit.
+
+**Read path:** check the memtable, then the newest SSTable, then older ones, until the key is found. A **Bloom filter** per file says "definitely not here" without reading the file, so most misses cost nothing.
+
+**Compaction:** a background job merges old SSTables, dropping overwritten and deleted values, so reads stay fast and disk stays tidy. Deletes are written as **tombstones** first, because you cannot remove a line from an immutable file.
+
+Say the sentence: "writes are appends, reads are binary search over a few sorted files, compaction keeps the file count small". That is the whole single-node design.""",
+            ),
+            (
+                "Step 5: Many Machines",
+                """Client → Coordinator → three replica nodes chosen by the key's hash
+
+**Partitioning:** hash each key onto a ring and give each node a range of the ring. This is **consistent hashing**: when a node joins or leaves, only its neighbours' keys move, not everything. Virtual nodes (many small ranges per machine) keep the load even.
+
+**Replication:** each key lives on N = 3 nodes, the owner and the next two around the ring. A write goes to all three.
+
+**The knobs:** W = how many replicas must confirm a write, R = how many replicas a read asks. With N = 3, W = 2 and R = 2, every read overlaps every write on at least one node, so you always see the latest value. That is the **quorum** rule: W + R > N. Set W = 1 and R = 1 for speed and accept that a read can be briefly stale.
+
+**Coordinator:** any node can take a request, look up the owners, fan out, and wait for W or R answers. No single "master" that can fail.""",
+            ),
+            (
+                "How It Works",
+                """### A write, step by step
+
+1. The client sends `put(k, v)` to any node.
+2. That node hashes `k`, finds the three owners, and forwards the write to all of them with a version (a timestamp or a vector clock).
+3. Each owner appends to its commit log, updates its memtable, and replies.
+4. When W replies arrive, the coordinator answers the client. The third reply can come later.
+
+### When a replica is down
+
+The coordinator still gets W = 2 confirmations from the other two, so the write succeeds. It also stores a **hint**: "node C missed this write". When C comes back, the hint is replayed to it. This is **hinted handoff**, and it is why a dead node does not stop writes.
+
+### When replicas disagree
+
+A read with R = 2 may get two different versions. The coordinator returns the newer one and, in the background, writes it to the stale replica. That is **read repair**. A slower background process compares whole ranges between replicas using **Merkle trees** (a hash tree, so two nodes can find the differing block without sending all the data) and fixes anything read repair missed. This is **anti-entropy**.
+
+### Versions
+
+Timestamps work if clocks are close and you accept "last writer wins". If two clients update the same key at the same moment on different sides of a partition, both writes are real and one will be lost. **Vector clocks** keep both and let the reader or application merge them. Say which you chose and why; do not pretend the conflict cannot happen.
+
+### Hot keys
+
+One key read a million times a second overloads its three owners. Put a small cache in front (Redis or in the coordinator) for the hottest keys, and for write-hot keys, split the key into shards (`k:0` … `k:9`) that the application sums on read.""",
+            ),
+            (
+                "Evolution Under Pressure",
+                """### Round 1 — "Add ten more nodes without downtime."
+
+New nodes take ranges from the ring; only the keys in those ranges stream over, while both old and new owners serve reads until the move completes. Virtual nodes make the amount each existing node gives up roughly equal.
+
+### Round 2 — "A client reads its own write and does not see it."
+
+With W = 1, R = 1 that is expected. Either raise to a quorum (W = 2, R = 2), or route a client's reads to the replica that took its write for a few seconds. Name the cost: quorums add one more network hop to the slowest of two replies.
+
+### Round 3 — "The network splits the cluster in two."
+
+Each half can still reach some replicas. With quorum settings, writes on the side that has two of the three owners succeed and the other side refuses, which keeps data consistent (CP). With W = 1 both sides accept writes and you reconcile later (AP). That is the CAP choice, and the store should let each caller pick.
+
+### Round 4 — "Reads got slow after a month."
+
+Too many SSTables, so each read checks many files. Compaction is behind or misconfigured. Check the file count per node, give compaction more room, and check the Bloom filters are sized for the key count.
+
+### Round 5 — "A whole data centre is lost."
+
+Place the three replicas in different racks or zones, so no single failure takes all copies. For a second region, replicate asynchronously and accept a small window of loss, or run a cross-region quorum and pay 100 ms on every write. Say which the business would choose.""",
+            ),
+            (
+                "Failure Modes",
+                """- **Acknowledging before the commit log is written**, so a crash loses the write.
+- **W + R ≤ N** while promising strong reads.
+- **No hinted handoff**, so one dead node makes some writes fail.
+- **Compaction never keeping up**, so reads scan dozens of files.
+- **Tombstones dropped too early**, so a deleted key comes back from an old replica.
+- **All replicas in one rack**, so one switch failure loses the key entirely.
+- **Clock-based versions across machines with drifting clocks**, silently losing writes.""",
+            ),
+            (
+                "Trade-offs",
+                """- **Strong versus eventual consistency.** One extra reply to wait for, versus reads that may be a second stale. Tunable per call is the mature answer.
+- **Last writer wins versus vector clocks.** Simple and lossy, versus correct and harder for callers.
+- **Hash partitioning versus range partitioning.** Even spread and no range scans, versus scans but hot ranges.
+- **Log-structured versus B-tree storage.** Fast writes and background compaction, versus faster point reads and slower writes.
+- **Replicating within a region versus across regions.** Fast writes with a small loss window, versus safe writes that cost a round trip.""",
+            ),
+            (
+                "Interviewer Follow-ups",
+                """- **"How does a write become durable?"** — Commit log append first, then memtable, then acknowledge.
+- **"How do you find a key on disk?"** — Bloom filter, then binary search in each sorted SSTable, newest first.
+- **"Why consistent hashing?"** — Adding a node moves only its neighbours' keys, not everything.
+- **"What do W and R mean?"** — Replicas that must confirm a write and answer a read. W + R > N gives you the latest value.
+- **"A node is down during a write. What happens?"** — The write still succeeds with the other replicas; a hint is replayed when the node returns.
+- **"Two replicas disagree. Who is right?"** — The newer version by the chosen versioning scheme; read repair fixes the stale copy.""",
+            ),
+            (
+                "Common Mistakes",
+                """- Starting with sharding before explaining the single-node write path
+- Promising strong consistency with W = 1 and R = 1
+- Forgetting deletes need tombstones in an append-only store
+- No plan for a dead replica during a write
+- Treating the coordinator as a single master
+- Putting large blobs in the store instead of a pointer to object storage""",
+            ),
+            (
+                "Interview Tip",
+                """Give the whole design in one breath early: "consistent hashing to place keys, three replicas, quorum reads and writes, a commit log plus memtable plus sorted files on each node, hinted handoff and read repair to heal". Then spend the time on the write path and on what W and R really buy, because that is where most candidates get vague.""",
+            ),
+        ],
+        [
+            "On one node: append to a commit log, update the memtable, flush to sorted files, read by binary search, compact in the background.",
+            "Across nodes: consistent hashing places keys, three replicas hold each one, and W + R > N gives you the latest value.",
+            "Hinted handoff keeps writes working when a replica is down; read repair and anti-entropy fix stale copies later.",
+            "Consistency is a per-call knob with a real cost; say what each setting buys and what it risks.",
+        ],
+        [
+            "Walk through what happens on one node when a write arrives.",
+            "Why does adding a machine not move all the data?",
+            "What do W and R mean, and when is a read guaranteed to be fresh?",
+            "A replica is down while a write comes in. What happens now, and later?",
+            "Two clients write the same key during a network split. What does the store do?",
+        ],
+    )
+
+
 def _news_feed() -> dict:
     return SD(
         "sd-news-feed",
@@ -3756,12 +3931,13 @@ def case_study_topic() -> dict:
     return _sd_topic(
         "sd-design-problems",
         "Interview Case Studies",
-        "Seventeen complete interview walkthroughs: requirements, estimates, APIs, data models, a first design, the bottleneck, and the design evolving under interviewer pressure.",
+        "Eighteen complete interview walkthroughs: requirements, estimates, APIs, data models, a first design, the bottleneck, and the design evolving under interviewer pressure.",
         "HARD",
         24,
         [
             _url_shortener(),
             _rate_limiter_case(),
+            _key_value_store(),
             _news_feed(),
             _instagram(),
             _youtube(),

@@ -149,7 +149,7 @@ export function ProblemList() {
               </span>
             </div>
           ) : (
-            <CatalogStats total={catalogTotal} solved={solved} remaining={remaining} />
+            <CatalogStats total={catalogTotal} stories={tally.total} solved={solved} remaining={remaining} />
           )
         }
         actions={<ProblemsTabs onCreate={requestCreate} activeTab={isStories ? "stories" : "all"} />}
