@@ -1098,4 +1098,276 @@ class Solution {
         ],
         "related_slugs": ["lc-125", "lc-234", "lc-680"],
     },
+    {
+        "slugs": ["lc-168"],
+        "pattern": "Base conversion",
+        "trigger": "Turn a number into letters where 26 is Z and 27 is AA: base 26 with no zero digit.",
+        "summary": (
+            "It is base 26, but the digits run from 1 (A) to 26 (Z), with no zero. Subtract 1 before each `% 26` "
+            "and `/ 26`, so Z does not turn into a zero. The letters come out right to left, so reverse them."
+        ),
+        "approaches": [
+            {
+                "name": "Count up one column at a time",
+                "idea": "Start at A and add one, the way the sheet counts, until you reach the column number.",
+                "steps": [
+                    "Start with the title \"A\" for column 1.",
+                    "To add one, look at the last letter. If it is Z, turn it into A and carry one to the letter on its left.",
+                    "If the carry runs past the first letter, put a new A at the front.",
+                    "Otherwise move the letter where the carry stopped one step forward, for example B to C.",
+                    "Do this once for every column before the target, then return the title.",
+                ],
+                "code": """class Solution {
+    public String convertToTitle(int columnNumber) {
+        StringBuilder title = new StringBuilder("A");
+        for (int count = 1; count < columnNumber; count++) {
+            int i = title.length() - 1;
+            while (i >= 0 && title.charAt(i) == 'Z') {
+                title.setCharAt(i, 'A');
+                i--;
+            }
+            if (i < 0) {
+                title.insert(0, 'A');
+            } else {
+                title.setCharAt(i, (char) (title.charAt(i) + 1));
+            }
+        }
+        return title.toString();
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "It adds one for every column before the target, so the largest int needs about two billion steps.",
+                "space_complexity": "O(log n)",
+                "space_why": "The title has one letter per base-26 digit, at most seven letters.",
+                "when_to_use": "Say it only to show how the titles grow. It is far too slow for large numbers.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Take letters with minus one",
+                "idea": "Shift A to Z down to 0 to 25, then read off base-26 digits from the right.",
+                "steps": [
+                    "Subtract 1 from n, so A to Z become 0 to 25.",
+                    "Take `n % 26` as the last letter and add it to a builder.",
+                    "Divide n by 26 to drop that letter.",
+                    "Repeat while n is above 0.",
+                    "The letters were found right to left, so reverse the builder and return it.",
+                ],
+                "code": """class Solution {
+    public String convertToTitle(int columnNumber) {
+        StringBuilder title = new StringBuilder();
+        int n = columnNumber;
+        while (n > 0) {
+            n--;
+            title.append((char) ('A' + n % 26));
+            n /= 26;
+        }
+        return title.reverse().toString();
+    }
+}
+""",
+                "time_complexity": "O(log n)",
+                "time_why": "Each round removes one base-26 digit, so the loop runs once per letter of the title.",
+                "space_complexity": "O(log n)",
+                "space_why": "Only the builder for the answer, one slot per letter.",
+                "when_to_use": "The version to write. Say out loud why the minus one is needed.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "columnNumber = 701",
+            "columns": ["n", "n - 1", "(n - 1) % 26", "letter", "next n = (n - 1) / 26", "letters so far", "note"],
+            "rows": [
+                ["701", "700", "24", "Y", "26", "Y", "24 is the 25th letter"],
+                ["26", "25", "25", "Z", "0", "YZ", "plain `26 % 26` would give 0, which is no letter"],
+                ["0", "-", "-", "-", "stop", "YZ", "reverse to get ZY"],
+            ],
+            "result": "The answer is \"ZY\".",
+        },
+        "mistakes": [
+            {
+                "name": "Taking % 26 without the minus one",
+                "wrong": "Using `n % 26` directly, so 26 gives 0 and there is no letter for 0.",
+                "right": "Subtract 1 first. Then A to Z are 0 to 25, and `n % 26` always names a real letter.",
+            },
+            {
+                "name": "Dividing the wrong value",
+                "wrong": "Subtracting 1 for the letter, then dividing the original n by 26.",
+                "right": "Divide the value after the minus one. For 26 that gives 0, so the loop stops after one Z.",
+            },
+            {
+                "name": "Forgetting to reverse",
+                "wrong": "Returning the letters in the order they were found.",
+                "right": "The first letter found is the last letter of the title. Reverse the builder at the end.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "1", "expected": "\"A\"", "why": "The smallest column."},
+            {"input": "26", "expected": "\"Z\"", "why": "Plain `% 26` gives 0 here and breaks."},
+            {"input": "27", "expected": "\"AA\"", "why": "The first two-letter title."},
+            {"input": "52", "expected": "\"AZ\"", "why": "Z in the last place, after a longer title."},
+            {"input": "701", "expected": "\"ZY\"", "why": "Z in the first place."},
+            {"input": "2147483647", "expected": "\"FXSHRXW\"", "why": "The largest int gives seven letters."},
+        ],
+        "interview_script": [
+            "I need to turn a column number into its Excel letters, where 26 is Z and 27 is AA.",
+            "My first idea is to count up from A one column at a time. That is O(n) steps, which is billions for the largest input.",
+            "The key point: this is base 26 with digits 1 to 26 and no zero, so I subtract 1 before taking each letter.",
+            "I loop: subtract 1, take `n % 26` as the last letter, divide by 26, and reverse at the end. That is O(log n) time and space.",
+            "I will test 1, 26, 27, 52, 701 and the largest int.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Go the other way: turn a title into its number.",
+                "answer": "Read left to right with `result = result * 26 + (letter - 'A' + 1)`. No minus one is needed there.",
+            },
+            {
+                "question": "Why subtract 1 instead of handling Z as a special case?",
+                "answer": "Both work. Subtracting 1 turns it into normal base 26, so one line covers every letter.",
+            },
+            {
+                "question": "How many letters can the title have for a 32-bit int?",
+                "answer": "Seven. Six letters reach only about 320 million columns, and 2^31 is over two billion.",
+            },
+        ],
+        "related_slugs": ["lc-7", "lc-8", "lc-43"],
+    },
+    {
+        "slugs": ["lc-7"],
+        "pattern": "Digit math",
+        "trigger": "Reverse the digits of an int, and return 0 if the result does not fit in 32 bits.",
+        "summary": (
+            "Pop the last digit with `x % 10` and push it with `result * 10 + digit`. Before each push, compare "
+            "result with `Integer.MAX_VALUE / 10` and `Integer.MIN_VALUE / 10`, so the int never overflows."
+        ),
+        "approaches": [
+            {
+                "name": "Reverse the text, then parse it",
+                "idea": "Write the number as text, reverse the digits, and let the parser report a number that is too big.",
+                "steps": [
+                    "Turn x into its text form with `Integer.toString(x)`.",
+                    "If x is negative, remember that and cut off the minus sign.",
+                    "Reverse the digits with a `StringBuilder`, and put the minus sign back in front if needed.",
+                    "Parse the result with `Integer.parseInt`. If it is out of range, the parser throws, so return 0.",
+                ],
+                "code": """class Solution {
+    public int reverse(int x) {
+        String text = Integer.toString(x);
+        boolean negative = x < 0;
+        if (negative) {
+            text = text.substring(1);
+        }
+        String reversed = new StringBuilder(text).reverse().toString();
+        try {
+            return Integer.parseInt(negative ? "-" + reversed : reversed);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+}
+""",
+                "time_complexity": "O(log x)",
+                "time_why": "An int has at most 10 digits, and each one is copied a few times.",
+                "space_complexity": "O(log x)",
+                "space_why": "It builds text copies of the digits: one slot per digit, a few times over.",
+                "when_to_use": "Same speed, but it builds extra copies of the digits and leans on the parser. Mention it, then do the maths.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Pop and push digits, check first",
+                "idea": "Move digits one by one from x to result, and stop just before a push would pass the int limit.",
+                "steps": [
+                    "Start the result at 0.",
+                    "Take the last digit with `x % 10`, then drop it with `x /= 10`.",
+                    "If result is above `Integer.MAX_VALUE / 10`, or equal to it with a digit above 7, return 0.",
+                    "Do the same check on the negative side with `Integer.MIN_VALUE / 10` and a digit below -8.",
+                    "Otherwise push the digit with `result = result * 10 + digit`. When x reaches 0, return result.",
+                ],
+                "code": """class Solution {
+    public int reverse(int x) {
+        int result = 0;
+        while (x != 0) {
+            int digit = x % 10;
+            x /= 10;
+            if (result > Integer.MAX_VALUE / 10 || (result == Integer.MAX_VALUE / 10 && digit > 7)) return 0;
+            if (result < Integer.MIN_VALUE / 10 || (result == Integer.MIN_VALUE / 10 && digit < -8)) return 0;
+            result = result * 10 + digit;
+        }
+        return result;
+    }
+}
+""",
+                "time_complexity": "O(log x)",
+                "time_why": "Each round removes one digit, and an int has at most 10 digits.",
+                "space_complexity": "O(1)",
+                "space_why": "Only result and the current digit are stored.",
+                "when_to_use": "The version to write. It uses no text and no `long`, as the problem asks.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "x = 1534236469",
+            "columns": ["x", "digit = x % 10", "check before the push", "result"],
+            "rows": [
+                ["1534236469", "9", "0 is not above 214748364", "9"],
+                ["153423646", "6", "9 is not above 214748364", "96"],
+                ["15342364 down to 153", "4, 6, 3, 2, 4, 3", "every check passes", "96463243"],
+                ["15", "5", "96463243 is not above 214748364", "964632435"],
+                ["1", "1", "964632435 is above 214748364: `result * 10` would overflow and wrap", "return 0"],
+            ],
+            "result": "The reversed number 9646324351 does not fit in an int, so the answer is 0.",
+        },
+        "mistakes": [
+            {
+                "name": "Checking after the multiply",
+                "wrong": "Computing `result * 10 + digit` first, then checking whether it went past the limit.",
+                "right": "An int that overflows wraps around to a wrong number with no error. Check against `Integer.MAX_VALUE / 10` before you multiply.",
+            },
+            {
+                "name": "Taking the absolute value",
+                "wrong": "Using `Math.abs(x)` first and putting the minus sign back at the end.",
+                "right": "`Math.abs(Integer.MIN_VALUE)` is still negative. Java's `%` keeps the sign, so the same loop handles negatives.",
+            },
+            {
+                "name": "Using long anyway",
+                "wrong": "Keeping result in a `long` and checking the range at the end.",
+                "right": "It gives the right answer, but the problem forbids 64-bit values. Check the limit before each push instead.",
+            },
+            {
+                "name": "Special code for trailing zeros",
+                "wrong": "Adding extra code to strip the zeros from 120 before reversing.",
+                "right": "Nothing is needed. `0 * 10 + 2` is just 2, so 120 gives 21 on its own.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "123", "expected": "321", "why": "A plain positive number."},
+            {"input": "-123", "expected": "-321", "why": "The sign must stay in front."},
+            {"input": "120", "expected": "21", "why": "The trailing zero disappears."},
+            {"input": "0", "expected": "0", "why": "The loop never runs."},
+            {"input": "1534236469", "expected": "0", "why": "The reversed number is too big for an int."},
+            {"input": "-2147483648", "expected": "0", "why": "The smallest int reversed is too small, and `Math.abs` fails on it."},
+        ],
+        "interview_script": [
+            "I need to reverse the digits of a 32-bit int, and return 0 if the reversed number does not fit.",
+            "My first idea is to turn it into text, reverse it and parse it back, catching the error on overflow. That is O(log x) time and O(log x) extra space for the text.",
+            "The key point: I can pop digits with `% 10` and push them with `result * 10 + digit`, but I must check the limit before the push, not after.",
+            "So I compare result with `Integer.MAX_VALUE / 10` and `Integer.MIN_VALUE / 10` first. That is O(log x) time and O(1) space.",
+            "I will test a negative number, 120, 0, and inputs such as 1534236469 and -2147483648 that overflow.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Why is the digit check 7 and -8?",
+                "answer": "`Integer.MAX_VALUE` is 2147483647 and `Integer.MIN_VALUE` is -2147483648. Those last digits are the largest allowed when result equals the limit divided by 10.",
+            },
+            {
+                "question": "Is an int a palindrome, without turning it into text?",
+                "answer": "Reverse only the second half of the digits and compare it with the first half. That also avoids overflow.",
+            },
+            {
+                "question": "What changes for a 64-bit input?",
+                "answer": "The same loop works with `Long.MAX_VALUE / 10` and `Long.MIN_VALUE / 10` as the limits.",
+            },
+        ],
+        "related_slugs": ["lc-8", "lc-168", "lc-2"],
+    },
 ]

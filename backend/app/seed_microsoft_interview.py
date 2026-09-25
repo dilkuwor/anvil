@@ -4,7 +4,8 @@ Usage (from backend/):
 
     python -m app.seed_microsoft_interview --username YOUR_USERNAME
 
-Safe to run multiple times. Existing problems and extra list items are left intact.
+The list holds the whole catalog, grouped by section. Safe to run multiple times.
+Existing problems and extra list items are left intact.
 """
 
 from __future__ import annotations

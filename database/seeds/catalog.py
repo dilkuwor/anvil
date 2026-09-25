@@ -6,6 +6,7 @@ Three modules contribute specs, all keyed by LeetCode ID and slugged ``lc-{id}``
 * ``looptracker`` - the 65-problem LoopTracker curriculum, which reuses the Microsoft
   specs where the two overlap.
 * ``fang_extra`` - the problems that fill the categories neither tracker covered.
+* ``microsoft_extra`` - frequently asked Microsoft problems none of the above include.
 
 Before this module existed, the Microsoft-only problems reached the database solely through
 ``python -m app.seed_microsoft_interview``, a per-user CLI, so a plain ``python -m app.seed``
@@ -14,6 +15,8 @@ ordered, de-duplicated list.
 
 Order is deliberate and is what the catalog seeder writes as insertion order: the LoopTracker
 curriculum first, then the remaining Microsoft problems, then the coverage additions.
+The Microsoft Interview list does not follow this order; it groups the whole catalog by
+section (see ``microsoft_list``).
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from database.seeds.fang_extra import EXTRA_TAGS as FANG_TAGS
 from database.seeds.fang_extra import PROBLEMS as FANG_PROBLEMS
 from database.seeds.looptracker import PROBLEMS as LOOPTRACKER_PROBLEMS
 from database.seeds.looptracker import TAGS as LOOPTRACKER_TAGS
+from database.seeds.microsoft_extra import PROBLEMS as MICROSOFT_EXTRA_PROBLEMS
 from database.seeds.microsoft_interview import PROBLEMS as MICROSOFT_PROBLEMS
 
 TAGS: list[tuple[str, str]] = list(dict.fromkeys([*LOOPTRACKER_TAGS, *FANG_TAGS]))
@@ -30,7 +34,7 @@ TAGS: list[tuple[str, str]] = list(dict.fromkeys([*LOOPTRACKER_TAGS, *FANG_TAGS]
 def _build() -> list[dict]:
     ordered: list[dict] = []
     seen: set[int] = set()
-    for spec in [*LOOPTRACKER_PROBLEMS, *MICROSOFT_PROBLEMS, *FANG_PROBLEMS]:
+    for spec in [*LOOPTRACKER_PROBLEMS, *MICROSOFT_PROBLEMS, *FANG_PROBLEMS, *MICROSOFT_EXTRA_PROBLEMS]:
         leetcode_id = spec["leetcode_id"]
         if leetcode_id in seen:
             continue

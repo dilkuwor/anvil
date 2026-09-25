@@ -1581,4 +1581,168 @@ SOLUTIONS: list[dict] = [
         ],
         "related_slugs": ["lc-1011", "lc-278", "lc-704"],
     },
+    {
+        "slugs": ["lc-69"],
+        "pattern": "Binary search on the answer",
+        "trigger": "Find the largest whole number whose square is at most x, with no built-in square root.",
+        "summary": (
+            "As m grows, m * m only grows. So binary search for the largest m with `m * m <= x`, round mid up "
+            "so the search always moves, and square in `long` so it cannot overflow."
+        ),
+        "approaches": [
+            {
+                "name": "Count up from zero",
+                "idea": "Try m = 1, 2, 3 and so on, and stop just before the square passes x.",
+                "steps": [
+                    "Start the count m at 0.",
+                    "While `(m + 1) * (m + 1)` is still at most x, add one to m.",
+                    "Use a `long` for m, so the square cannot overflow.",
+                    "When the next square would pass x, m is the answer.",
+                ],
+                "code": """class Solution {
+    public int mySqrt(int x) {
+        long m = 0;
+        while ((m + 1) * (m + 1) <= x) {
+            m++;
+        }
+        return (int) m;
+    }
+}
+""",
+                "time_complexity": "O(√x)",
+                "time_why": "It takes one step per whole number up to the root, about 46,000 steps for the largest int.",
+                "space_complexity": "O(1)",
+                "space_why": "Only m is stored.",
+                "when_to_use": "Say it first. It is correct and not too slow here, but the squares are sorted, so binary search fits.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Binary search for the last m that fits",
+                "idea": "The answers to `m * m <= x` read yes, yes, yes, then no forever, so halve the range to find the last yes.",
+                "steps": [
+                    "Set low to 0 and high to x. The answer is somewhere in that range.",
+                    "While low is below high, take mid as the middle, rounded up: `(low + high + 1) / 2`.",
+                    "If `mid * mid <= x`, mid fits, so the answer is at least mid: set low to mid.",
+                    "Otherwise mid is too big, so move the high end down to mid - 1.",
+                    "When low meets high, that number is the answer. Keep all three as `long` so the square cannot overflow.",
+                ],
+                "code": """class Solution {
+    public int mySqrt(int x) {
+        long low = 0;
+        long high = x;
+        while (low < high) {
+            long mid = (low + high + 1) / 2;
+            if (mid * mid <= x) {
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return (int) low;
+    }
+}
+""",
+                "time_complexity": "O(log x)",
+                "time_why": "Each round halves the range from 0 to x, so about 31 rounds for the largest int.",
+                "space_complexity": "O(1)",
+                "space_why": "Only low, high and mid are stored.",
+                "when_to_use": "The version to write. Explain why mid rounds up.",
+                "is_optimal": True,
+            },
+            {
+                "name": "Newton's method on m * m = x",
+                "idea": "Start with a guess that is too big and keep replacing it with the average of the guess and x divided by it.",
+                "steps": [
+                    "Start with the guess r equal to x, which is never smaller than the root.",
+                    "While `r * r` is bigger than x, replace the guess with `(r + x / r) / 2`.",
+                    "Each new guess is closer to the root and never drops below the rounded-down answer.",
+                    "When `r * r` is no longer bigger than x, r is the answer.",
+                ],
+                "code": """class Solution {
+    public int mySqrt(int x) {
+        long r = x;
+        while (r * r > x) {
+            r = (r + x / r) / 2;
+        }
+        return (int) r;
+    }
+}
+""",
+                "time_complexity": "O(log x)",
+                "time_why": "Far from the root each step about halves the guess, and near it each step doubles the correct digits.",
+                "space_complexity": "O(1)",
+                "space_why": "Only the guess r is stored.",
+                "when_to_use": "Use it when asked for a faster way or a root with decimals. It needs fewer steps, but it is harder to prove correct in an interview.",
+                "is_optimal": False,
+                "is_alternative": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "x = 8",
+            "columns": ["low", "high", "mid (rounded up)", "mid * mid", "fits?", "what moves"],
+            "rows": [
+                ["0", "8", "4", "16", "no, 16 > 8", "high = 3"],
+                ["0", "3", "2", "4", "yes, 4 <= 8", "low = 2"],
+                ["2", "3", "3", "9", "no, 9 > 8", "high = 2 (rounding down would pick mid = 2 again and loop forever)"],
+                ["2", "2", "-", "-", "-", "low meets high, stop"],
+            ],
+            "result": "2 * 2 = 4 fits and 3 * 3 = 9 does not, so the answer is 2.",
+        },
+        "mistakes": [
+            {
+                "name": "Rounding mid down with low = mid",
+                "wrong": "Using `mid = (low + high) / 2` together with `low = mid`.",
+                "right": "When low and high are next to each other, mid equals low and nothing moves. Round mid up with `(low + high + 1) / 2`.",
+            },
+            {
+                "name": "Squaring in int",
+                "wrong": "Computing `mid * mid` as an `int`. For large x, mid can be about a billion and the square wraps around.",
+                "right": "Keep low, high and mid as `long`, or compare `mid <= x / mid` instead.",
+            },
+            {
+                "name": "Returning the wrong end",
+                "wrong": "Returning the first m whose square is too big.",
+                "right": "The answer is the largest m with `m * m <= x`. With this loop, that is low when it stops.",
+            },
+            {
+                "name": "Starting high at x / 2 with no guard",
+                "wrong": "Setting high to `x / 2`, which is 0 when x is 1.",
+                "right": "Start high at x, or return x early when x is below 2. The root of 1 is 1.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "0", "expected": "0", "why": "The loop never runs."},
+            {"input": "1", "expected": "1", "why": "Breaks a search that starts high at x / 2."},
+            {"input": "4", "expected": "2", "why": "A perfect square."},
+            {"input": "8", "expected": "2", "why": "Not a square, so the answer rounds down."},
+            {"input": "2147395599", "expected": "46339", "why": "Just below 46340 squared."},
+            {"input": "2147483647", "expected": "46340", "why": "The largest int: an `int` square overflows here."},
+        ],
+        "interview_script": [
+            "I need the whole-number square root of x, rounded down, without a built-in square root.",
+            "My first idea is to count m up from 0 until the next square passes x. That is O(√x) time, about 46,000 steps for the largest int.",
+            "The key point I use: m * m only grows as m grows, so the answers read yes, yes, then no, and I can binary search for the last yes.",
+            "I search m between 0 and x, rounding mid up and squaring in `long`. That is O(log x) time and O(1) space.",
+            "I will test 0, 1, a perfect square, 8, and 2147483647 for overflow.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Return the root to three decimal places.",
+                "answer": "Binary search on doubles until high - low is below 0.0005, or use Newton's method.",
+            },
+            {
+                "question": "Is x a perfect square?",
+                "answer": "Run the same search, then check whether `low * low == x`.",
+            },
+            {
+                "question": "Can you avoid long?",
+                "answer": "Compare `mid <= x / mid` instead of `mid * mid <= x`. Division cannot overflow; just skip mid = 0.",
+            },
+            {
+                "question": "Which is faster, binary search or Newton's method?",
+                "answer": "Newton needs fewer steps for large x, since near the root each step doubles the correct digits. Both are fast here.",
+            },
+        ],
+        "related_slugs": ["lc-704", "lc-278", "lc-875"],
+    },
 ]

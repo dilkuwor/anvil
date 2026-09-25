@@ -17,20 +17,20 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from database.seeds.microsoft_interview import (  # noqa: E402
+from database.seeds.microsoft_interview import leetcode_slug  # noqa: E402
+from database.seeds.microsoft_list import (  # noqa: E402
     EXPECTED_LEETCODE_IDS,
     LIST_DESCRIPTION,
     LIST_NAME,
     PROBLEMS,
     TAGS,
-    leetcode_slug,
-    validate_catalog,
 )
 from app.lists.models import ProblemList, ProblemListItem
 from app.problems.models import Problem, ProblemTag, Tag, TestCase
 
 _LC_TITLE = re.compile(r"(?i)leetcode\s*#\s*(\d+)\b")
 _ORDER_EPOCH = datetime(2020, 1, 1, tzinfo=timezone.utc)
+_OLD_TRACKER_DESCRIPTION = "Coding problems from the Microsoft Interview practice tracker."
 
 
 @dataclass(frozen=True)
@@ -71,7 +71,6 @@ class MicrosoftInterviewSeedReport:
 
 
 def seed_microsoft_interview_problems(db: Session, user_id: UUID) -> MicrosoftInterviewSeedReport:
-    validate_catalog()
     tag_ids = _ensure_tags(db)
     existing_by_id = _index_existing_problems(db)
 
@@ -126,7 +125,7 @@ def seed_microsoft_interview_problems(db: Session, user_id: UUID) -> MicrosoftIn
 
     return MicrosoftInterviewSeedReport(
         list_name=problem_list.name,
-        expected=47,
+        expected=len(EXPECTED_LEETCODE_IDS),
         found=found,
         created_problems=created_problems,
         existing_problems=existing_problems,
@@ -236,6 +235,9 @@ def _find_or_create_list(db: Session, user_id: UUID) -> ProblemList:
         db.add(row)
         db.flush()
         db.refresh(row)
+    elif row.description == _OLD_TRACKER_DESCRIPTION:
+        # The list used to hold only the 47 tracker problems. Refresh the untouched default text.
+        row.description = LIST_DESCRIPTION
     return row
 
 

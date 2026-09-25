@@ -668,4 +668,333 @@ class Solution {
         ],
         "related_slugs": ["lc-48", "lc-54", "lc-286"],
     },
+    {
+        "slugs": ["lc-289"],
+        "pattern": "Matrix, state in spare bits",
+        "trigger": "Every cell changes at the same moment, and you must update the grid in place.",
+        "summary": (
+            "Each cell must hold its old state and its new state at the same time. Keep the old state in bit 0 "
+            "and write the new state into bit 1. Count neighbours with `cell & 1`, then shift every cell right by one."
+        ),
+        "approaches": [
+            {
+                "name": "Copy the board first",
+                "idea": "Read every neighbour from an untouched copy, and write the new states into the board.",
+                "steps": [
+                    "Make a full copy of the board before changing anything.",
+                    "For each cell, count the live cells among its eight neighbours in the copy.",
+                    "Apply the four rules to decide whether the cell is live next turn.",
+                    "Write that new state into the board. The copy never changes, so every count sees the old state.",
+                ],
+                "code": """class Solution {
+    public int[][] gameOfLife(int[][] board) {
+        int rows = board.length;
+        int cols = board[0].length;
+        int[][] old = new int[rows][cols];
+        for (int r = 0; r < rows; r++) {
+            old[r] = board[r].clone();
+        }
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int live = 0;
+                for (int dr = -1; dr <= 1; dr++) {
+                    for (int dc = -1; dc <= 1; dc++) {
+                        if (dr == 0 && dc == 0) continue;
+                        int nr = r + dr;
+                        int nc = c + dc;
+                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) live += old[nr][nc];
+                    }
+                }
+                boolean alive = old[r][c] == 1;
+                board[r][c] = (alive && (live == 2 || live == 3)) || (!alive && live == 3) ? 1 : 0;
+            }
+        }
+        return board;
+    }
+}
+""",
+                "time_complexity": "O(m × n)",
+                "time_why": "Each cell looks at its eight neighbours once, which is a fixed amount of work per cell.",
+                "space_complexity": "O(m × n)",
+                "space_why": "The copy holds one value for every cell of the board.",
+                "when_to_use": "Say it first. It is correct and easy to explain, but the problem asks you to work in place.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Two states in each cell",
+                "idea": "A cell only needs one bit, so bit 0 keeps the old state while bit 1 stores the new one.",
+                "steps": [
+                    "For each cell, count its live neighbours using `board[nr][nc] & 1`, which is always the old state.",
+                    "Apply the four rules to the old state and that count.",
+                    "If the cell is live next turn, set bit 1 with `board[r][c] |= 2`. Leave bit 0 alone.",
+                    "When every cell is done, shift each cell right by one, so the new state moves into bit 0.",
+                ],
+                "code": """class Solution {
+    public int[][] gameOfLife(int[][] board) {
+        int rows = board.length;
+        int cols = board[0].length;
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int live = 0;
+                for (int dr = -1; dr <= 1; dr++) {
+                    for (int dc = -1; dc <= 1; dc++) {
+                        if (dr == 0 && dc == 0) continue;
+                        int nr = r + dr;
+                        int nc = c + dc;
+                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) live += board[nr][nc] & 1;
+                    }
+                }
+                boolean alive = (board[r][c] & 1) == 1;
+                if ((alive && (live == 2 || live == 3)) || (!alive && live == 3)) {
+                    board[r][c] |= 2;
+                }
+            }
+        }
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                board[r][c] >>= 1;
+            }
+        }
+        return board;
+    }
+}
+""",
+                "time_complexity": "O(m × n)",
+                "time_why": "One pass counts eight neighbours per cell, and a second pass shifts each cell once.",
+                "space_complexity": "O(1)",
+                "space_why": "Both states live inside the board's own numbers. Only a few counters are extra.",
+                "when_to_use": "The version to write. Same time as the copy, with no extra board.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "board = [[0,0,0],[1,1,1],[0,0,0]]",
+            "columns": ["cell", "old", "live neighbours", "rule", "stored", "new"],
+            "rows": [
+                ["(0,0)", "0", "2", "dead, needs exactly 3", "0", "0"],
+                ["(0,1)", "0", "3", "dead with 3 comes alive", "2 (bits 10)", "1"],
+                ["(0,2)", "0", "2: it reads `2 & 1 = 0` for (0,1), the old state", "dead, needs exactly 3", "0", "0"],
+                ["(1,0)", "1", "1", "live with fewer than 2 dies", "1 (bits 01)", "0"],
+                ["(1,1)", "1", "2", "live with 2 lives on", "3 (bits 11)", "1"],
+                ["(1,2)", "1", "1", "live with fewer than 2 dies", "1 (bits 01)", "0"],
+                ["(2,1)", "0", "3", "dead with 3 comes alive", "2 (bits 10)", "1"],
+                ["all", "-", "-", "shift every cell right by one", "-", "bit 1 becomes the state"],
+            ],
+            "result": "Cells (2,0) and (2,2) see 2 live neighbours and stay dead. The answer is [[0,1,0],[0,1,0],[0,1,0]].",
+        },
+        "mistakes": [
+            {
+                "name": "Writing the new value too early",
+                "wrong": "Writing each cell's next state straight into the board as you go.",
+                "right": "Later cells would count that new value as a neighbour. Keep the old state in bit 0 and always read it with `cell & 1`.",
+            },
+            {
+                "name": "Counting the cell itself",
+                "wrong": "Adding up the whole 3 x 3 square around a cell, including the middle.",
+                "right": "Skip `dr == 0 && dc == 0`. Only the eight cells around it count.",
+            },
+            {
+                "name": "Reading off the edge",
+                "wrong": "Reading `board[r - 1][c]` on the top row without a check.",
+                "right": "Check `0 <= nr < rows` and `0 <= nc < cols` before reading a neighbour.",
+            },
+            {
+                "name": "Forgetting the final shift",
+                "wrong": "Returning the board while cells still hold 2 or 3.",
+                "right": "Shift every cell right by one at the end, so only the new state is left.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "[[1]]", "expected": "[[0]]", "why": "One live cell has no neighbours, so it dies."},
+            {"input": "[[1,1],[1,0]]", "expected": "[[1,1],[1,1]]", "why": "The dead corner has exactly three live neighbours."},
+            {"input": "[[0,0,0],[1,1,1],[0,0,0]]", "expected": "[[0,1,0],[0,1,0],[0,1,0]]", "why": "The line flips, so writing too early gives a wrong answer here."},
+            {"input": "[[1,1],[1,1]]", "expected": "[[1,1],[1,1]]", "why": "Every cell has three live neighbours, so nothing changes."},
+            {"input": "[[0,0],[0,0]]", "expected": "[[0,0],[0,0]]", "why": "An empty board stays empty."},
+        ],
+        "interview_script": [
+            "I need to move every cell one step forward, and all cells change at the same moment.",
+            "My first idea is to copy the board and count neighbours in the copy. That is O(m × n) time and O(m × n) extra space.",
+            "The key point I use: a cell is 0 or 1, so the int has spare bits. Bit 0 can keep the old state while bit 1 holds the new one.",
+            "I count neighbours with `cell & 1`, set bit 1 when the cell lives next turn, then shift every cell right. That is O(m × n) time and O(1) space.",
+            "I will test a single cell, a full 2 x 2 block, and the line of three that flips.",
+        ],
+        "follow_ups": [
+            {
+                "question": "The board is endless. How would you store it?",
+                "answer": "Keep only the live cells, as a set of (row, column) pairs. Count neighbours for each live cell and the cells next to it.",
+            },
+            {
+                "question": "The board is too big for memory and arrives one row at a time.",
+                "answer": "Keep only three rows at once: the one above, the current one and the one below.",
+            },
+            {
+                "question": "What if the edges wrap around?",
+                "answer": "Use `(r + dr + rows) % rows` and the same for columns, so a neighbour off one edge comes from the other.",
+            },
+            {
+                "question": "Run k steps instead of one.",
+                "answer": "Run the same step k times. The shift clears bit 1 each time, so the trick keeps working.",
+            },
+        ],
+        "related_slugs": ["lc-73", "lc-48", "lc-130"],
+    },
+    {
+        "slugs": ["lc-36"],
+        "pattern": "Seen table per group",
+        "trigger": "No value may repeat inside several overlapping groups: each row, each column and each 3 x 3 box.",
+        "summary": (
+            "Every filled cell belongs to one row, one column and one box, and the box number is `(r / 3) * 3 + c / 3`. "
+            "Go over the board once and mark each digit in three seen tables. A digit already marked means the board is invalid."
+        ),
+        "approaches": [
+            {
+                "name": "Check each cell against its groups",
+                "idea": "For every filled cell, look along its row, down its column and around its box for the same digit.",
+                "steps": [
+                    "Go over the board one cell at a time and skip the empty cells.",
+                    "Look at every other cell in the same row. If one holds the same digit, return false.",
+                    "Do the same for every other cell in the same column.",
+                    "Do the same for the other cells in its 3 x 3 box, which starts at row `(r / 3) * 3` and column `(c / 3) * 3`.",
+                    "If no cell found a clash, return true.",
+                ],
+                "code": """class Solution {
+    public boolean isValidSudoku(String[][] board) {
+        for (int r = 0; r < 9; r++) {
+            for (int c = 0; c < 9; c++) {
+                String cell = board[r][c];
+                if (cell.equals(".")) continue;
+                if (!fitsHere(board, r, c, cell)) return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean fitsHere(String[][] board, int r, int c, String cell) {
+        for (int i = 0; i < 9; i++) {
+            if (i != c && board[r][i].equals(cell)) return false;
+            if (i != r && board[i][c].equals(cell)) return false;
+        }
+        int top = (r / 3) * 3;
+        int left = (c / 3) * 3;
+        for (int br = top; br < top + 3; br++) {
+            for (int bc = left; bc < left + 3; bc++) {
+                if ((br != r || bc != c) && board[br][bc].equals(cell)) return false;
+            }
+        }
+        return true;
+    }
+}
+""",
+                "time_complexity": "O(n³)",
+                "time_why": "With side n (9 here), each of the n² cells scans a row, a column and a box of about n cells each.",
+                "space_complexity": "O(1)",
+                "space_why": "It only reads the board. A few loop counters are extra.",
+                "when_to_use": "A fine first answer, since the board is small. Say it, then offer the one-pass version.",
+                "is_optimal": False,
+            },
+            {
+                "name": "One pass with three seen tables",
+                "idea": "Record each digit in its row's table, its column's table and its box's table as you go.",
+                "steps": [
+                    "Make three 9 x 9 tables of true or false: one for rows, one for columns, one for boxes.",
+                    "Go over the board once and skip the empty cells.",
+                    "Turn the digit into an index 0 to 8, and find the box with `(r / 3) * 3 + c / 3`.",
+                    "If the digit is already marked in the row, the column or the box table, return false.",
+                    "Otherwise mark it in all three tables. If the pass ends, return true.",
+                ],
+                "code": """class Solution {
+    public boolean isValidSudoku(String[][] board) {
+        boolean[][] rows = new boolean[9][9];
+        boolean[][] cols = new boolean[9][9];
+        boolean[][] boxes = new boolean[9][9];
+        for (int r = 0; r < 9; r++) {
+            for (int c = 0; c < 9; c++) {
+                String cell = board[r][c];
+                if (cell.equals(".")) continue;
+                int digit = cell.charAt(0) - '1';
+                int box = (r / 3) * 3 + c / 3;
+                if (rows[r][digit] || cols[c][digit] || boxes[box][digit]) return false;
+                rows[r][digit] = true;
+                cols[c][digit] = true;
+                boxes[box][digit] = true;
+            }
+        }
+        return true;
+    }
+}
+""",
+                "time_complexity": "O(n²)",
+                "time_why": "Each of the n² cells is read once and checked in three tables at a fixed cost. For 9 x 9 that is 81 cells.",
+                "space_complexity": "O(n²)",
+                "space_why": "Three tables of n × n marks, which is 243 marks for a 9 x 9 board.",
+                "when_to_use": "The version to write. It trades a few hundred marks of memory for a single pass.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": 'row 0 = ["1",".",".",".",".",".",".",".","."], row 1 = [".","1",".",".",".",".",".",".","."], all other cells "."',
+            "columns": ["cell", "value", "box", "row seen?", "column seen?", "box seen?", "what happens"],
+            "rows": [
+                ["(0,0)", "1", "0", "no", "no", "no", "mark 1 in row 0, column 0 and box 0"],
+                ["(0,1) to (1,0)", ".", "-", "-", "-", "-", "empty, skip"],
+                ["(1,1)", "1", "(1 / 3) * 3 + 1 / 3 = 0", "no", "no", "yes", "same box as (0,0): return false"],
+            ],
+            "result": "The two 1s share no row and no column, only box 0. The answer is false.",
+        },
+        "mistakes": [
+            {
+                "name": "Skipping the box check",
+                "wrong": "Checking only the rows and the columns.",
+                "right": "Two equal digits can sit in different rows and columns but the same 3 x 3 box. Check the box too.",
+            },
+            {
+                "name": "Wrong box number",
+                "wrong": "Using `r / 3 + c / 3`, which gives box 1 for both (0,3) and (3,0).",
+                "right": "Multiply the box row by 3: `(r / 3) * 3 + c / 3` gives each of the nine boxes its own number, 0 to 8.",
+            },
+            {
+                "name": "Trying to solve the board",
+                "wrong": "Checking whether the empty cells can be filled in.",
+                "right": "Only the filled cells must follow the rules. A board with no solution can still be valid.",
+            },
+            {
+                "name": "Comparing text with ==",
+                "wrong": "Writing `cell == \".\"` to spot an empty cell.",
+                "right": "In Java `==` compares objects, not text. Use `cell.equals(\".\")`.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "every cell is \".\"", "expected": "true", "why": "Nothing is filled, so nothing can clash."},
+            {"input": "the example board from the problem", "expected": "true", "why": "A normal, partly filled valid board."},
+            {"input": "row 0 = [\"1\",\"1\",\".\",\".\",\".\",\".\",\".\",\".\",\".\"], rest \".\"", "expected": "false", "why": "A repeat inside one row."},
+            {"input": "the example board with (0,0) changed to \"8\"", "expected": "false", "why": "The 8 now clashes with the 8 lower down in column 0."},
+            {"input": "\"1\" at (0,0) and at (1,1), rest \".\"", "expected": "false", "why": "Only the box check catches this one."},
+        ],
+        "interview_script": [
+            "I need to check that no digit repeats in any row, column or 3 x 3 box, looking only at the filled cells.",
+            "My first idea is to check each filled cell against its whole row, column and box. With side n that is O(n³) time and O(1) space.",
+            "The key point I use: each cell belongs to exactly one row, one column and one box, and the box number is `(r / 3) * 3 + c / 3`.",
+            "So I go over the board once and mark each digit in three seen tables. That is O(n²) time and O(n²) space, which is constant for 9 x 9.",
+            "I will test an empty board, a row clash, a column clash, and a box clash where the rows and columns differ.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Can you use less memory?",
+                "answer": "Use one int per row, column and box, with one bit per digit. That is 27 ints instead of 243 marks.",
+            },
+            {
+                "question": "Now solve the Sudoku.",
+                "answer": "Use backtracking: put each digit these same tables allow into an empty cell, go deeper, and undo it on a dead end.",
+            },
+            {
+                "question": "Could you do it with a single hash set?",
+                "answer": "Yes. Add strings such as `5 in row 0`, `5 in col 3` and `5 in box 1`. A failed add means a repeat.",
+            },
+            {
+                "question": "What changes for a 16 x 16 board with 4 x 4 boxes?",
+                "answer": "Only the sizes. The box number becomes `(r / 4) * 4 + c / 4`, and each table has 16 slots.",
+            },
+        ],
+        "related_slugs": ["lc-348", "lc-217", "lc-73"],
+    },
 ]

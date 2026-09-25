@@ -1903,5 +1903,417 @@ class TimeMap {
         ],
         "related_slugs": ["lc-146", "lc-362", "lc-706"],
     },
+    {
+        "slugs": ["lc-348"],
+        "pattern": "Design: line counters",
+        "trigger": "An n x n game where each move must report whether a row, column or diagonal is now full of one player.",
+        "summary": (
+            "A move can only complete its own row, its own column and the two diagonals. Keep one count per line: "
+            "+1 for player 1 and -1 for player 2. A count of n or -n means one player owns that whole line."
+        ),
+        "approaches": [
+            {
+                "name": "Store the board and check the lines",
+                "idea": "Keep the full grid, and after each move check the move's row, column and both diagonals.",
+                "steps": [
+                    "Keep an n by n grid, all zero at the start.",
+                    "On each move, write the player's number into its cell.",
+                    "Check every cell in the move's row and in its column to see if they all belong to this player.",
+                    "Check both diagonals the same way. If any line is full, return the player. Otherwise return 0.",
+                ],
+                "code": """import java.util.*;
 
+class Solution {
+    public int[] process(String[] operations, int[][] args) {
+        TicTacToe game = null;
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < operations.length; i++) {
+            switch (operations[i]) {
+                case "TicTacToe" -> game = new TicTacToe(args[i][0]);
+                case "move" -> out.add(game.move(args[i][0], args[i][1], args[i][2]));
+                default -> {}
+            }
+        }
+        int[] arr = new int[out.size()];
+        for (int i = 0; i < out.size(); i++) arr[i] = out.get(i);
+        return arr;
+    }
+}
+
+class TicTacToe {
+    private final int n;
+    private final int[][] board;
+
+    public TicTacToe(int n) {
+        this.n = n;
+        this.board = new int[n][n];
+    }
+
+    public int move(int row, int col, int player) {
+        board[row][col] = player;
+        boolean rowFull = true, colFull = true, diagonalFull = true, antiDiagonalFull = true;
+        for (int i = 0; i < n; i++) {
+            if (board[row][i] != player) rowFull = false;
+            if (board[i][col] != player) colFull = false;
+            if (board[i][i] != player) diagonalFull = false;
+            if (board[i][n - 1 - i] != player) antiDiagonalFull = false;
+        }
+        return rowFull || colFull || diagonalFull || antiDiagonalFull ? player : 0;
+    }
+}
+""",
+                "time_complexity": "O(n) per move",
+                "time_why": "Each move reads four lines of n cells.",
+                "space_complexity": "O(n²)",
+                "space_why": "The grid stores every cell of the board.",
+                "when_to_use": "Say it first. It is correct, but the grid is bigger than needed and each move reads 4n cells.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Count marks per line",
+                "idea": "Keep a running count for each row, each column and the two diagonals, with a sign for each player.",
+                "steps": [
+                    "Keep an array of n row counts, an array of n column counts, and two diagonal counts.",
+                    "Player 1 adds +1 to a count, and player 2 adds -1.",
+                    "On a move, change the count of its row and the count of its column.",
+                    "If `row == col` the cell is on the main diagonal. If `row + col == n - 1` it is on the other one. Change those counts too.",
+                    "If any changed count is now n or -n, that line is full of one player: return the player.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public int[] process(String[] operations, int[][] args) {
+        TicTacToe game = null;
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < operations.length; i++) {
+            switch (operations[i]) {
+                case "TicTacToe" -> game = new TicTacToe(args[i][0]);
+                case "move" -> out.add(game.move(args[i][0], args[i][1], args[i][2]));
+                default -> {}
+            }
+        }
+        int[] arr = new int[out.size()];
+        for (int i = 0; i < out.size(); i++) arr[i] = out.get(i);
+        return arr;
+    }
+}
+
+class TicTacToe {
+    private final int n;
+    private final int[] rows;
+    private final int[] cols;
+    private int diagonal;
+    private int antiDiagonal;
+
+    public TicTacToe(int n) {
+        this.n = n;
+        this.rows = new int[n];
+        this.cols = new int[n];
+    }
+
+    public int move(int row, int col, int player) {
+        int add = player == 1 ? 1 : -1;
+        rows[row] += add;
+        cols[col] += add;
+        if (row == col) diagonal += add;
+        if (row + col == n - 1) antiDiagonal += add;
+        if (Math.abs(rows[row]) == n || Math.abs(cols[col]) == n
+                || Math.abs(diagonal) == n || Math.abs(antiDiagonal) == n) {
+            return player;
+        }
+        return 0;
+    }
+}
+""",
+                "time_complexity": "O(1) per move",
+                "time_why": "Each move changes and checks at most four counts.",
+                "space_complexity": "O(n)",
+                "space_why": "Two arrays of n counts plus two numbers. No grid.",
+                "when_to_use": "The version to aim for. Each move takes constant time, and there is no grid to store.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "n = 2, moves: (0,0) by player 1, (1,1) by player 2, (0,1) by player 1",
+            "columns": ["move", "player adds", "row counts", "column counts", "diagonal", "other diagonal", "returns"],
+            "rows": [
+                ["(0,0)", "+1", "[1, 0]", "[1, 0]", "1", "0", "0"],
+                ["(1,1)", "-1", "[1, -1]", "[1, -1]", "0 (a plain count would say 2 = n, a false win)", "0", "0"],
+                ["(0,1)", "+1", "[2, -1]", "[1, 0]", "0", "1", "1, because row 0 reached n = 2"],
+            ],
+            "result": "Row 0 reaches n on the third move, so the answer is [0,0,1].",
+        },
+        "mistakes": [
+            {
+                "name": "Counting both players together",
+                "wrong": "Adding 1 to a line for every mark, whoever made it.",
+                "right": "Add +1 for player 1 and -1 for player 2. A line with both players' marks never reaches n or -n.",
+            },
+            {
+                "name": "Wrong test for the other diagonal",
+                "wrong": "Using `row == n - col` for the second diagonal.",
+                "right": "A cell is on it when `row + col == n - 1`.",
+            },
+            {
+                "name": "Missing the centre cell",
+                "wrong": "Using `else if` for the two diagonal checks.",
+                "right": "On an odd board the centre is on both diagonals. Use two separate `if` checks.",
+            },
+            {
+                "name": "Checking every line",
+                "wrong": "Checking all rows and columns after each move.",
+                "right": "Only the move's own row, column and diagonals can change, so check only those.",
+            },
+        ],
+        "edge_cases": [
+            {
+                "input": '["TicTacToe","move","move","move"]\n[[2],[0,0,1],[1,1,2],[0,1,1]]',
+                "expected": "[0,0,1]",
+                "why": "The diagonal holds both players. Plain counts would call a false win on move two.",
+            },
+            {
+                "input": '["TicTacToe","move","move","move"]\n[[2],[0,0,1],[0,1,2],[1,1,1]]',
+                "expected": "[0,0,1]",
+                "why": "A win on the main diagonal.",
+            },
+            {
+                "input": '["TicTacToe","move","move","move","move","move"]\n[[3],[0,2,2],[0,0,1],[1,1,2],[0,1,1],[2,0,2]]',
+                "expected": "[0,0,0,0,2]",
+                "why": "Player 2 wins on the other diagonal, so the -1 side is tested too.",
+            },
+            {
+                "input": '["TicTacToe","move","move","move","move","move"]\n[[3],[0,0,1],[0,1,2],[1,0,1],[1,1,2],[2,0,1]]',
+                "expected": "[0,0,0,0,1]",
+                "why": "A win down a column.",
+            },
+            {
+                "input": '["TicTacToe","move"]\n[[3],[1,1,1]]',
+                "expected": "[0]",
+                "why": "The centre is on both diagonals. One mark is not a win.",
+            },
+        ],
+        "interview_script": [
+            "I need a board where each move returns the winner, or 0 if nobody has a full line yet.",
+            "My first idea is to keep the grid and check the move's row, column and diagonals. That is O(n) per move and O(n²) space.",
+            "The key point I use: a move only touches its own row, its own column and at most two diagonals, so a count per line is enough.",
+            "I add +1 for player 1 and -1 for player 2, and a count of n or -n is a win. That is O(1) per move and O(n) space.",
+            "I will test a mixed diagonal, a win on each diagonal, a column win, and the centre cell of a 3 x 3 board.",
+        ],
+        "follow_ups": [
+            {
+                "question": "What if a move can be invalid, such as a cell that is already taken?",
+                "answer": "Then I need the grid back to check the cell. The counts still do the win check.",
+            },
+            {
+                "question": "What if you need k in a row on a large board, like Gomoku?",
+                "answer": "Counts per full line no longer work. From the new mark, count matching cells both ways along each of the four directions.",
+            },
+            {
+                "question": "What if there are more than two players?",
+                "answer": "Signs no longer keep them apart. Keep a count per player per line, or mark a line dead once a second player uses it.",
+            },
+        ],
+        "related_slugs": ["lc-36", "lc-51", "lc-289"],
+    },
+    {
+        "slugs": ["lc-173"],
+        "pattern": "In-order walk with a stack",
+        "trigger": "Give back a BST's values one at a time in sorted order, with `next` and `hasNext`, in O(h) memory.",
+        "summary": (
+            "Do the in-order walk with your own stack, and pause it between calls. The stack holds the path of "
+            "left turns still waiting, so its top is always the next smallest value."
+        ),
+        "approaches": [
+            {
+                "name": "Copy all values into a list first",
+                "idea": "Visit the whole tree in order at the start, and keep a list of the values plus a position.",
+                "steps": [
+                    "In the constructor, visit the tree in order: the left side, then the node, then the right side.",
+                    "Add each value to a list as you visit it. The list comes out sorted.",
+                    "Keep a position that starts at 0.",
+                    "`next()` returns the value at the position and moves it forward. `hasNext()` checks the position is before the end.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<Object> process(TreeNode root, String[] operations) {
+        BSTIterator iterator = new BSTIterator(root);
+        List<Object> out = new ArrayList<>();
+        for (String operation : operations) {
+            if (operation.equals("next")) out.add(iterator.next());
+            else if (operation.equals("hasNext")) out.add(iterator.hasNext());
+        }
+        return out;
+    }
+}
+
+class BSTIterator {
+    private final List<Integer> values = new ArrayList<>();
+    private int position = 0;
+
+    public BSTIterator(TreeNode root) {
+        visit(root);
+    }
+
+    private void visit(TreeNode node) {
+        if (node == null) return;
+        visit(node.left);
+        values.add(node.val);
+        visit(node.right);
+    }
+
+    public int next() {
+        return values.get(position++);
+    }
+
+    public boolean hasNext() {
+        return position < values.size();
+    }
+}
+""",
+                "time_complexity": "O(1) per call",
+                "time_why": "Each call reads one list slot. The constructor does O(n) work once, up front.",
+                "space_complexity": "O(n)",
+                "space_why": "The list holds every value in the tree.",
+                "when_to_use": "Say it first. It gives the right answers but ignores the O(h) memory goal.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Controlled in-order walk with a stack",
+                "idea": "Keep only the path of nodes still waiting, and do a small piece of the in-order walk on each `next()`.",
+                "steps": [
+                    "In the constructor, push the root and then keep going left, pushing every node on the way.",
+                    "On `next()`, pop the top node. It is the smallest value not yet returned.",
+                    "Before returning, push its right child and then all of that child's left children.",
+                    "`hasNext()` is true while the stack is not empty. It never moves the walk.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<Object> process(TreeNode root, String[] operations) {
+        BSTIterator iterator = new BSTIterator(root);
+        List<Object> out = new ArrayList<>();
+        for (String operation : operations) {
+            if (operation.equals("next")) out.add(iterator.next());
+            else if (operation.equals("hasNext")) out.add(iterator.hasNext());
+        }
+        return out;
+    }
+}
+
+class BSTIterator {
+    private final Deque<TreeNode> stack = new ArrayDeque<>();
+
+    public BSTIterator(TreeNode root) {
+        pushLeftChain(root);
+    }
+
+    public int next() {
+        TreeNode node = stack.pop();
+        pushLeftChain(node.right);
+        return node.val;
+    }
+
+    public boolean hasNext() {
+        return !stack.isEmpty();
+    }
+
+    private void pushLeftChain(TreeNode node) {
+        while (node != null) {
+            stack.push(node);
+            node = node.left;
+        }
+    }
+}
+""",
+                "time_complexity": "O(1) average per call",
+                "time_why": "Over all calls each node is pushed once and popped once, so n values cost about 2n steps. One call can take up to h steps.",
+                "space_complexity": "O(h)",
+                "space_why": "The stack holds at most one path from the root down, which is h nodes.",
+                "when_to_use": "The version to aim for. It meets the O(h) memory goal and is short to write.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "root = [7,3,15,null,null,9,20], calls: next, next, hasNext, next, next, next, hasNext",
+            "columns": ["call", "pop", "push", "stack (top on right)", "returns"],
+            "rows": [
+                ["start", "-", "7, then its left child 3", "[7, 3]", "-"],
+                ["next", "3", "nothing: 3 has no right child", "[7]", "3"],
+                ["next", "7", "right child 15, then its left child 9", "[15, 9]", "7"],
+                ["hasNext", "-", "-", "[15, 9]", "true"],
+                ["next", "9", "nothing", "[15]", "9"],
+                ["next", "15", "right child 20", "[20]", "15"],
+                ["next", "20", "nothing", "[]", "20"],
+                ["hasNext", "-", "-", "[]", "false"],
+            ],
+            "result": "The calls return [3,7,true,9,15,20,false].",
+        },
+        "mistakes": [
+            {
+                "name": "Forgetting the left chain",
+                "wrong": "After popping a node, pushing only its right child.",
+                "right": "Push the right child and then every left child below it. The smallest value there is at the bottom of that left chain.",
+            },
+            {
+                "name": "Keeping a full copy",
+                "wrong": "Storing every value in a list at the start.",
+                "right": "That costs O(n) memory. The stack keeps only O(h).",
+            },
+            {
+                "name": "Moving the walk in hasNext",
+                "wrong": "Popping or pushing inside `hasNext()`.",
+                "right": "`hasNext()` only looks at the stack. Calling it twice in a row must not skip a value.",
+            },
+        ],
+        "edge_cases": [
+            {"input": '[1]\n["hasNext","next","hasNext"]', "expected": "[true,1,false]", "why": "One node: the stack is empty after one call."},
+            {
+                "input": '[5,3,null,2,null,1]\n["next","next","next","next","hasNext"]',
+                "expected": "[1,2,3,5,false]",
+                "why": "Only left children: the constructor pushes the whole tree.",
+            },
+            {
+                "input": '[1,null,2,null,3]\n["next","next","next","hasNext"]',
+                "expected": "[1,2,3,false]",
+                "why": "Only right children: the stack never holds more than one node.",
+            },
+            {
+                "input": '[2,1,3]\n["hasNext","hasNext","next"]',
+                "expected": "[true,true,1]",
+                "why": "Calling `hasNext()` twice must not move the walk.",
+            },
+            {
+                "input": '[7,3,15,null,null,9,20]\n["next","next","hasNext","next","hasNext","next","hasNext","next","hasNext"]',
+                "expected": "[3,7,true,9,true,15,true,20,false]",
+                "why": "After 7, the next value is 9, at the bottom of 15's left chain.",
+            },
+        ],
+        "interview_script": [
+            "I need to hand out the tree's values in sorted order, one per `next()` call.",
+            "My first idea is to copy the whole in-order walk into a list at the start. Each call is O(1), but that uses O(n) memory.",
+            "The key point I use: an in-order walk with a stack can be paused. The top of the stack is always the next smallest value.",
+            "So I push the left chain at the start, and on each `next()` I pop one node and push the left chain of its right child. That is O(1) average per call and O(h) memory.",
+            "I will test a single node, a tree with only left children, one with only right children, and `hasNext()` twice in a row.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Why is `next()` O(1) on average when one call can take h steps?",
+                "answer": "Each node is pushed once and popped once over all the calls. So n calls do about 2n steps in total.",
+            },
+            {
+                "question": "Give the values from largest to smallest instead.",
+                "answer": "Mirror it: push right chains, and after a pop push the left child's right chain.",
+            },
+            {
+                "question": "Add a `prev()` that steps back.",
+                "answer": "Keep a list of the values already returned and a position in it. `prev()` moves back in that list, and `next()` reads from it before using the stack.",
+            },
+            {
+                "question": "Could you use O(1) extra memory?",
+                "answer": "Morris threading: point each node's in-order predecessor back at it for a while, then undo the link. It changes the tree while it runs.",
+            },
+        ],
+        "related_slugs": ["lc-94", "lc-230", "lc-98"],
+    },
 ]

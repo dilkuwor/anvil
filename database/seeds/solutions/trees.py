@@ -3335,4 +3335,725 @@ SOLUTIONS = [   {   'approaches': [   {   'code': 'import java.util.*;\n'
                            'result': 'Node 4 violates lower bound 5, returning false.',
                            'rows': [   ['5', '(-inf, +inf)', '5', 'Valid'],
                                        ['1', '(-inf, 5)', '1', 'Valid'],
-                                       ['4', '(5, +inf)', '4', 'Invalid: 4 is not greater than 5']]}}]
+                                       ['4', '(5, +inf)', '4', 'Invalid: 4 is not greater than 5']]}},
+    {
+        "slugs": ["lc-450"],
+        "pattern": "Binary search tree",
+        "trigger": "“Delete the node with this key” from a binary search tree and return the new root.",
+        "summary": (
+            "Find the node by going left for smaller keys and right for larger ones. A node with zero or one "
+            "child is replaced by that child. A node with two children takes its successor's value, and the "
+            "successor is removed instead."
+        ),
+        "approaches": [
+            {
+                "name": "Recursive, each call returns the new subtree top",
+                "idea": "Call the function on the side where the key must be, and let each call hand back the new top of its subtree.",
+                "steps": [
+                    "If the node is empty, the key is not here, so return null.",
+                    "If the key is smaller, delete it from the left subtree and store the result in `node.left`. Do the same on the right for a larger key.",
+                    "When the key matches and one side is empty, return the other side. That child takes the node's place.",
+                    "With two children, walk down the left side of the right subtree to find the smallest value there: the successor.",
+                    "Copy the successor's value into the node, then delete that value from the right subtree.",
+                ],
+                "code": """class Solution {
+    public TreeNode deleteNode(TreeNode root, int key) {
+        if (root == null) return null;
+        if (key < root.val) {
+            root.left = deleteNode(root.left, key);
+        } else if (key > root.val) {
+            root.right = deleteNode(root.right, key);
+        } else {
+            if (root.left == null) return root.right;
+            if (root.right == null) return root.left;
+            TreeNode successor = root.right;
+            while (successor.left != null) successor = successor.left;
+            root.val = successor.val;
+            root.right = deleteNode(root.right, successor.val);
+        }
+        return root;
+    }
+}
+""",
+                "time_complexity": "O(h)",
+                "time_why": "Each call steps one level down. Finding and removing the successor is one more walk down, so about 2h steps (h = tree height).",
+                "space_complexity": "O(h)",
+                "space_why": "The waiting calls reach from the root down to the deepest node touched, up to h of them.",
+                "when_to_use": "A good first answer to write. It is short and hard to get wrong, and many interviewers accept it as it is.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Iterative, with a parent pointer",
+                "idea": "Walk down with a loop, remember the parent, and fix one link by hand, so no call stack is needed.",
+                "steps": [
+                    "Walk down from the root, keeping `parent` one step behind, until you reach the key or fall off the tree.",
+                    "If you fell off, the key is not in the tree, so return the root unchanged.",
+                    "If the node has two children, walk to the leftmost node of its right subtree, and keep that node's parent too.",
+                    "Copy the successor's value into the node. The successor has no left child, so its parent now points to its right child.",
+                    "Otherwise the node has at most one child. Point the parent at that child, or return the child if the node was the root.",
+                ],
+                "code": """class Solution {
+    public TreeNode deleteNode(TreeNode root, int key) {
+        TreeNode parent = null;
+        TreeNode node = root;
+        while (node != null && node.val != key) {
+            parent = node;
+            node = key < node.val ? node.left : node.right;
+        }
+        if (node == null) return root;
+
+        if (node.left != null && node.right != null) {
+            TreeNode successorParent = node;
+            TreeNode successor = node.right;
+            while (successor.left != null) {
+                successorParent = successor;
+                successor = successor.left;
+            }
+            node.val = successor.val;
+            if (successorParent == node) successorParent.right = successor.right;
+            else successorParent.left = successor.right;
+            return root;
+        }
+
+        TreeNode child = node.left != null ? node.left : node.right;
+        if (parent == null) return child;
+        if (parent.left == node) parent.left = child;
+        else parent.right = child;
+        return root;
+    }
+}
+""",
+                "time_complexity": "O(h)",
+                "time_why": "One walk down to the key and one more down to the successor, each at most h levels.",
+                "space_complexity": "O(1)",
+                "space_why": "Only a few pointers are kept, whatever the size of the tree.",
+                "when_to_use": "Offer it when asked to avoid recursion, or when the tree may be deep and lopsided.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "root = [5,3,6,2,4,null,7], key = 3",
+            "columns": ["step", "at node", "what happens", "tree now"],
+            "rows": [
+                ["1", "5", "3 is smaller than 5, so go left", "[5,3,6,2,4,null,7]"],
+                ["2", "3", "Found the key. It has two children, 2 and 4", "[5,3,6,2,4,null,7]"],
+                ["3", "4", "The leftmost node of the right subtree is 4: the successor", "[5,3,6,2,4,null,7]"],
+                ["4", "3", "Copy 4 into the node. Now 4 appears twice", "[5,4,6,2,4,null,7]"],
+                ["5", "old 4", "Remove the old 4. It has no children, so its parent's right link becomes null", "[5,4,6,2,null,null,7]"],
+            ],
+            "result": "The answer is [5,4,6,2,null,null,7].",
+        },
+        "mistakes": [
+            {
+                "name": "Leaving the successor behind",
+                "wrong": "Copying the successor's value into the node and stopping there, so the value appears twice.",
+                "right": "After copying, remove the successor from the right subtree. It has no left child, so that is the easy one-child case.",
+            },
+            {
+                "name": "Dropping the returned subtree",
+                "wrong": "Calling `deleteNode(root.left, key)` without storing the result.",
+                "right": "Always write `root.left = deleteNode(root.left, key)`. The top of that subtree may have changed.",
+            },
+            {
+                "name": "Using the predecessor",
+                "wrong": "Taking the largest value from the left subtree instead.",
+                "right": "That also gives a valid tree, but not the one this judge expects. Use the smallest value in the right subtree.",
+            },
+            {
+                "name": "Forgetting the root has no parent",
+                "wrong": "In the loop version, assuming the deleted node always has a parent.",
+                "right": "If the root itself is deleted and has at most one child, return that child as the new root.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "root = [5,3,6,2,4,null,7], key = 0", "expected": "[5,3,6,2,4,null,7]", "why": "The key is missing, so nothing changes."},
+            {"input": "root = [], key = 0", "expected": "[]", "why": "Empty tree."},
+            {"input": "root = [1], key = 1", "expected": "[]", "why": "Deleting the only node leaves an empty tree."},
+            {"input": "root = [5,3,6,2,4,null,7], key = 5", "expected": "[6,3,7,2,4]", "why": "The root has two children. Its successor 6 has a right child, 7, which moves up."},
+            {"input": "root = [5,3,6,2,4,null,7], key = 7", "expected": "[5,3,6,2,4]", "why": "A leaf is removed and its parent's link becomes null."},
+        ],
+        "interview_script": [
+            "I need to remove one value from a binary search tree and return the root, keeping the search order.",
+            "The first version I would write is recursive. It is O(h) time, but it also uses O(h) space for the waiting calls.",
+            "The hard case is a node with two children. I copy in its successor, the smallest value on its right, and then delete that successor, which has at most one child.",
+            "To drop the call stack, I walk down with a loop and keep the parent. That is still O(h) time, with O(1) extra space.",
+            "I would test a missing key, a leaf, the root with two children, and a one-node tree.",
+        ],
+        "follow_ups": [
+            {
+                "question": "What is h in the worst case?",
+                "answer": "For a balanced tree h is about log n. For a tree shaped like a line it is n, so the cost becomes O(n).",
+            },
+            {
+                "question": "Can you delete without copying values, by moving nodes instead?",
+                "answer": "Yes. Unlink the successor, give it the deleted node's two children, and put it in that node's place. This matters when nodes carry more data than a value.",
+            },
+            {
+                "question": "How would you insert a value instead?",
+                "answer": "Walk down the same way until you reach an empty spot, then attach a new node there. It is O(h) as well.",
+            },
+            {
+                "question": "How do you keep h small after many deletes?",
+                "answer": "Use a self-balancing tree, such as an AVL or red-black tree. It turns nodes around after changes to keep the height near log n.",
+            },
+        ],
+        "related_slugs": ["lc-98", "lc-230", "lc-173", "lc-235"],
+    },
+    {
+        "slugs": ["lc-314"],
+        "pattern": "Tree BFS",
+        "trigger": "“Vertical order” or “column by column”, with values listed top to bottom inside each column.",
+        "summary": (
+            "Give the root column 0, a left child one less and a right child one more. Visit nodes level by level "
+            "with a queue, so each column's list fills from top to bottom and left to right on its own."
+        ),
+        "approaches": [
+            {
+                "name": "DFS with row and column, then sort",
+                "idea": "Record every node's column and row with a depth-first walk, then sort the records into the right order.",
+                "steps": [
+                    "Walk the tree depth first, passing each node its row and its column.",
+                    "Save a record of column, row and value for every node, in the order you visit them.",
+                    "Sort the records by column, then by row. The sort is stable, so equal pairs keep their left-to-right visit order.",
+                    "Go through the sorted records and start a new list each time the column changes.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<List<Integer>> verticalOrder(TreeNode root) {
+        List<int[]> records = new ArrayList<>();
+        visit(root, 0, 0, records);
+        records.sort((a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(a[1], b[1]));
+        List<List<Integer>> result = new ArrayList<>();
+        Integer lastCol = null;
+        for (int[] record : records) {
+            if (lastCol == null || record[0] != lastCol) {
+                result.add(new ArrayList<>());
+                lastCol = record[0];
+            }
+            result.get(result.size() - 1).add(record[2]);
+        }
+        return result;
+    }
+
+    private void visit(TreeNode node, int row, int col, List<int[]> records) {
+        if (node == null) return;
+        records.add(new int[] {col, row, node.val});
+        visit(node.left, row + 1, col - 1, records);
+        visit(node.right, row + 1, col + 1, records);
+    }
+}
+""",
+                "time_complexity": "O(n log n)",
+                "time_why": "Sorting the n records costs O(n log n).",
+                "space_complexity": "O(n)",
+                "space_why": "The records list holds one entry per node, and the calls go up to h deep.",
+                "when_to_use": "Mention it as the first idea. It is also the starting point for the harder version where ties are sorted by value.",
+                "is_optimal": False,
+            },
+            {
+                "name": "BFS with a column number on each node",
+                "idea": "Visit nodes level by level and drop each value into its column's list, which comes out in the right order with no sort.",
+                "steps": [
+                    "Put the root in a queue with column 0. A queue lets nodes leave in the order they arrived, so rows come out top to bottom.",
+                    "Take the front node and add its value to the list for its column, kept in a map from column to list.",
+                    "Put its left child in the queue with column minus 1, then its right child with column plus 1.",
+                    "Keep track of the smallest and the largest column seen.",
+                    "When the queue is empty, read the lists from the smallest column to the largest.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<List<Integer>> verticalOrder(TreeNode root) {
+        List<List<Integer>> result = new ArrayList<>();
+        if (root == null) return result;
+        Map<Integer, List<Integer>> columns = new HashMap<>();
+        Deque<TreeNode> queue = new ArrayDeque<>();
+        Deque<Integer> queueCols = new ArrayDeque<>();
+        queue.add(root);
+        queueCols.add(0);
+        int minCol = 0;
+        int maxCol = 0;
+        while (!queue.isEmpty()) {
+            TreeNode node = queue.poll();
+            int col = queueCols.poll();
+            columns.computeIfAbsent(col, key -> new ArrayList<>()).add(node.val);
+            minCol = Math.min(minCol, col);
+            maxCol = Math.max(maxCol, col);
+            if (node.left != null) {
+                queue.add(node.left);
+                queueCols.add(col - 1);
+            }
+            if (node.right != null) {
+                queue.add(node.right);
+                queueCols.add(col + 1);
+            }
+        }
+        for (int col = minCol; col <= maxCol; col++) result.add(columns.get(col));
+        return result;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Each node enters and leaves the queue once, and reading the columns needs no sort.",
+                "space_complexity": "O(n)",
+                "space_why": "The map holds every value, and the queue can hold a whole level.",
+                "when_to_use": "The version to aim for. BFS gives the order inside each column for free.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "root = [1,2,3,null,4,null,null,null,5]",
+            "columns": ["taken from queue", "column", "row", "columns so far", "note"],
+            "rows": [
+                ["1", "0", "0", "0: [1]", "The root"],
+                ["2", "-1", "1", "-1: [2], 0: [1]", "Left child: column minus 1"],
+                ["3", "1", "1", "-1: [2], 0: [1], 1: [3]", "Right child: column plus 1"],
+                ["4", "0", "2", "-1: [2], 0: [1,4], 1: [3]", "Right child of 2: back to column 0"],
+                ["5", "1", "3", "-1: [2], 0: [1,4], 1: [3,5]", "3 is higher, so it comes first. A plain DFS would reach 5 before 3"],
+            ],
+            "result": "Reading columns -1 to 1 gives [[2],[1,4],[3,5]].",
+        },
+        "mistakes": [
+            {
+                "name": "Trusting DFS order",
+                "wrong": "Filling the column lists during a depth-first walk and not sorting by row.",
+                "right": "A deep node on the left can reach a column before a higher node on the right. Use BFS, or sort by row afterwards.",
+            },
+            {
+                "name": "Sorting the column numbers",
+                "wrong": "Using a `TreeMap` or sorting the columns at the end.",
+                "right": "Each step moves one column, so there are no gaps. Track the smallest and largest column and read them in a plain loop.",
+            },
+            {
+                "name": "Right child first",
+                "wrong": "Adding the right child to the queue before the left child.",
+                "right": "Add the left child first, so nodes in the same row and column come out left to right.",
+            },
+            {
+                "name": "Empty tree",
+                "wrong": "Returning a list that holds one empty column when the root is null.",
+                "right": "Return an empty list when the root is null.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "root = []", "expected": "[]", "why": "No nodes at all."},
+            {"input": "root = [1]", "expected": "[[1]]", "why": "One node, one column."},
+            {"input": "root = [3,9,8,4,0,1,7]", "expected": "[[4],[9],[3,0,1],[8],[7]]", "why": "0 and 1 share a row and a column, so they must stay left to right."},
+            {"input": "root = [1,2,3,null,4,null,null,null,5]", "expected": "[[2],[1,4],[3,5]]", "why": "A deep node from the left side lands below a higher node from the right side."},
+            {"input": "root = [1,2,null,3]", "expected": "[[3],[2],[1]]", "why": "A tree leaning left: every column is at or left of the root."},
+        ],
+        "interview_script": [
+            "I need the tree's values column by column, and top to bottom inside each column.",
+            "My first idea is a DFS that records row and column, then a sort. That is O(n log n) because of the sort.",
+            "The key point is that BFS already visits nodes top to bottom and left to right, which is exactly the order inside a column.",
+            "So I run BFS with a column number on each node and track the smallest and largest column. That is O(n) time and O(n) space.",
+            "I would test an empty tree, two nodes sharing a row and a column, and a deep left node that crosses into a right column.",
+        ],
+        "follow_ups": [
+            {
+                "question": "What if nodes in the same row and column must be sorted by value?",
+                "answer": "That is LeetCode 987. Record row and column for each node, then sort by column, then row, then value. It costs O(n log n).",
+            },
+            {
+                "question": "Why can you skip sorting the columns?",
+                "answer": "Each step moves by exactly one column, so the columns have no gaps. A loop from the smallest to the largest reaches all of them.",
+            },
+            {
+                "question": "How would you print only the top view of the tree?",
+                "answer": "Run the same BFS and keep only the first value that reaches each column. For the bottom view, keep the last one.",
+            },
+        ],
+        "related_slugs": ["lc-102", "lc-199", "lc-103"],
+    },
+    {
+        "slugs": ["lc-545"],
+        "pattern": "Tree edges and leaves",
+        "trigger": "“Boundary” of a tree, anti-clockwise from the root: left edge, then leaves, then the right edge.",
+        "summary": (
+            "Split the boundary into three walks: the left edge top-down, the leaves left to right, and the right "
+            "edge bottom-up. Leave leaves out of both edge walks, so no node is listed twice."
+        ),
+        "approaches": [
+            {
+                "name": "Three walks, then drop repeats with a set",
+                "idea": "Collect the edges and the leaves without caring about overlaps, then skip every node that was already added.",
+                "steps": [
+                    "Walk the left edge from the root's left child, going left when you can and right otherwise. Keep every node.",
+                    "Collect all the leaves from left to right with a depth-first walk.",
+                    "Walk the right edge from the root's right child the same way, going right first, and reverse that list.",
+                    "Join the root, the left edge, the leaves and the reversed right edge. Keep a set of nodes already added and skip any repeat.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<Integer> boundaryOfBinaryTree(TreeNode root) {
+        List<Integer> boundary = new ArrayList<>();
+        if (root == null) return boundary;
+        List<TreeNode> order = new ArrayList<>();
+        order.add(root);
+        for (TreeNode node = root.left; node != null; node = node.left != null ? node.left : node.right) {
+            order.add(node);
+        }
+        addLeaves(root, order);
+        List<TreeNode> rightEdge = new ArrayList<>();
+        for (TreeNode node = root.right; node != null; node = node.right != null ? node.right : node.left) {
+            rightEdge.add(node);
+        }
+        Collections.reverse(rightEdge);
+        order.addAll(rightEdge);
+
+        Set<TreeNode> added = new HashSet<>();
+        for (TreeNode node : order) {
+            if (added.add(node)) boundary.add(node.val);
+        }
+        return boundary;
+    }
+
+    private void addLeaves(TreeNode node, List<TreeNode> order) {
+        if (node == null) return;
+        if (node.left == null && node.right == null) {
+            order.add(node);
+            return;
+        }
+        addLeaves(node.left, order);
+        addLeaves(node.right, order);
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The leaf walk visits every node once, and the edge walks touch at most h nodes each.",
+                "space_complexity": "O(n)",
+                "space_why": "The set and the list of nodes can hold every leaf, which is about half of a full tree.",
+                "when_to_use": "Fine if you only notice the repeats late. Say that the set patches a problem you can avoid.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Three walks that skip leaves on the edges",
+                "idea": "Repeats only happen at leaves, so the edge walks leave leaves out and the leaf walk adds each one once.",
+                "steps": [
+                    "Add the root's value, unless the root is a leaf, because the leaf walk will add it.",
+                    "Walk the left edge from the root's left child, going left when you can and right otherwise. Add each node that is not a leaf.",
+                    "Add every leaf from left to right with a depth-first walk.",
+                    "Walk the right edge from the root's right child, going right first. Push each node that is not a leaf onto a stack.",
+                    "Pop the stack into the answer, so the right edge comes out bottom to top.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public List<Integer> boundaryOfBinaryTree(TreeNode root) {
+        List<Integer> boundary = new ArrayList<>();
+        if (root == null) return boundary;
+        if (!isLeaf(root)) boundary.add(root.val);
+
+        TreeNode node = root.left;
+        while (node != null) {
+            if (!isLeaf(node)) boundary.add(node.val);
+            node = node.left != null ? node.left : node.right;
+        }
+
+        addLeaves(root, boundary);
+
+        Deque<Integer> rightEdge = new ArrayDeque<>();
+        node = root.right;
+        while (node != null) {
+            if (!isLeaf(node)) rightEdge.push(node.val);
+            node = node.right != null ? node.right : node.left;
+        }
+        boundary.addAll(rightEdge);
+        return boundary;
+    }
+
+    private boolean isLeaf(TreeNode node) {
+        return node.left == null && node.right == null;
+    }
+
+    private void addLeaves(TreeNode node, List<Integer> boundary) {
+        if (node == null) return;
+        if (isLeaf(node)) {
+            boundary.add(node.val);
+            return;
+        }
+        addLeaves(node.left, boundary);
+        addLeaves(node.right, boundary);
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The leaf walk visits every node once, and the edge walks touch at most h nodes each.",
+                "space_complexity": "O(h)",
+                "space_why": "Not counting the answer, the leaf walk's calls go h deep and the stack holds at most h right-edge nodes.",
+                "when_to_use": "The version to aim for. Three small loops are easy to explain one at a time.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "root = [1,null,2,3,4]",
+            "columns": ["part", "node", "leaf?", "what happens", "answer so far"],
+            "rows": [
+                ["root", "1", "no", "Add it", "[1]"],
+                ["left edge", "none", "-", "The root has no left child, so this part is empty", "[1]"],
+                ["leaves", "3", "yes", "Add it", "[1,3]"],
+                ["leaves", "4", "yes", "Add it", "[1,3,4]"],
+                ["right edge", "2", "no", "Push it onto the stack", "[1,3,4]"],
+                ["right edge", "4", "yes", "Skip it. It was already added as a leaf", "[1,3,4]"],
+                ["pop stack", "2", "no", "Add it", "[1,3,4,2]"],
+            ],
+            "result": "The answer is [1,3,4,2].",
+        },
+        "mistakes": [
+            {
+                "name": "Listing a leaf twice",
+                "wrong": "Keeping the last node of an edge walk, which is always a leaf, and then adding it again in the leaf walk.",
+                "right": "Skip leaves in both edge walks. The leaf walk adds them once, in the right place.",
+            },
+            {
+                "name": "Taking the ends of each level",
+                "wrong": "Walking level by level and keeping the first and last node of each level.",
+                "right": "The edge is a path that goes left when it can, otherwise right. The first node of a deep level may hang under the right side.",
+            },
+            {
+                "name": "Adding a leaf root twice",
+                "wrong": "Adding the root first and then again in the leaf walk, when the tree is one node.",
+                "right": "Add the root up front only if it is not a leaf.",
+            },
+            {
+                "name": "Right edge in the wrong order",
+                "wrong": "Adding right-edge nodes to the answer as you walk down.",
+                "right": "The boundary goes anti-clockwise, so the right edge is listed bottom to top. Push onto a stack, or reverse the list.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "root = []", "expected": "[]", "why": "Empty tree."},
+            {"input": "root = [1]", "expected": "[1]", "why": "The root is a leaf, so it is listed once."},
+            {"input": "root = [1,2]", "expected": "[1,2]", "why": "No right child, so the right edge is empty. 2 is a leaf and comes from the leaf walk."},
+            {"input": "root = [1,null,2,3,4]", "expected": "[1,3,4,2]", "why": "No left child, so the left edge is empty even though 3 sits far left."},
+            {"input": "root = [1,2,3,4,5,6,null,null,null,7,8,9,10]", "expected": "[1,2,4,7,8,9,10,6,3]", "why": "Node 3 has no right child, so the right edge must step left to 6."},
+        ],
+        "interview_script": [
+            "I need the tree's outline, anti-clockwise from the root: left edge, then leaves, then the right edge from the bottom.",
+            "My first version joins three walks and drops repeats with a set. That is O(n) time but O(n) extra space for the set.",
+            "The key point for me is that repeats only happen at leaves. If both edge walks skip leaves, nothing is listed twice.",
+            "So I write three loops: O(n) time, and O(h) extra space for the leaf walk and the right-edge stack.",
+            "I would test one node, a root with no left child, a single left child, and an edge that has to bend the other way.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Can you do it in one walk?",
+                "answer": "Yes. Do one depth-first walk and pass two flags: is this node on the left edge, and is it on the right edge. Add left-edge nodes before their children and right-edge nodes after them.",
+            },
+            {
+                "question": "What if the boundary must go clockwise?",
+                "answer": "Swap the roles: root, right edge top-down, leaves from right to left, then the left edge bottom-up.",
+            },
+            {
+                "question": "What if the tree is very deep?",
+                "answer": "The leaf walk could overflow the call stack. Use your own stack instead, pushing the right child before the left so leaves still come out left to right.",
+            },
+        ],
+        "related_slugs": ["lc-199", "lc-94", "lc-102"],
+    },
+    {
+        "slugs": ["lc-116"],
+        "pattern": "Tree BFS",
+        "trigger": "“Point each node to the next node on its right” in the same level of a perfect binary tree.",
+        "summary": (
+            "Once a level is linked, you can walk it like a linked list using `next`. While walking it, link its "
+            "children: left to right under the same parent, and right child to the next parent's left child."
+        ),
+        "approaches": [
+            {
+                "name": "BFS with a queue, one level at a time",
+                "idea": "Take the nodes of each level from a queue and point each one at the node behind it.",
+                "steps": [
+                    "Put the root in a queue. A queue lets nodes leave in the order they arrived, so a level comes out left to right.",
+                    "At the start of each level, note how many nodes are in the queue. That is the level size.",
+                    "Take that many nodes. Point each one's `next` at the node now at the front of the queue, except the last one.",
+                    "Put each node's children in the queue for the next level.",
+                ],
+                "code": """import java.util.*;
+
+class Node {
+    public int val;
+    public Node left;
+    public Node right;
+    public Node next;
+    public Node(int val) { this.val = val; }
+}
+
+class Solution {
+    // The judge calls this. It copies the tree into Node objects, calls your connect(),
+    // then reads every level by following the next pointers. You do not need to change it.
+    public List<List<Integer>> connectAndRead(TreeNode root) {
+        Node connected = connect(copy(root));
+        List<List<Integer>> levels = new ArrayList<>();
+        for (Node start = connected; start != null; start = start.left) {
+            List<Integer> level = new ArrayList<>();
+            for (Node node = start; node != null; node = node.next) level.add(node.val);
+            levels.add(level);
+        }
+        return levels;
+    }
+
+    private Node copy(TreeNode tree) {
+        if (tree == null) return null;
+        Node node = new Node(tree.val);
+        node.left = copy(tree.left);
+        node.right = copy(tree.right);
+        return node;
+    }
+
+    public Node connect(Node root) {
+        if (root == null) return null;
+        Deque<Node> queue = new ArrayDeque<>();
+        queue.add(root);
+        while (!queue.isEmpty()) {
+            int size = queue.size();
+            for (int i = 0; i < size; i++) {
+                Node node = queue.poll();
+                if (i < size - 1) node.next = queue.peek();
+                if (node.left != null) queue.add(node.left);
+                if (node.right != null) queue.add(node.right);
+            }
+        }
+        return root;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Each node enters and leaves the queue once.",
+                "space_complexity": "O(n)",
+                "space_why": "The bottom level of a perfect tree holds about half the nodes, and the queue holds a whole level.",
+                "when_to_use": "Say it first. It works for any tree, but it misses the O(1) memory the problem asks for.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Walk each linked level with next",
+                "idea": "Use the `next` links of the level you stand on, in place of a queue, to link the level below.",
+                "steps": [
+                    "Start with `leftmost` at the root. It marks the first node of the level you are standing on.",
+                    "Walk this level from left to right by following `next`.",
+                    "For each node, set `node.left.next = node.right`. The two children share a parent.",
+                    "If `node.next` exists, also set `node.right.next = node.next.left`. This link crosses to the next parent.",
+                    "When the level ends, move `leftmost` down to its left child. Stop when there are no children.",
+                ],
+                "code": """import java.util.*;
+
+class Node {
+    public int val;
+    public Node left;
+    public Node right;
+    public Node next;
+    public Node(int val) { this.val = val; }
+}
+
+class Solution {
+    // The judge calls this. It copies the tree into Node objects, calls your connect(),
+    // then reads every level by following the next pointers. You do not need to change it.
+    public List<List<Integer>> connectAndRead(TreeNode root) {
+        Node connected = connect(copy(root));
+        List<List<Integer>> levels = new ArrayList<>();
+        for (Node start = connected; start != null; start = start.left) {
+            List<Integer> level = new ArrayList<>();
+            for (Node node = start; node != null; node = node.next) level.add(node.val);
+            levels.add(level);
+        }
+        return levels;
+    }
+
+    private Node copy(TreeNode tree) {
+        if (tree == null) return null;
+        Node node = new Node(tree.val);
+        node.left = copy(tree.left);
+        node.right = copy(tree.right);
+        return node;
+    }
+
+    public Node connect(Node root) {
+        Node leftmost = root;
+        while (leftmost != null && leftmost.left != null) {
+            for (Node node = leftmost; node != null; node = node.next) {
+                node.left.next = node.right;
+                if (node.next != null) node.right.next = node.next.left;
+            }
+            leftmost = leftmost.left;
+        }
+        return root;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Every node is visited once as a parent, and each visit makes at most two links.",
+                "space_complexity": "O(1)",
+                "space_why": "Only `leftmost` and `node` are kept. The `next` links already made do the job of the queue.",
+                "when_to_use": "The version to aim for. It meets the O(1) memory goal and is only a few lines.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "root = [1,2,3,4,5,6,7]",
+            "columns": ["level (leftmost)", "node", "link made", "why"],
+            "rows": [
+                ["1 (node 1)", "1", "2 → 3", "Same parent"],
+                ["1 (node 1)", "1", "no cross link", "1 has no next"],
+                ["2 (node 2)", "2", "4 → 5", "Same parent"],
+                ["2 (node 2)", "2", "5 → 6", "Across parents: 2.next is 3, so 5 points to 3.left"],
+                ["2 (node 2)", "3", "6 → 7", "Same parent"],
+                ["2 (node 2)", "3", "7 stays null", "3 has no next"],
+                ["3 (node 4)", "-", "none", "4 has no children, so stop"],
+            ],
+            "result": "Reading each level by `next` gives [[1],[2,3],[4,5,6,7]].",
+        },
+        "mistakes": [
+            {
+                "name": "Missing the link across parents",
+                "wrong": "Setting only `node.left.next = node.right`, so 5 never points to 6.",
+                "right": "Also set `node.right.next = node.next.left` whenever `node.next` exists.",
+            },
+            {
+                "name": "Walking a level before it is linked",
+                "wrong": "Following `next` on the level you are linking right now.",
+                "right": "Walk the parents' level, which was linked in the round before, and link only their children.",
+            },
+            {
+                "name": "Using this on a tree that is not perfect",
+                "wrong": "Assuming every node has two children in a general tree.",
+                "right": "This trick needs a perfect tree. For any tree, keep a pointer to the last linked node of the level below.",
+            },
+            {
+                "name": "Reading children of a null root",
+                "wrong": "Reading `root.left` when the root is null.",
+                "right": "The check `leftmost != null && leftmost.left != null` covers both the empty tree and a single node.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "root = []", "expected": "[]", "why": "Empty tree."},
+            {"input": "root = [1]", "expected": "[[1]]", "why": "No children, so no links are made."},
+            {"input": "root = [1,2,3]", "expected": "[[1],[2,3]]", "why": "Only a same-parent link, no link across parents."},
+            {"input": "root = [1,2,3,4,5,6,7]", "expected": "[[1],[2,3],[4,5,6,7]]", "why": "The first level with a link across parents: 5 → 6."},
+            {"input": "root = [1,2,...,15]", "expected": "[[1],[2,3],[4,5,6,7],[8,...,15]]", "why": "Four levels: checks that `leftmost` keeps moving down."},
+        ],
+        "interview_script": [
+            "Each node's `next` should point to its right neighbour on the same level, and the tree is perfect.",
+            "The obvious way is BFS with a queue, where I link each node to the one behind it. That is O(n) time and O(n) space.",
+            "The key point is that a level I already linked is a linked list. I can walk it with `next` instead of a queue.",
+            "While I walk a level, I link its children, including the link across two parents. That is O(n) time and O(1) extra space.",
+            "I would test an empty tree, one node, three nodes, and seven nodes, where the link across parents first appears.",
+        ],
+        "follow_ups": [
+            {
+                "question": "What if the tree is not perfect?",
+                "answer": "That is LeetCode 117. Walk the linked level and keep a dummy head and a tail for the level below, adding each child you find. It is still O(1) extra space.",
+            },
+            {
+                "question": "Can you do it with recursion?",
+                "answer": "Yes. Link a node's two children and the cross link, then recurse left and right. It uses O(log n) space for the calls, since a perfect tree is log n deep.",
+            },
+            {
+                "question": "Why does the loop stop when `leftmost.left` is null?",
+                "answer": "That is the bottom level. It has no children to link, so there is nothing left to do.",
+            },
+        ],
+        "related_slugs": ["lc-102", "lc-199", "lc-103"],
+    },
+]

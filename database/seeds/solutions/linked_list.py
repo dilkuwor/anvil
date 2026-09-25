@@ -1808,4 +1808,458 @@ class Solution {
         ],
         "related_slugs": ["lc-206", "lc-19", "lc-143"],
     },
+    {
+        "slugs": ["lc-61"],
+        "pattern": "Linked list ring and cut",
+        "trigger": "Rotate a linked list to the right by k places, where k can be far larger than the list.",
+        "summary": (
+            "Only `k % n` rotations matter. The last k nodes move to the front as one block, "
+            "so join the tail to the head to make a ring, then cut the ring after position n − k."
+        ),
+        "approaches": [
+            {
+                "name": "Move the last node to the front, one at a time",
+                "idea": "Do what the statement says: take the last node and put it at the front, `k % n` times.",
+                "steps": [
+                    "Count the nodes, and reduce k to `k % n`.",
+                    "Walk to the node just before the last one.",
+                    "Cut the last node off and put it in front of the head.",
+                    "The moved node is the new head. Repeat until all k moves are done.",
+                ],
+                "code": """class Solution {
+    public ListNode rotateRight(ListNode head, int k) {
+        if (head == null || head.next == null) return head;
+        int length = 0;
+        for (ListNode node = head; node != null; node = node.next) length++;
+        int moves = k % length;
+        for (int move = 0; move < moves; move++) {
+            ListNode beforeLast = head;
+            while (beforeLast.next.next != null) beforeLast = beforeLast.next;
+            ListNode last = beforeLast.next;
+            beforeLast.next = null;
+            last.next = head;
+            head = last;
+        }
+        return head;
+    }
+}
+""",
+                "time_complexity": "O(n²)",
+                "time_why": "Up to n − 1 moves, and each move walks the whole list to find the last node.",
+                "space_complexity": "O(1)",
+                "space_why": "Only a few pointers. The nodes are moved, not copied.",
+                "when_to_use": "Say it in one sentence to show you understand the rotation. Do not code it.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Store the nodes in an array",
+                "idea": "Put every node in an array, so the cut point can be reached by its index.",
+                "steps": [
+                    "Walk the list, adding each node to an array list.",
+                    "Reduce k to `k % n`. If it is 0, return the head as it is.",
+                    "The new head is the node at index `n - k`, and the node before it is the new tail.",
+                    "Set the new tail's next to null, and point the last node at the old head.",
+                ],
+                "code": """import java.util.*;
+
+class Solution {
+    public ListNode rotateRight(ListNode head, int k) {
+        if (head == null) return null;
+        List<ListNode> nodes = new ArrayList<>();
+        for (ListNode node = head; node != null; node = node.next) nodes.add(node);
+        int n = nodes.size();
+        k = k % n;
+        if (k == 0) return head;
+        ListNode newHead = nodes.get(n - k);
+        nodes.get(n - k - 1).next = null;
+        nodes.get(n - 1).next = head;
+        return newHead;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "One walk to fill the array, then three relinks by index.",
+                "space_complexity": "O(n)",
+                "space_why": "The array holds every node.",
+                "when_to_use": "Correct and easy to explain. Expect to be asked to drop the extra array.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Make a ring, then cut it",
+                "idea": "Join the tail to the head, walk to the new tail, and break the ring there.",
+                "steps": [
+                    "Walk to the last node, counting the length n on the way.",
+                    "Reduce k to `k % n`. If it is 0, the list does not change.",
+                    "Point the last node at the head. The list is now a ring.",
+                    "Walk `n - k - 1` steps from the head. That node is the new tail.",
+                    "The node after it is the new head. Set the new tail's next to null to break the ring.",
+                ],
+                "code": """class Solution {
+    public ListNode rotateRight(ListNode head, int k) {
+        if (head == null || head.next == null) return head;
+        int length = 1;
+        ListNode tail = head;
+        while (tail.next != null) {
+            tail = tail.next;
+            length++;
+        }
+        k = k % length;
+        if (k == 0) return head;
+        tail.next = head;
+        ListNode newTail = head;
+        for (int step = 0; step < length - k - 1; step++) newTail = newTail.next;
+        ListNode newHead = newTail.next;
+        newTail.next = null;
+        return newHead;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "One walk to count the nodes, and at most one more walk to the cut point.",
+                "space_complexity": "O(1)",
+                "space_why": "Only a few pointers are kept.",
+                "when_to_use": "The version to aim for. One walk to count, one short walk to cut, no extra memory.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "head = [0,1,2], k = 4",
+            "columns": ["step", "what happens", "n", "k", "list"],
+            "rows": [
+                ["1", "Walk to the last node (2), counting", "3", "4", "0 → 1 → 2"],
+                ["2", "k is larger than n, so k becomes 4 % 3", "3", "1", "0 → 1 → 2"],
+                ["3", "Point the tail 2 at the head 0", "3", "1", "0 → 1 → 2 → back to 0"],
+                ["4", "Walk 3 − 1 − 1 = 1 step from 0: the new tail is 1", "3", "1", "ring"],
+                ["5", "The new head is 2. Cut the link after 1", "3", "1", "2 → 0 → 1"],
+            ],
+            "result": "The list becomes [2,0,1].",
+        },
+        "mistakes": [
+            {
+                "name": "Rotating k times when k is huge",
+                "wrong": "Moving nodes k times, or walking k steps, when k can be two billion.",
+                "right": "Rotating by the length n gives back the same list. Use `k % n` first.",
+            },
+            {
+                "name": "Cutting in the wrong place",
+                "wrong": "Walking k steps from the head to find the new tail.",
+                "right": "The last k nodes move to the front. The new tail is n − k nodes in, so walk `n - k - 1` steps from the head.",
+            },
+            {
+                "name": "Leaving the ring closed",
+                "wrong": "Linking the tail to the head and returning, which leaves a loop.",
+                "right": "Set `newTail.next = null` after you pick the new head.",
+            },
+            {
+                "name": "Dividing by an empty list",
+                "wrong": "Computing `k % n` when the list is empty, so n is 0.",
+                "right": "Return early when the list is empty or has one node.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "[]\n0", "expected": "[]", "why": "Empty list: return before any `% n`."},
+            {"input": "[1]\n99", "expected": "[1]", "why": "One node looks the same after any rotation."},
+            {"input": "[1,2]\n2", "expected": "[1,2]", "why": "k equals the length, so `k % n` is 0 and nothing moves."},
+            {"input": "[0,1,2]\n4", "expected": "[2,0,1]", "why": "k is larger than the length, so only `4 % 3 = 1` rotation counts."},
+            {"input": "[1,2,3,4,5]\n0", "expected": "[1,2,3,4,5]", "why": "k = 0: return the list with no ring left behind."},
+        ],
+        "interview_script": [
+            "I need to move the last k nodes of the list to the front, keeping their order.",
+            "My first idea is to move the last node to the front k times. Even with `k % n` that is O(n²), because each move walks the whole list.",
+            "The key point I use: rotating by the length gives the same list, and the last k nodes move together as one block.",
+            "So I count the length and find the tail in one walk, join the tail to the head, and cut after position n − k. That is O(n) time and O(1) space.",
+            "I will test an empty list, one node, k equal to the length, and k much larger than the length.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Rotate to the left instead.",
+                "answer": "Rotating left by k is rotating right by `n - k % n`. Same ring, different cut point.",
+            },
+            {
+                "question": "Can you do it without making a ring?",
+                "answer": "Yes. Cut after the new tail first, then point the old tail at the old head. Same walks, same cost.",
+            },
+            {
+                "question": "What if the input were an array?",
+                "answer": "Reverse the whole array, then reverse the first k and the rest. That is O(n) time and O(1) extra space.",
+            },
+            {
+                "question": "What if the list were doubly linked?",
+                "answer": "The same plan works. Also set the new head's `prev` to null and the old head's `prev` to the old tail.",
+            },
+        ],
+        "related_slugs": ["lc-189", "lc-19", "lc-25"],
+    },
+    {
+        "slugs": ["lc-430"],
+        "pattern": "Linked list splicing",
+        "trigger": "A doubly linked list whose nodes may have a `child` list, to be made into one flat list.",
+        "summary": (
+            "Walk the top list. When a node has a child, find the child list's tail and splice the whole "
+            "child list in between the node and its old next. Deeper children are then ahead of you, and "
+            "you handle them when you reach them."
+        ),
+        "approaches": [
+            {
+                "name": "Write the nodes down in order, then relink",
+                "idea": "Record every node in flat order in an array, then rebuild all the links from the array.",
+                "steps": [
+                    "Start at the head and add each node to an array list as you reach it.",
+                    "When a node has a child, record that whole child list (and its own children) before moving to the node's next.",
+                    "Go through the array and point each node's next at the node after it, and its prev at the node before it.",
+                    "Set every `child` to null. The first node's prev and the last node's next are null.",
+                ],
+                "code": r"""import java.util.*;
+
+class Node {
+    public int val;
+    public Node prev;
+    public Node next;
+    public Node child;
+    public Node(int val) { this.val = val; }
+}
+
+class Solution {
+    // The judge calls this. It builds the multilevel list from LeetCode's format, calls your
+    // flatten(), checks every prev and child pointer, and returns the values in order.
+    // You do not need to change it.
+    public List<Integer> flattenAndRead(String serialized) {
+        Node head = flatten(build(serialized));
+        List<Integer> values = new ArrayList<>();
+        Node before = null;
+        for (Node node = head; node != null; node = node.next) {
+            if (node.prev != before) throw new IllegalStateException("wrong prev pointer at " + node.val);
+            if (node.child != null) throw new IllegalStateException("child pointer left set at " + node.val);
+            values.add(node.val);
+            before = node;
+        }
+        return values;
+    }
+
+    private Node build(String serialized) {
+        String body = serialized.trim().replaceAll("^\\[|\\]$", "").trim();
+        if (body.isEmpty()) return null;
+        String[] tokens = body.split("\\s*,\\s*");
+        Node head = null;
+        List<Node> previousLevel = null;
+        int i = 0;
+        while (i < tokens.length) {
+            int skip = 0;
+            if (previousLevel != null) {
+                while (i < tokens.length && tokens[i].equals("null")) {
+                    skip++;
+                    i++;
+                }
+            }
+            List<Node> level = new ArrayList<>();
+            while (i < tokens.length && !tokens[i].equals("null")) {
+                Node node = new Node(Integer.parseInt(tokens[i]));
+                if (!level.isEmpty()) {
+                    Node last = level.get(level.size() - 1);
+                    last.next = node;
+                    node.prev = last;
+                }
+                level.add(node);
+                i++;
+            }
+            if (level.isEmpty()) break;
+            if (previousLevel == null) head = level.get(0);
+            else previousLevel.get(skip).child = level.get(0);
+            previousLevel = level;
+            i++;
+        }
+        return head;
+    }
+
+    public Node flatten(Node head) {
+        List<Node> order = new ArrayList<>();
+        record(head, order);
+        for (int i = 0; i < order.size(); i++) {
+            Node node = order.get(i);
+            node.prev = i > 0 ? order.get(i - 1) : null;
+            node.next = i + 1 < order.size() ? order.get(i + 1) : null;
+            node.child = null;
+        }
+        return head;
+    }
+
+    private void record(Node node, List<Node> order) {
+        for (; node != null; node = node.next) {
+            order.add(node);
+            record(node.child, order);
+        }
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "Each node is recorded once and relinked once.",
+                "space_complexity": "O(n)",
+                "space_why": "The array holds every node, and the recursion holds one call per level.",
+                "when_to_use": "Easy to get right, and a fine first answer. Expect to be asked to drop the array.",
+                "is_optimal": False,
+            },
+            {
+                "name": "Splice each child list in place",
+                "idea": "Walk forward. At a node with a child, find the child list's tail and join the child list in right after the node.",
+                "steps": [
+                    "Walk the list from the head, one node at a time.",
+                    "If the node has no child, move on to its next.",
+                    "If it has a child, walk from the child to the last node of that child list: the tail.",
+                    "Point the tail at the node's old next and fix that node's prev. Then point the node at the child and fix the child's prev.",
+                    "Set the node's `child` to null and keep walking. Any deeper children are now ahead of you.",
+                ],
+                "code": r"""import java.util.*;
+
+class Node {
+    public int val;
+    public Node prev;
+    public Node next;
+    public Node child;
+    public Node(int val) { this.val = val; }
+}
+
+class Solution {
+    // The judge calls this. It builds the multilevel list from LeetCode's format, calls your
+    // flatten(), checks every prev and child pointer, and returns the values in order.
+    // You do not need to change it.
+    public List<Integer> flattenAndRead(String serialized) {
+        Node head = flatten(build(serialized));
+        List<Integer> values = new ArrayList<>();
+        Node before = null;
+        for (Node node = head; node != null; node = node.next) {
+            if (node.prev != before) throw new IllegalStateException("wrong prev pointer at " + node.val);
+            if (node.child != null) throw new IllegalStateException("child pointer left set at " + node.val);
+            values.add(node.val);
+            before = node;
+        }
+        return values;
+    }
+
+    private Node build(String serialized) {
+        String body = serialized.trim().replaceAll("^\\[|\\]$", "").trim();
+        if (body.isEmpty()) return null;
+        String[] tokens = body.split("\\s*,\\s*");
+        Node head = null;
+        List<Node> previousLevel = null;
+        int i = 0;
+        while (i < tokens.length) {
+            int skip = 0;
+            if (previousLevel != null) {
+                while (i < tokens.length && tokens[i].equals("null")) {
+                    skip++;
+                    i++;
+                }
+            }
+            List<Node> level = new ArrayList<>();
+            while (i < tokens.length && !tokens[i].equals("null")) {
+                Node node = new Node(Integer.parseInt(tokens[i]));
+                if (!level.isEmpty()) {
+                    Node last = level.get(level.size() - 1);
+                    last.next = node;
+                    node.prev = last;
+                }
+                level.add(node);
+                i++;
+            }
+            if (level.isEmpty()) break;
+            if (previousLevel == null) head = level.get(0);
+            else previousLevel.get(skip).child = level.get(0);
+            previousLevel = level;
+            i++;
+        }
+        return head;
+    }
+
+    public Node flatten(Node head) {
+        for (Node node = head; node != null; node = node.next) {
+            if (node.child == null) continue;
+            Node child = node.child;
+            Node tail = child;
+            while (tail.next != null) tail = tail.next;
+            Node oldNext = node.next;
+            tail.next = oldNext;
+            if (oldNext != null) oldNext.prev = tail;
+            node.next = child;
+            child.prev = node;
+            node.child = null;
+        }
+        return head;
+    }
+}
+""",
+                "time_complexity": "O(n)",
+                "time_why": "The main walk visits each node once. Each tail search reads one child list once, when it is spliced.",
+                "space_complexity": "O(1)",
+                "space_why": "Only a few pointers. The nodes are relinked where they are.",
+                "when_to_use": "The version to aim for. No array and no recursion, so no call depth to worry about.",
+                "is_optimal": True,
+            },
+        ],
+        "walkthrough": {
+            "input": "[1,2,null,3,null,4]: 1 → 2 on top, 3 hangs from 1, and 4 hangs from 3",
+            "columns": ["at node", "child", "child tail", "old next", "what happens", "list now"],
+            "rows": [
+                ["1", "3", "3", "2", "Link tail 3 to old next 2 first, then link 1 to 3", "1 3 2 (3 still has child 4)"],
+                ["3", "4", "4", "2", "Link tail 4 to old next 2, then link 3 to 4", "1 3 4 2"],
+                ["4", "none", "-", "2", "Move on", "1 3 4 2"],
+                ["2", "none", "-", "none", "End of the list", "1 3 4 2"],
+            ],
+            "result": "No child links are left and every prev matches, so the answer is [1,3,4,2].",
+        },
+        "mistakes": [
+            {
+                "name": "Losing the old next",
+                "wrong": "Setting `node.next = child` before the child's tail is linked to the old next.",
+                "right": "Save the old next first, and link the tail to it. Then point the node at the child.",
+            },
+            {
+                "name": "Forgetting the prev links",
+                "wrong": "Fixing only `next` links, as in a singly linked list.",
+                "right": "Every splice changes two `prev` links: the child's and the old next's.",
+            },
+            {
+                "name": "Leaving the child link set",
+                "wrong": "Splicing the child list in but leaving `node.child` pointing at it.",
+                "right": "Set `node.child = null`. The flat list must have no children left.",
+            },
+            {
+                "name": "Old next is missing",
+                "wrong": "Always writing `node.next.prev = tail`.",
+                "right": "The node may be the last one on its level. Only fix that prev when the old next exists.",
+            },
+        ],
+        "edge_cases": [
+            {"input": "[]", "expected": "[]", "why": "Empty list: the loop never runs."},
+            {"input": "[1,2,3]", "expected": "[1,2,3]", "why": "No children at all: nothing changes."},
+            {"input": "[1,2,null,3]", "expected": "[1,3,2]", "why": "One child spliced between a node and its old next."},
+            {"input": "[1,null,2,null,3]", "expected": "[1,2,3]", "why": "Each child hangs from a node with no next, so there is no old next to fix."},
+            {
+                "input": "[1,2,3,4,5,6,null,null,null,7,8,9,10,null,null,11,12]",
+                "expected": "[1,2,3,7,8,11,12,9,10,4,5,6]",
+                "why": "Three levels, with children hanging from the middle of a level.",
+            },
+        ],
+        "interview_script": [
+            "I need to turn a list with child lists into one flat list, where each child list comes right after its parent node.",
+            "My first idea is to record every node in order in an array and relink them. That is O(n) time but O(n) extra space.",
+            "The key point: I can splice a whole child list in as one block once I know its tail. Deeper children then sit ahead of me.",
+            "So I walk forward, splice each child list between its node and the old next, and fix both prev links. That is O(n) time and O(1) space.",
+            "I will test an empty list, a list with no children, children on a node with no next, and the three-level example.",
+        ],
+        "follow_ups": [
+            {
+                "question": "Can you write it with recursion?",
+                "answer": "Yes. A helper flattens one list and returns its tail, so the parent can link that tail to its old next. It uses call stack space for each level.",
+            },
+            {
+                "question": "Why is it still O(n) with the tail searches?",
+                "answer": "Each child list is read once to find its tail, when it is spliced. The main walk reads each node once more. That is at most 2n steps.",
+            },
+            {
+                "question": "What if the list were singly linked?",
+                "answer": "The same splice works. Skip the two `prev` fixes.",
+            },
+        ],
+        "related_slugs": ["lc-143", "lc-138", "lc-116"],
+    },
 ]

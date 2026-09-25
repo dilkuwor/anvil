@@ -39,8 +39,8 @@ ALL_SPECS = [*ORIGINAL_PROBLEMS, *CATALOG_PROBLEMS]
 
 def test_catalog_is_internally_consistent():
     validate_catalog()
-    assert len(CATALOG_PROBLEMS) == 163
-    assert len(ALL_SPECS) == 178
+    assert len(CATALOG_PROBLEMS) == 176
+    assert len(ALL_SPECS) == 191
     slugs = [spec["slug"] for spec in ALL_SPECS]
     assert len(slugs) == len(set(slugs))
 
