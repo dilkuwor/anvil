@@ -2240,5 +2240,57 @@
     "trap_rule": "Do not search only for the exact timestamp: if an exact match does not exist, return the closest earlier entry.",
     "time": "O(log N)",
     "space": "O(N)"
+  },
+  {
+    "slugs": [
+      "lc-61"
+    ],
+    "pattern": "Linked list ring and cut",
+    "trigger": "“rotate a linked list right by k places”, where k can be far larger than the list",
+    "insight": "Only k % n rotations matter. Tie the tail to the head to make a ring, then cut the string after the bead n − k in from the front.",
+    "metaphor": "The necklace",
+    "trap": "Rotating k times when k is huge",
+    "trap_rule": "Rotating by the length n gives back the same list. Reduce k with k % n first, before any walking or moving.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-450"
+    ],
+    "pattern": "Binary search tree: find by order, then fill the hole with the next-bigger value",
+    "trigger": "“delete the node with this key” from a search tree, and return the new top",
+    "insight": "Search by order: smaller left, bigger right. A node with one child or none is replaced by that child. A node with two children takes the stand-in's value, and the stand-in is removed instead.",
+    "metaphor": "The stand-in",
+    "trap": "Leaving the successor behind",
+    "trap_rule": "After copying the stand-in's value into the hole, remove the successor from the bigger side. It has no smaller side, so that is the easy one-child case.",
+    "time": "O(h)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": [
+      "lc-289"
+    ],
+    "pattern": "Matrix, state in spare bits",
+    "trigger": "every cell changes at the same moment, and you must update the grid in place",
+    "insight": "Each cell keeps its old state in bit 0 (ink) and gets its new state in bit 1 (pencil). Neighbours read only the ink; at the end, shift every cell right by one.",
+    "metaphor": "Ink and pencil",
+    "trap": "Writing the new value too early",
+    "trap_rule": "If a new state is written straight into the board, later cells count that new value as a neighbour. Keep the old state in bit 0 and always read neighbours with cell & 1.",
+    "time": "O(m × n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": [
+      "lc-348"
+    ],
+    "pattern": "Design: line counters",
+    "trigger": "an n × n game where each move must report whether a row, column or diagonal is now full of one player",
+    "insight": "A move can only complete its own row, its own column and the diagonals through it. Keep one rope per line: X pulls +1, O pulls −1, and a rope at n or −n is a win.",
+    "metaphor": "The tug-of-war ropes",
+    "trap": "Counting both players together",
+    "trap_rule": "Pull one way for player 1 (+1) and the other way for player 2 (−1). A rope with both players' marks never reaches n or −n, so a plain count of marks is wrong.",
+    "time": "O(1) per move",
+    "space": "O(n)"
   }
 ]

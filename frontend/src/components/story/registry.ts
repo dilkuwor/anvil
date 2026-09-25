@@ -22,6 +22,7 @@ import { trappingRainWaterStory } from "./stories/trapping-rain-water";
 import type { AnyProblemStory } from "./types";
 import { AGY_STORIES } from "./registry-agy";
 import { GROK_STORIES } from "./registry-grok";
+import { MS_STORIES } from "./registry-ms";
 
 /**
  * Complete catalog of visual stories across Phase 1, Phase 2, and Phase 3.
@@ -51,7 +52,7 @@ const STORIES: AnyProblemStory[] = [
 ];
 
 // The second wave of stories lives in one file per author so nobody edits this list concurrently.
-const ALL_STORIES: AnyProblemStory[] = [...STORIES, ...GROK_STORIES, ...AGY_STORIES];
+const ALL_STORIES: AnyProblemStory[] = [...STORIES, ...GROK_STORIES, ...AGY_STORIES, ...MS_STORIES];
 
 const BY_SLUG = new Map<string, AnyProblemStory>(
   ALL_STORIES.flatMap((story) => story.slugs.map((slug) => [slug, story] as const))
