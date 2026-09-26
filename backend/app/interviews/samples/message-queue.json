@@ -1,0 +1,153 @@
+{
+  "slug": "message-queue",
+  "name": "Distributed Message Queue",
+  "summary": "Producers → DNS → broker cluster. Each partition has a leader broker with followers; a controller service elects leaders; consumer group workers pull by offset and a dead-letter topic catches poison messages.",
+  "difficulty": "advanced",
+  "workload": {
+    "dau": 1000000,
+    "concurrent_users": 20000,
+    "requests_per_user_day": 500,
+    "read_ratio": 0.5,
+    "avg_request_bytes": 1024,
+    "avg_response_bytes": 1024,
+    "peak_multiplier": 4,
+    "traffic_growth": 0.5,
+    "avg_record_bytes": 1024
+  },
+  "slo": {
+    "availability": 0.9999,
+    "p95_ms": 20,
+    "p99_ms": 50,
+    "error_rate": 0.0001,
+    "rpo_seconds": 0,
+    "rto_seconds": 30
+  },
+  "nodes": [
+    {
+      "id": "producers",
+      "type": "client",
+      "label": "Producers",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 2,
+        "qps": 100000
+      }
+    },
+    {
+      "id": "ctrl",
+      "type": "api_server",
+      "label": "Controller",
+      "x": 500,
+      "y": 80,
+      "config": {
+        "instances": 3,
+        "vcpu": 4,
+        "avgLatencyMs": 2,
+        "p95LatencyMs": 5,
+        "autoscaling": true,
+        "minInstances": 2,
+        "maxInstances": 12
+      }
+    },
+    {
+      "id": "leader",
+      "type": "kafka",
+      "label": "Leader Brokers",
+      "x": 500,
+      "y": 230,
+      "config": {
+        "brokers": 6,
+        "partitions": 96,
+        "consumers": 24,
+        "producerThroughput": 150000,
+        "consumerThroughput": 150000
+      }
+    },
+    {
+      "id": "followers",
+      "type": "kafka",
+      "label": "Follower Replicas",
+      "x": 730,
+      "y": 380,
+      "config": {
+        "brokers": 12,
+        "partitions": 96,
+        "consumers": 0,
+        "producerThroughput": 150000,
+        "consumerThroughput": 150000
+      }
+    },
+    {
+      "id": "consumers",
+      "type": "worker",
+      "label": "Consumer Group",
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 24,
+        "concurrency": 8,
+        "jobMs": 5,
+        "idempotent": true
+      }
+    },
+    {
+      "id": "dlq",
+      "type": "kafka",
+      "label": "Dead-letter Topic",
+      "x": 960,
+      "y": 230,
+      "config": {
+        "brokers": 3,
+        "partitions": 6,
+        "consumers": 2,
+        "producerThroughput": 1000,
+        "consumerThroughput": 1000
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-producers-dns",
+      "source": "producers",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-leader",
+      "source": "dns",
+      "target": "leader"
+    },
+    {
+      "id": "e-ctrl-leader",
+      "source": "ctrl",
+      "target": "leader",
+      "label": "leader election"
+    },
+    {
+      "id": "e-leader-followers",
+      "source": "leader",
+      "target": "followers",
+      "label": "replicate, acks=all"
+    },
+    {
+      "id": "e-leader-consumers",
+      "source": "leader",
+      "target": "consumers",
+      "label": "pull by offset"
+    },
+    {
+      "id": "e-consumers-dlq",
+      "source": "consumers",
+      "target": "dlq",
+      "label": "poison messages",
+      "weight": 0.01
+    }
+  ]
+}

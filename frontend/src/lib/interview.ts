@@ -191,18 +191,26 @@ export type DesignNodeType =
   | "storage"
   | "websocket";
 
+/**
+ * A node on the interview canvas. `type` is one of the simulator's component types, or one
+ * of the older plain `DesignNodeType`s for sessions drawn before the canvases were unified.
+ */
 export type DesignNode = {
   id: string;
-  type: DesignNodeType;
+  type: DesignNodeType | string;
   label: string;
   x: number;
   y: number;
+  config?: Record<string, string | number | boolean>;
+  disabled?: boolean;
 };
 
 export type DesignEdge = {
   id: string;
   from: string;
   to: string;
+  label?: string;
+  weight?: number;
 };
 
 export type ArchitectureGraph = {

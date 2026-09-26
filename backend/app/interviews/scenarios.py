@@ -368,6 +368,151 @@ _SCENARIOS: list[dict[str, Any]] = [
             "and how a hinted handoff or read repair heals after a node comes back."
         ),
     },
+    {
+        "slug": "blob-storage",
+        "title": "Design Blob Storage",
+        "difficulty": "HARD",
+        "summary": "Store and serve objects of any size with eleven nines of durability, like Azure Blob or S3.",
+        "prompt": (
+            "Design an object store. Clients upload objects up to several gigabytes under a bucket and key, "
+            "read them back by key, and list keys by prefix. No acknowledged object may ever be lost."
+        ),
+        "functional_requirements": [
+            "PUT, GET and DELETE an object by bucket and key.",
+            "Multipart upload for large objects, resumable after a failure.",
+            "List keys by prefix, with paging.",
+            "Presigned URLs so clients upload and download without going through the app.",
+        ],
+        "non_functional_requirements": [
+            "Eleven nines of durability: losing one rack or one data centre loses nothing.",
+            "Time to first byte under 100 ms for a warm object.",
+            "Adding storage nodes must not pause reads or writes.",
+        ],
+        "constraints": [
+            "Tens of petabytes, billions of objects, most under 1 MB, a few over 1 GB.",
+            "Read:write ratio around 4:1.",
+            "Objects are immutable once written; a new version replaces the old.",
+        ],
+        "assumptions": [
+            "Metadata (small, hot) and bytes (large, cold) can be stored on different systems.",
+            "Eventually consistent listing is acceptable if the trade-off is stated.",
+            "Access control is by signed request; auth details are out of scope.",
+        ],
+        "interviewer_notes": (
+            "Probe the split between metadata store and data nodes, erasure coding vs 3x replication, "
+            "how multipart upload state survives a crash, checksum scrubbing, and what a hot object does to one data node."
+        ),
+    },
+    {
+        "slug": "leaderboard",
+        "title": "Design a Leaderboard",
+        "difficulty": "MEDIUM",
+        "summary": "Real-time game rankings: top 10, my rank and my neighbours, per game and global, with a monthly reset.",
+        "prompt": (
+            "Design the leaderboard for a game with tens of millions of players. After every match a score is "
+            "submitted; players see the top 10, their own rank, and the players just above and below them, "
+            "and the board resets each month."
+        ),
+        "functional_requirements": [
+            "Submit a score for a player in a game.",
+            "Read the top N players.",
+            "Read a player's rank and the players around them.",
+            "Per-game and global boards; a fresh board each month with history kept.",
+        ],
+        "non_functional_requirements": [
+            "Rank reads under 50 ms at the 95th percentile.",
+            "A submitted score is visible in the ranking within a second.",
+            "No score is lost; a rebuild from the durable log must be possible.",
+        ],
+        "constraints": [
+            "20 million daily players, about 5,000 score submits per second at peak.",
+            "Reads outnumber writes about 9:1; the top 10 is by far the hottest read.",
+            "Scores are integers; ties happen often.",
+        ],
+        "assumptions": [
+            "Anti-cheat validation happens before the score reaches the leaderboard.",
+            "A board for one month fits in one machine's memory.",
+            "Friends lists come from another service.",
+        ],
+        "interviewer_notes": (
+            "Expect a Redis sorted set (ZADD, ZREVRANK, ZREVRANGE) and why it is O(log n); probe durability via a log "
+            "plus rebuild, sharding when one board is too big, tie-breaking, and how to serve 'top 10 among my friends'."
+        ),
+    },
+    {
+        "slug": "collaborative-editor",
+        "title": "Design a Collaborative Editor",
+        "difficulty": "HARD",
+        "summary": "Several people editing one document at once, like Office or Google Docs, with cursors and offline edits.",
+        "prompt": (
+            "Design a document editor where several people type in the same document at the same time and each "
+            "sees the others' changes and cursors within a moment. Edits made offline must merge in when the "
+            "client reconnects."
+        ),
+        "functional_requirements": [
+            "Open a document and receive a live stream of changes.",
+            "Send a change and see it applied for everyone, in a consistent order.",
+            "Show other editors' cursors and selections.",
+            "Queue edits while offline and merge them on reconnect.",
+        ],
+        "non_functional_requirements": [
+            "A keystroke is visible to other editors in under 200 ms in the same region.",
+            "No edit is ever lost or applied twice.",
+            "A new joiner opens a large document in under two seconds.",
+        ],
+        "constraints": [
+            "Millions of documents; usually 1–5 concurrent editors per document, sometimes hundreds of viewers.",
+            "Hundreds of operations per second on a busy document.",
+            "Documents can reach tens of megabytes of history.",
+        ],
+        "assumptions": [
+            "One server can be responsible for ordering all operations of one document at a time.",
+            "Rich formatting can be modelled as operations on a sequence.",
+            "Comments and permissions are out of scope.",
+        ],
+        "interviewer_notes": (
+            "Probe the conflict of two inserts at the same position, OT vs CRDT and when each fits, a single ordering "
+            "server per document with sticky routing, snapshots so joiners do not replay history, and what happens when "
+            "that server dies mid-session."
+        ),
+    },
+    {
+        "slug": "message-queue",
+        "title": "Design a Distributed Message Queue",
+        "difficulty": "HARD",
+        "summary": "A durable, partitioned log that producers append to and consumer groups read from, like Kafka or Service Bus.",
+        "prompt": (
+            "Design a message queue that many services use to send events to each other. Producers append messages to "
+            "topics, consumer groups read them at their own pace, and no acknowledged message may be lost even if a "
+            "broker dies."
+        ),
+        "functional_requirements": [
+            "Produce to a topic; consume from a topic as part of a consumer group.",
+            "Ordering within a key; consumers track their position with offsets.",
+            "Retention by time or size; replay from an old offset.",
+            "A dead-letter path for messages that keep failing.",
+        ],
+        "non_functional_requirements": [
+            "Publish latency under 20 ms at the 95th percentile with acks from replicas.",
+            "No acknowledged message lost when one broker fails.",
+            "Add brokers and partitions without stopping producers or consumers.",
+        ],
+        "constraints": [
+            "Hundreds of thousands of messages per second, about 1 KB each.",
+            "Seven days of retention; some topics keep a compacted latest-value view.",
+            "Consumers may be slow or crash at any time.",
+        ],
+        "assumptions": [
+            "Messages are opaque bytes; the queue does not inspect them.",
+            "At-least-once delivery is the default; exactly-once is opt-in and costs more.",
+            "A small coordination service is available for leader election.",
+        ],
+        "interviewer_notes": (
+            "Probe the append-only log and page cache, partitions and keys for ordering, leader/follower replication with "
+            "in-sync replicas and acks=all, consumer group rebalancing, offset commits and the at-least-once duplicate, "
+            "idempotent producers, and backpressure when a consumer lags."
+        ),
+    },
 ]
 
 
@@ -421,6 +566,26 @@ _CATALOG: dict[str, dict[str, Any]] = {
         "learn_slug": "sd-key-value-store",
         "sample_slug": "key-value-store",
         "workload": {"dau": 2_000_000, "requests_per_user_day": 200, "read_ratio": 0.75, "peak_multiplier": 3},
+    },
+    "blob-storage": {
+        "learn_slug": "sd-blob-storage",
+        "sample_slug": "blob-storage",
+        "workload": {"dau": 500_000, "requests_per_user_day": 60, "read_ratio": 0.8, "peak_multiplier": 3},
+    },
+    "leaderboard": {
+        "learn_slug": "sd-leaderboard",
+        "sample_slug": "leaderboard",
+        "workload": {"dau": 20_000_000, "requests_per_user_day": 30, "read_ratio": 0.9, "peak_multiplier": 4},
+    },
+    "collaborative-editor": {
+        "learn_slug": "sd-collaborative-editor",
+        "sample_slug": "collaborative-editor",
+        "workload": {"dau": 5_000_000, "requests_per_user_day": 400, "read_ratio": 0.5, "peak_multiplier": 3},
+    },
+    "message-queue": {
+        "learn_slug": "sd-message-queue",
+        "sample_slug": "message-queue",
+        "workload": {"dau": 1_000_000, "requests_per_user_day": 500, "read_ratio": 0.5, "peak_multiplier": 4},
     },
 }
 

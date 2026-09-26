@@ -1,0 +1,177 @@
+{
+  "slug": "leaderboard",
+  "name": "Leaderboard",
+  "summary": "Games → DNS → LB → score API. Scores append to Kafka, a ranker keeps Redis sorted sets, Postgres holds the durable log, and top-10 reads come from a cache.",
+  "difficulty": "intermediate",
+  "workload": {
+    "dau": 20000000,
+    "concurrent_users": 400000,
+    "requests_per_user_day": 30,
+    "read_ratio": 0.9,
+    "avg_request_bytes": 200,
+    "avg_response_bytes": 600,
+    "peak_multiplier": 4,
+    "traffic_growth": 0.3,
+    "avg_record_bytes": 64
+  },
+  "slo": {
+    "availability": 0.999,
+    "p95_ms": 50,
+    "p99_ms": 120,
+    "error_rate": 0.001,
+    "rpo_seconds": 5,
+    "rto_seconds": 60
+  },
+  "nodes": [
+    {
+      "id": "games",
+      "type": "client",
+      "label": "Game Clients",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 2,
+        "qps": 100000
+      }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 3,
+        "maxRps": 60000,
+        "algorithm": "least_connections",
+        "baseLatencyMs": 1
+      }
+    },
+    {
+      "id": "api",
+      "type": "api_server",
+      "label": "Score API",
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 24,
+        "vcpu": 4,
+        "avgLatencyMs": 2,
+        "p95LatencyMs": 6,
+        "autoscaling": true,
+        "minInstances": 12,
+        "maxInstances": 96
+      }
+    },
+    {
+      "id": "log",
+      "type": "kafka",
+      "label": "Score Events",
+      "x": 960,
+      "y": 80,
+      "config": {
+        "brokers": 3,
+        "partitions": 24,
+        "consumers": 8,
+        "producerThroughput": 60000,
+        "consumerThroughput": 60000
+      }
+    },
+    {
+      "id": "ranker",
+      "type": "worker",
+      "label": "Ranker",
+      "x": 1190,
+      "y": 80,
+      "config": {
+        "instances": 8,
+        "concurrency": 8,
+        "jobMs": 2,
+        "idempotent": true
+      }
+    },
+    {
+      "id": "sets",
+      "type": "redis",
+      "label": "Sorted Sets",
+      "x": 960,
+      "y": 230,
+      "config": {
+        "memoryGb": 64,
+        "hitRatio": 0.98,
+        "maxOps": 300000,
+        "ttlSec": 2592000,
+        "replicas": 2
+      }
+    },
+    {
+      "id": "store",
+      "type": "postgresql",
+      "label": "Score Log",
+      "x": 960,
+      "y": 380,
+      "config": {
+        "vcpu": 8,
+        "storageGb": 2000,
+        "readCapacity": 20000,
+        "writeCapacity": 10000,
+        "readReplicas": 2,
+        "readLatencyMs": 3,
+        "writeLatencyMs": 5
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-games-dns",
+      "source": "games",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-lb",
+      "source": "dns",
+      "target": "lb"
+    },
+    {
+      "id": "e-lb-api",
+      "source": "lb",
+      "target": "api"
+    },
+    {
+      "id": "e-api-log",
+      "source": "api",
+      "target": "log",
+      "label": "score submits",
+      "weight": 0.1
+    },
+    {
+      "id": "e-log-ranker",
+      "source": "log",
+      "target": "ranker"
+    },
+    {
+      "id": "e-ranker-sets",
+      "source": "ranker",
+      "target": "sets"
+    },
+    {
+      "id": "e-ranker-store",
+      "source": "ranker",
+      "target": "store"
+    },
+    {
+      "id": "e-api-sets",
+      "source": "api",
+      "target": "sets",
+      "label": "rank reads",
+      "weight": 0.9
+    }
+  ]
+}

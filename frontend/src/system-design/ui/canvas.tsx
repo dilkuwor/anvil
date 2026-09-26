@@ -35,6 +35,7 @@ export function SimulatorCanvas({
   onDuplicate,
   onToggleDisabled,
   onDelete,
+  readOnly = false,
 }: {
   designNodes: DesignNode[];
   designEdges: DesignEdge[];
@@ -46,6 +47,8 @@ export function SimulatorCanvas({
   onDuplicate: (id: string) => void;
   onToggleDisabled: (id: string) => void;
   onDelete: (id: string) => void;
+  /** After an interview ends the drawing is kept but frozen. */
+  readOnly?: boolean;
 }) {
   const { screenToFlowPosition, fitView, getNodes } = useReactFlow();
   const selectedRef = useRef(selectedId);
@@ -111,6 +114,7 @@ export function SimulatorCanvas({
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
+        if (readOnly) return;
         const type = event.dataTransfer.getData("application/system-design") as ComponentType;
         if (!type) return;
         const kind = getKind(type);
@@ -134,7 +138,10 @@ export function SimulatorCanvas({
         nodeTypes={nodeTypes}
         minZoom={0.2}
         maxZoom={1.6}
-        deleteKeyCode={["Backspace", "Delete"]}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
+        edgesReconnectable={!readOnly}
+        deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
         multiSelectionKeyCode={["Meta", "Control"]}
         onInit={(instance) => instance.fitView({ padding: 0.2 })}
         onNodesChange={onNodesChange}
@@ -142,6 +149,7 @@ export function SimulatorCanvas({
         onNodeDragStop={() => persistPositions()}
         onNodeContextMenu={(event, node) => {
           event.preventDefault();
+          if (readOnly) return;
           onSelect(node.id);
           setMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
         }}

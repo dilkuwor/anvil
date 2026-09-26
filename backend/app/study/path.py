@@ -49,12 +49,12 @@ UNITS: list[dict] = [
     {
         "number": 4,
         "id": "heap-intervals",
-        "why": "A feed merges many sorted streams and keeps the top K, which is heap work.",
+        "why": "A leaderboard is top-K at scale: the same idea as a heap, kept in a sorted set.",
         "title": "Heap & Intervals",
         "tags": ["heap", "intervals"],
         "problems": ["lc-1046", "lc-215", "lc-973", "lc-23", "lc-295", "lc-56", "lc-57", "lc-253"],
-        "lessons": ["message-queues", "event-driven-architecture", "sd-news-feed"],
-        "design": "news-feed",
+        "lessons": ["message-queues", "event-driven-architecture", "sd-leaderboard"],
+        "design": "leaderboard",
     },
     {
         "number": 5,
@@ -109,8 +109,8 @@ UNITS: list[dict] = [
         "title": "Design Problems & the Full Loop",
         "tags": ["design"],
         "problems": ["lc-146", "lc-380", "lc-355", "lc-348", "lc-173", "lc-706"],
-        "lessons": ["sd-interview-scoring", "observability", "sd-multi-region"],
-        "design": "url-shortener",
+        "lessons": ["sd-interview-scoring", "sd-message-queue", "sd-blob-storage"],
+        "design": "message-queue",
     },
 ]
 

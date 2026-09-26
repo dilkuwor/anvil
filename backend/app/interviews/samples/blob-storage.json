@@ -1,0 +1,176 @@
+{
+  "slug": "blob-storage",
+  "name": "Blob Storage",
+  "summary": "Clients → DNS → LB → front door API. Metadata lives in a sharded NoSQL store; bytes go to object storage data nodes in chunks; a CDN serves hot public objects; a scrubber worker checks checksums.",
+  "difficulty": "intermediate",
+  "workload": {
+    "dau": 500000,
+    "concurrent_users": 30000,
+    "requests_per_user_day": 60,
+    "read_ratio": 0.8,
+    "avg_request_bytes": 500,
+    "avg_response_bytes": 524288,
+    "peak_multiplier": 3,
+    "traffic_growth": 0.4,
+    "avg_record_bytes": 300
+  },
+  "slo": {
+    "availability": 0.9999,
+    "p95_ms": 120,
+    "p99_ms": 300,
+    "error_rate": 0.0005,
+    "rpo_seconds": 0,
+    "rto_seconds": 120
+  },
+  "nodes": [
+    {
+      "id": "clients",
+      "type": "client",
+      "label": "Clients",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 2,
+        "qps": 100000
+      }
+    },
+    {
+      "id": "cdn",
+      "type": "cdn",
+      "label": "CDN",
+      "x": 500,
+      "y": 80,
+      "config": {
+        "hitRatio": 0.85,
+        "maxRps": 200000,
+        "edgeLatencyMs": 18,
+        "ttlSec": 3600
+      }
+    },
+    {
+      "id": "lb",
+      "type": "load_balancer",
+      "label": "Load Balancer",
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 3,
+        "maxRps": 60000,
+        "algorithm": "least_connections",
+        "baseLatencyMs": 1
+      }
+    },
+    {
+      "id": "front",
+      "type": "api_server",
+      "label": "Front Door API",
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 16,
+        "vcpu": 4,
+        "avgLatencyMs": 3,
+        "p95LatencyMs": 9,
+        "autoscaling": true,
+        "minInstances": 8,
+        "maxInstances": 64
+      }
+    },
+    {
+      "id": "meta",
+      "type": "nosql",
+      "label": "Metadata Store",
+      "x": 960,
+      "y": 80,
+      "config": {
+        "vcpu": 16,
+        "storageGb": 8000,
+        "readCapacity": 50000,
+        "writeCapacity": 15000,
+        "replicationFactor": 3,
+        "iops": 50000
+      }
+    },
+    {
+      "id": "data",
+      "type": "object_storage",
+      "label": "Data Nodes",
+      "x": 960,
+      "y": 230,
+      "config": {
+        "capacityTb": 5000,
+        "avgObjectKb": 512,
+        "readRps": 40000,
+        "writeRps": 8000
+      }
+    },
+    {
+      "id": "scrub",
+      "type": "worker",
+      "label": "Checksum Scrubber",
+      "x": 960,
+      "y": 380,
+      "config": {
+        "instances": 4,
+        "concurrency": 4,
+        "jobMs": 2000,
+        "idempotent": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-clients-dns",
+      "source": "clients",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-cdn",
+      "source": "dns",
+      "target": "cdn",
+      "label": "public reads",
+      "weight": 0.4
+    },
+    {
+      "id": "e-dns-lb",
+      "source": "dns",
+      "target": "lb"
+    },
+    {
+      "id": "e-cdn-lb",
+      "source": "cdn",
+      "target": "lb",
+      "label": "cache miss",
+      "weight": 0.15
+    },
+    {
+      "id": "e-lb-front",
+      "source": "lb",
+      "target": "front"
+    },
+    {
+      "id": "e-front-meta",
+      "source": "front",
+      "target": "meta",
+      "label": "lookup / commit"
+    },
+    {
+      "id": "e-front-data",
+      "source": "front",
+      "target": "data",
+      "label": "chunks"
+    },
+    {
+      "id": "e-scrub-data",
+      "source": "scrub",
+      "target": "data"
+    }
+  ]
+}

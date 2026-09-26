@@ -191,3 +191,37 @@ class _Turn:
 
 def _fake_turn(context):
     return _Turn(context)
+
+
+def test_architecture_accepts_simulator_parts_and_maps_them_to_families():
+    from app.interviews.architecture import has_core_shape, typical_gaps
+
+    graph = normalize_architecture(
+        {
+            "nodes": [
+                {"id": "c", "type": "client", "label": "Users", "x": 0, "y": 0},
+                {"id": "lb", "type": "load_balancer", "label": "Load Balancer", "x": 100, "y": 0},
+                {"id": "api", "type": "api_server", "label": "API", "x": 200, "y": 0, "config": {"instances": 12, "vcpu": 4, "autoscaling": True}},
+                {"id": "r", "type": "redis", "label": "Hot keys", "x": 300, "y": -60, "config": {"memoryGb": 32, "hitRatio": 0.9}},
+                {"id": "pg", "type": "postgresql", "label": "PostgreSQL", "x": 300, "y": 60, "disabled": False},
+                {"id": "k", "type": "kafka", "label": "Events", "x": 300, "y": 120},
+            ],
+            "edges": [
+                {"id": "e1", "source": "c", "target": "lb"},
+                {"id": "e2", "source": "lb", "target": "api", "label": "https", "weight": 1},
+                {"id": "e3", "source": "api", "target": "r", "label": "reads", "weight": 0.8},
+                {"id": "e4", "source": "api", "target": "pg"},
+                {"id": "e5", "source": "api", "target": "k", "weight": 7},
+            ],
+        }
+    )
+    assert [node["type"] for node in graph["nodes"]] == ["client", "load_balancer", "api_server", "redis", "postgresql", "kafka"]
+    assert graph["nodes"][2]["config"] == {"instances": 12, "vcpu": 4, "autoscaling": True}
+    assert graph["edges"][2] == {"id": "e3", "from": "api", "to": "r", "label": "reads", "weight": 0.8}
+    assert "weight" not in graph["edges"][4]
+    assert typical_gaps(graph) == []
+    assert has_core_shape(graph) is True
+    assert architecture_quality(graph) >= 8
+    summary = summarize_architecture(graph)
+    assert "Hot keys (Redis)" in summary and "memoryGb 32" in summary
+    assert "PostgreSQL" in summary

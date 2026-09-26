@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { EndInterviewDialog } from "@/components/interview/interview-banner";
 import { InterviewFeedback } from "@/components/interview/interview-feedback";
 import { InterviewerPanel } from "@/components/interview/interviewer-panel";
-import { ArchitectureCanvas } from "@/components/system-design/architecture-canvas";
+import { InterviewCanvas, toDesignGraph } from "@/components/system-design/interview-canvas";
 import { ScenarioPanel } from "@/components/system-design/scenario-panel";
 import { Button } from "@/components/ui/button";
 import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
@@ -22,7 +22,9 @@ import {
   type SystemDesignScenario,
 } from "@/lib/interview";
 import { queryKeys } from "@/lib/queries";
+import { applyScenarioWorkload } from "@/lib/system-design-catalog";
 import { cn } from "@/lib/utils";
+import { newDesign, saveCurrent } from "@/system-design/state/persist";
 
 export function DesignWorkspace() {
   const search = useSearchParams();
@@ -222,7 +224,7 @@ function LoadedDesignWorkspace({
         </div>
       </header>
 
-      <div className="mt-3 grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)_minmax(280px,340px)]">
+      <div className="mt-3 grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(220px,250px)_minmax(0,1fr)_minmax(260px,320px)]">
         <div className="min-h-[18rem] min-w-0 lg:min-h-0">
           {scenario ? (
             <ScenarioPanel scenario={scenario} />
@@ -233,15 +235,36 @@ function LoadedDesignWorkspace({
           )}
         </div>
         <div className="min-h-[28rem] min-w-0 lg:min-h-0">
-          <ArchitectureCanvas value={architecture} onChange={onArchitectureChange} readOnly={!live} />
+          <InterviewCanvas value={architecture} onChange={onArchitectureChange} readOnly={!live} />
         </div>
         <div className="min-h-[22rem] min-w-0 lg:min-h-0">
           {session.completed ? (
-            <InterviewFeedback
-              session={session}
-              onBack={() => router.push("/system-design")}
-              onRetry={() => router.push("/system-design")}
-            />
+            <div className="flex h-full min-h-0 flex-col gap-3">
+              <div className="min-h-0 flex-1 overflow-auto">
+                <InterviewFeedback
+                  session={session}
+                  onBack={() => router.push("/system-design")}
+                  onRetry={() => router.push("/system-design")}
+                />
+              </div>
+              {architecture.nodes.length > 0 ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  title="Load this drawing into the simulator with the scenario's traffic numbers"
+                  onClick={() => {
+                    const graph = toDesignGraph(architecture);
+                    let design = { ...newDesign(session.problem_title || "Interview design"), nodes: graph.nodes, edges: graph.edges };
+                    if (scenario) design = applyScenarioWorkload(design, scenario);
+                    saveCurrent(design);
+                    router.push(scenario ? `/system-design/simulator?problem=${encodeURIComponent(scenario.slug)}` : "/system-design/simulator");
+                  }}
+                >
+                  Open this design in the simulator
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <InterviewerPanel
               session={session}

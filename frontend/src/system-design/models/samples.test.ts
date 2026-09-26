@@ -21,8 +21,12 @@ describe("catalog samples", () => {
   it("includes a graph for every known problem", () => {
     expect(samples.map((item) => item.slug).sort()).toEqual([
       "autocomplete",
+      "blob-storage",
       "chat-system",
+      "collaborative-editor",
       "key-value-store",
+      "leaderboard",
+      "message-queue",
       "news-feed",
       "rate-limiter",
       "ride-sharing",

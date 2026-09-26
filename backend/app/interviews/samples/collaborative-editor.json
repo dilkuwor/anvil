@@ -1,0 +1,152 @@
+{
+  "slug": "collaborative-editor",
+  "name": "Collaborative Editor",
+  "summary": "Editors → DNS → WebSocket gateway (sticky by doc id) → doc servers that order operations. Kafka is the op log, object storage holds snapshots, Redis carries presence and cursors.",
+  "difficulty": "advanced",
+  "workload": {
+    "dau": 5000000,
+    "concurrent_users": 300000,
+    "requests_per_user_day": 400,
+    "read_ratio": 0.5,
+    "avg_request_bytes": 120,
+    "avg_response_bytes": 160,
+    "peak_multiplier": 3,
+    "traffic_growth": 0.3,
+    "avg_record_bytes": 100
+  },
+  "slo": {
+    "availability": 0.9995,
+    "p95_ms": 80,
+    "p99_ms": 200,
+    "error_rate": 0.001,
+    "rpo_seconds": 0,
+    "rto_seconds": 60
+  },
+  "nodes": [
+    {
+      "id": "editors",
+      "type": "client",
+      "label": "Editors",
+      "x": 40,
+      "y": 230
+    },
+    {
+      "id": "dns",
+      "type": "dns",
+      "label": "DNS",
+      "x": 270,
+      "y": 230,
+      "config": {
+        "latencyMs": 2,
+        "qps": 100000
+      }
+    },
+    {
+      "id": "ws",
+      "type": "websocket_gateway",
+      "label": "WebSocket Gateway",
+      "x": 500,
+      "y": 230,
+      "config": {
+        "instances": 12,
+        "maxConnections": 30000,
+        "messagesPerSec": 60000,
+        "heartbeatSec": 20
+      }
+    },
+    {
+      "id": "docs",
+      "type": "api_server",
+      "label": "Doc Servers",
+      "x": 730,
+      "y": 230,
+      "config": {
+        "instances": 24,
+        "vcpu": 4,
+        "avgLatencyMs": 2,
+        "p95LatencyMs": 6,
+        "autoscaling": true,
+        "minInstances": 12,
+        "maxInstances": 96
+      }
+    },
+    {
+      "id": "oplog",
+      "type": "kafka",
+      "label": "Op Log",
+      "x": 960,
+      "y": 80,
+      "config": {
+        "brokers": 3,
+        "partitions": 48,
+        "consumers": 12,
+        "producerThroughput": 80000,
+        "consumerThroughput": 80000
+      }
+    },
+    {
+      "id": "snap",
+      "type": "object_storage",
+      "label": "Snapshots",
+      "x": 960,
+      "y": 230,
+      "config": {
+        "capacityTb": 200,
+        "avgObjectKb": 256,
+        "readRps": 5000,
+        "writeRps": 2000
+      }
+    },
+    {
+      "id": "presence",
+      "type": "redis",
+      "label": "Presence & Cursors",
+      "x": 960,
+      "y": 380,
+      "config": {
+        "memoryGb": 16,
+        "hitRatio": 0.99,
+        "maxOps": 200000,
+        "ttlSec": 30,
+        "replicas": 1
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-editors-dns",
+      "source": "editors",
+      "target": "dns"
+    },
+    {
+      "id": "e-dns-ws",
+      "source": "dns",
+      "target": "ws"
+    },
+    {
+      "id": "e-ws-docs",
+      "source": "ws",
+      "target": "docs"
+    },
+    {
+      "id": "e-docs-oplog",
+      "source": "docs",
+      "target": "oplog",
+      "label": "every op"
+    },
+    {
+      "id": "e-docs-snap",
+      "source": "docs",
+      "target": "snap",
+      "label": "every 100 ops",
+      "weight": 0.05
+    },
+    {
+      "id": "e-docs-presence",
+      "source": "docs",
+      "target": "presence",
+      "label": "cursors",
+      "weight": 0.3
+    }
+  ]
+}
