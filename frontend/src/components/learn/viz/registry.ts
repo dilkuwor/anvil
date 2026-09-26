@@ -20,6 +20,7 @@ import { topKViz } from "./top-k-heap";
 import { topologicalSortViz } from "./topological-sort";
 import { treeTraversalViz } from "./tree-traversal";
 import { unionFindViz } from "./union-find";
+import { MORE_VIZ } from "./registry-more";
 import type { AnyVizDefinition } from "./types";
 
 /**
@@ -54,6 +55,7 @@ const DEFINITIONS: AnyVizDefinition[] = [
   idempotencyViz,
   quorumViz,
   circuitBreakerViz,
+  ...MORE_VIZ,
 ];
 
 const REGISTRY = new Map<string, AnyVizDefinition>(DEFINITIONS.map((definition) => [definition.id, definition]));
@@ -106,6 +108,20 @@ const VIZ_TAGS: Record<string, string[]> = {
   "idempotency": ["Idempotency Keys", "Payment Flow", "Deduplication"],
   "quorum": ["Distributed Consensus", "W+R>N", "Eventual Consistency"],
   "circuit-breaker": ["Fault Tolerance", "State Machine", "Resilience"],
+  architecture: ["Request Path", "Boxes & Arrows", "Case Studies"],
+  "inverted-index": ["Search", "Posting Lists", "Tokenising"],
+  "stream-window": ["Streaming", "Event Time", "Watermarks"],
+  "snowflake-id": ["Unique IDs", "64-bit", "Time-Ordered"],
+  "bloom-filter": ["Probabilistic", "Bit Array", "False Positives"],
+  geohash: ["Geospatial", "Nearby Search", "Grid Cells"],
+  "dns-resolution": ["DNS", "Caching", "TTL"],
+  "tls-handshake": ["TLS", "Round Trips", "Latency"],
+  "cdn-edge": ["CDN", "Edge Cache", "Origin"],
+  "lsm-tree": ["Storage Engine", "Memtable", "SSTable"],
+  "btree-lookup": ["Indexes", "B+ Tree", "Disk Pages"],
+  "raft-election": ["Consensus", "Leader Election", "Terms"],
+  "two-phase-vs-saga": ["Transactions", "2PC", "Saga"],
+  "region-failover": ["Multi-Region", "Failover", "RPO / RTO"],
 };
 
 export function getVizCategory(id: string): VizCategory {

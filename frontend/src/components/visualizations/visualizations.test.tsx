@@ -19,15 +19,15 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Visualizer Registry Catalog", () => {
-  it("categorizes all 22 visualizers into dsa and system-design", () => {
+  it("categorizes all 36 visualizers into dsa and system-design", () => {
     const catalog = listVizCatalog();
-    expect(catalog).toHaveLength(22);
+    expect(catalog).toHaveLength(36);
 
     const dsaItems = catalog.filter((c) => c.category === "dsa");
     const sdItems = catalog.filter((c) => c.category === "system-design");
 
     expect(dsaItems).toHaveLength(13);
-    expect(sdItems).toHaveLength(9);
+    expect(sdItems).toHaveLength(23);
 
     expect(getVizCategory("sliding-window")).toBe("dsa");
     expect(getVizCategory("binary-search")).toBe("dsa");
@@ -55,12 +55,12 @@ describe("VisualizationsView Component", () => {
     render(<VisualizationsView />);
 
     expect(screen.getByText("Interactive Visualizers")).toBeInTheDocument();
-    expect(screen.getByText(/22 visualizers · 13 Algorithms & DSA · 9 System Design/)).toBeInTheDocument();
+    expect(screen.getByText(/36 visualizers · 13 Algorithms & DSA · 23 System Design/)).toBeInTheDocument();
 
     // Verify category tabs
-    expect(screen.getByRole("button", { name: /^All \(22\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^All \(36\)/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Algorithms & DSA \(13\)/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^System Design \(9\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^System Design \(23\)/ })).toBeInTheDocument();
 
     // Default visualizer is sliding window
     expect(screen.getAllByText("Variable-size sliding window").length).toBeGreaterThan(0);
@@ -71,7 +71,7 @@ describe("VisualizationsView Component", () => {
     render(<VisualizationsView />);
 
     // Click System Design tab
-    const sdTab = screen.getByRole("button", { name: /^System Design \(9\)/ });
+    const sdTab = screen.getByRole("button", { name: /^System Design \(23\)/ });
     fireEvent.click(sdTab);
 
     const cacheAsideTitle = getViz("cache-aside")!.title;

@@ -156,7 +156,7 @@ def test_learn_seed_is_idempotent(db):
     )
     assert first == second
     assert first[0] == 7
-    assert first[2] == 333
+    assert first[2] == 342
 
 
 def test_system_design_problems_topic(auth_client, db):
@@ -186,7 +186,7 @@ def test_system_design_problems_topic(auth_client, db):
 
     topic = auth_client.get("/api/v1/learn/topics/sd-design-problems").json()
     assert topic["category_slug"] == "system-design"
-    assert topic["lesson_count"] == 18
+    assert topic["lesson_count"] == 22
     titles = {lesson["title"] for lesson in topic["lessons"]}
     assert "Design a URL Shortener" in titles
     assert "Design a News Feed (Twitter / X)" in titles
@@ -368,7 +368,7 @@ def test_system_design_curriculum_depth(auth_client, db):
     _seed_catalog(db)
 
     category = auth_client.get("/api/v1/learn/categories/system-design").json()
-    assert category["lesson_count"] == 61
+    assert category["lesson_count"] == 70
     slugs = [topic["slug"] for topic in category["topics"]]
 
     # Progression: method, foundations, building blocks, distributed systems,

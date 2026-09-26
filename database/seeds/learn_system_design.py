@@ -1626,6 +1626,9 @@ Candidates who treat DNS as magic give vague failover answers. Candidates who kn
 
 Browser cache → OS cache → Recursive resolver → Root → TLD → Authoritative
 
+
+:::viz dns-resolution {"hostname": "api.example.com", "warm": false, "ttl": 300}
+
 The first three are caches. Your control is limited to what the authoritative server returns and the TTL you set on it — everything upstream of that is somebody else's cache honouring, or ignoring, your TTL.
 
 > Memory cue: DNS is a globally distributed cache you can write to, but cannot invalidate.""",
@@ -1831,6 +1834,9 @@ This table is why retrying a failed GET or PUT is safe and retrying a POST is no
                     (
                         "Example",
                         """A mobile client in Sydney calls an API in Virginia. Round trip is about 200 ms.
+
+:::viz tls-handshake {"version": "1.2", "rtt": 200, "resume": false}
+
 
 Cold request over TLS 1.2: DNS (cached) + TCP (200) + TLS (400) + request (200) = roughly 800 ms before any backend work.
 
@@ -3045,6 +3051,9 @@ The strong answer pre-warms everything before 12:00, serves a heavily cached pag
 
 User → Edge PoP → Regional shield → Origin
 
+
+:::viz cdn-edge {"requests": ["EU:logo.png", "EU:logo.png", "US:logo.png", "EU:logo.png", "purge:logo.png", "EU:logo.png"], "ttl": 60}
+
 - Hundreds of **edge points of presence** close to users.
 - Often a **shield** or mid-tier that aggregates misses so the origin sees one request rather than three hundred.
 - Your **origin**, which should see very little traffic.
@@ -3248,6 +3257,9 @@ If you can answer those five for the two or three main entities, the store usual
 
 ### The storage engine distinction that matters
 
+
+:::viz lsm-tree {"writes": ["a=1", "b=2", "c=3", "a=4", "d=5", "e=6"], "memtableSize": 3, "read": "b"}
+
 Two designs underlie most operational databases, and knowing the difference is a genuine depth signal:
 
 **B-tree** (Postgres, MySQL/InnoDB) — updates in place, reads are a handful of page fetches, excellent for read-heavy and range queries. Writes cost random I/O and write amplification through the write-ahead log.
@@ -3399,7 +3411,9 @@ Consequences that follow directly:
                     ),
                     (
                         "How It Works",
-                        """### Index types
+                        """:::viz btree-lookup {"keys": [3, 8, 12, 17, 21, 26, 30, 35, 41, 47, 52, 58], "fanout": 3, "find": 35}
+
+### Index types
 
 | Type | Serves | Notes |
 | --- | --- | --- |
@@ -4905,6 +4919,18 @@ Events are a contract with consumers you may not know about. Rules that hold up:
 - Version the event type when you must break it, and publish both for a deprecation period.
 - Use a schema registry with compatibility checks if the organisation is large enough that you cannot ask everyone.
 
+### CQRS and materialized views
+
+CQRS stands for Command Query Responsibility Segregation. Plainly: use one model for writes and a different one for reads. The write side stores facts the way the business needs them (normalised tables, or the event log). The read side keeps copies shaped for each screen: a **materialized view** that is already joined, summed and sorted, so a page load is one cheap lookup.
+
+Events are what keep the two sides in step. Every write publishes an event; a small consumer updates the read model. That is the same outbox-and-consumer path as the rest of this lesson, so CQRS adds no new machinery, only a decision: which screens deserve their own pre-built view.
+
+- **Use it when** reads vastly outnumber writes, a page needs data from several services, or the read shape is very different from the write shape (a feed, a dashboard, a search index).
+- **The price** is eventual consistency: a user may save and, for a moment, not see their change on the read side. Say how you hide that: read your own write from the write side, or show the change optimistically in the client.
+- **Do not** introduce it for a plain CRUD service. Two models are twice the code and a second source of bugs.
+
+In an interview, the sentence is: "writes go to the source of truth, an event updates a read model built for that screen, and the read model is allowed to lag by a second." That one line covers most feed, timeline and reporting questions.
+
 ### Event sourcing (adjacent, not the same)
 
 Event-driven architecture means services communicate with events. **Event sourcing** means a service stores its state *as* a sequence of events, deriving current state by replaying them. It gives a perfect audit log and time travel, and it costs you: queries need projections, schema changes need care over years of stored events, and most teams do not need it. Knowing the distinction and not conflating them is a good signal.
@@ -5237,7 +5263,9 @@ The same shape appears constantly in real systems: charge the card and create th
                     ),
                     (
                         "How It Works",
-                        """### Two-phase commit
+                        """:::viz two-phase-vs-saga {"mode": "2pc", "fail": "none"}
+
+### Two-phase commit
 
 - **Prepare** — the coordinator asks each participant to prepare; each writes the change durably and promises it can commit, holding locks.
 - **Commit** — if all prepared successfully, the coordinator tells everyone to commit; otherwise everyone aborts.
@@ -5956,7 +5984,9 @@ Propose → Majority agrees → Decision is durable
                     ),
                     (
                         "How It Works",
-                        """### Raft, at the level an interview needs
+                        """:::viz raft-election {"nodes": 5, "first": 3, "failure": "crash"}
+
+### Raft, at the level an interview needs
 
 - Nodes are follower, candidate, or leader.
 - A follower that hears nothing from a leader within a randomised election timeout becomes a candidate and requests votes.
@@ -7482,6 +7512,9 @@ Easy to forget and important to mention:
 
 ### Failover
 
+
+:::viz region-failover {"mode": "async", "lagSeconds": 5, "failover": "auto"}
+
 - **RTO** — how long until service is restored.
 - **RPO** — how much data you may lose, which with asynchronous replication is the replication lag.
 
@@ -7958,6 +7991,7 @@ Part 3 is the one that makes this a staff-level topic: the technical answers (pe
 def system_design_topics() -> list[dict]:
     """Every topic in the System Design category, in curriculum order."""
     from database.seeds.learn_system_design_cases import case_study_topic
+    from database.seeds.sd_extra import extra_topics
 
     return [
         _playbook_topic(),
@@ -7983,5 +8017,6 @@ def system_design_topics() -> list[dict]:
         _security_topic(),
         _scalability_topic(),
         _operations_topic(),
+        *extra_topics(),
         case_study_topic(),
     ]

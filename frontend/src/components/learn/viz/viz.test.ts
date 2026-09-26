@@ -35,7 +35,8 @@ describe("viz registry", () => {
 
   it("registers every visualizer with fields, defaults, and a pure step function", () => {
     const ids = listViz().map((definition) => definition.id);
-    expect(ids).toHaveLength(22);
+    expect(ids.length).toBeGreaterThanOrEqual(23);
+    expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual(expect.arrayContaining(["sliding-window", "binary-search", "graph-traversal", "cache-aside", "consistent-hashing", "monotonic-stack", "fast-slow", "top-k-heap", "union-find", "topological-sort", "dijkstra", "dp-1d", "merge-intervals", "tree-traversal", "linked-list-reverse", "replication", "load-balancing", "queue-backpressure", "token-bucket", "idempotency", "quorum", "circuit-breaker"]));
     for (const definition of listViz()) {
       const params = definition.parse({});
