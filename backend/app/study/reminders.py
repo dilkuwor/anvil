@@ -1,6 +1,7 @@
 """Daily reminder emails: one per day, only when something is due, never a "you missed".
 
-Run from a cron job every 10–15 minutes (from backend/):
+The API runs :func:`run_scheduler` in the background every REMINDER_INTERVAL_MINUTES
+(default 10). Set it to 0 to disable that and run the sender from cron instead:
 
     python -m app.study.reminders
 
@@ -10,6 +11,7 @@ day they chose, who has not been sent one today yet.
 
 from __future__ import annotations
 
+import asyncio
 import html
 import logging
 from datetime import datetime, timedelta, timezone
@@ -80,10 +82,12 @@ def send_reminder(db: Session, user: User, *, now: datetime | None = None, force
     plan = service.get_today(db, user.id, today)
     open_tasks = [task for task in plan.tasks if not task.done and not task.optional]
 
-    # Claim the day first so a slow or failing send never doubles up.
-    settings.last_reminder_on = today
-    db.add(settings)
-    db.commit()
+    # Claim the day first so a slow or failing send never doubles up. A forced send
+    # (the "send test email" button) must not use up the day's real reminder.
+    if not force:
+        settings.last_reminder_on = today
+        db.add(settings)
+        db.commit()
 
     if not open_tasks and not force:
         return False
@@ -93,11 +97,12 @@ def send_reminder(db: Session, user: User, *, now: datetime | None = None, force
     try:
         send_email(to=user.email, subject=content["subject"], html=content["html"], text=content["text"])
     except EmailSendError as exc:
-        # Give the day back so the next cron run tries again.
         log.warning("reminder email failed for %s: %s", user.id, exc)
-        settings.last_reminder_on = None
-        db.add(settings)
-        db.commit()
+        if not force:
+            # Give the day back so the next run tries again.
+            settings.last_reminder_on = None
+            db.add(settings)
+            db.commit()
         return False
     return True
 
@@ -151,20 +156,44 @@ def reminder_email(plan: TodayOut, app_url: str) -> dict[str, str]:
     return {"subject": SUBJECT, "html": html_doc, "text": "\n".join(text_lines)}
 
 
-def main() -> int:
+def run_once() -> int:
+    """One scheduler tick: open a session, send what is due, never raise."""
     from app.common import models as _models  # noqa: F401
     from app.common.database import SessionLocal
 
     if not is_configured():
-        print("Email is not configured (RESEND_API_KEY / EMAIL_FROM). Nothing sent.")
         return 0
     db = SessionLocal()
     try:
         sent = send_due_reminders(db)
-        print(f"Sent {sent} reminder(s).")
+        if sent:
+            log.info("sent %d reminder(s)", sent)
+        return sent
+    except Exception:  # noqa: BLE001 - the loop must survive a bad tick
+        log.exception("reminder run failed")
         return 0
     finally:
         db.close()
+
+
+async def run_scheduler(interval_minutes: int, *, first_delay_seconds: float = 30) -> None:
+    """Background task for the API: check for due reminders every ``interval_minutes``.
+
+    The first check happens shortly after startup so a restart inside a user's send
+    window does not push their reminder back by a full interval.
+    """
+    await asyncio.sleep(first_delay_seconds)
+    while True:
+        await asyncio.to_thread(run_once)
+        await asyncio.sleep(interval_minutes * 60)
+
+
+def main() -> int:
+    if not is_configured():
+        print("Email is not configured (RESEND_API_KEY / EMAIL_FROM). Nothing sent.")
+        return 0
+    print(f"Sent {run_once()} reminder(s).")
+    return 0
 
 
 if __name__ == "__main__":

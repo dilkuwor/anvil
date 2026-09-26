@@ -309,6 +309,49 @@ def test_test_email_needs_configuration(auth_client):
     assert auth_client.post("/api/v1/study/settings/test-email").status_code == 503
 
 
+def test_test_email_does_not_use_up_the_day(auth_client, db, monkeypatch, email_enabled):
+    seed_problem_catalog(db)
+    _seed_lessons(db)
+    user = _user(db, auth_client)
+    service.update_settings(
+        db, user.id, StudySettingsUpdate(timezone="UTC", reminder_time="08:30", reminder_days=[3])
+    )
+    sent: list[dict] = []
+    monkeypatch.setattr(reminders, "send_email", lambda **kw: sent.append(kw))
+
+    assert auth_client.post("/api/v1/study/settings/test-email").status_code == 204
+    assert len(sent) == 1
+    assert service.get_or_create_settings(db, user.id).last_reminder_on is None
+
+    # The real reminder for that day still goes out (Thursday 2026-10-01, 08:45 UTC).
+    assert reminders.send_due_reminders(db, datetime(2026, 10, 1, 8, 45, tzinfo=timezone.utc)) == 1
+    assert len(sent) == 2
+
+
+def test_scheduler_tick_uses_send_due_reminders(monkeypatch, email_enabled):
+    calls: list[object] = []
+
+    class FakeSession:
+        def close(self) -> None:
+            calls.append("closed")
+
+    monkeypatch.setattr("app.common.database.SessionLocal", FakeSession)
+    monkeypatch.setattr(reminders, "send_due_reminders", lambda db, now=None: calls.append("sent") or 2)
+    assert reminders.run_once() == 2
+    assert calls == ["sent", "closed"]
+
+    def boom(db, now=None):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(reminders, "send_due_reminders", boom)
+    assert reminders.run_once() == 0
+
+
+def test_scheduler_tick_skips_when_email_not_configured(monkeypatch):
+    monkeypatch.setattr(reminders, "send_due_reminders", lambda db, now=None: (_ for _ in ()).throw(AssertionError("must not run")))
+    assert reminders.run_once() == 0
+
+
 def test_failed_send_is_retried_next_run(auth_client, db, monkeypatch):
     seed_problem_catalog(db)
     _seed_lessons(db)

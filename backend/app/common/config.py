@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     frontend_base_url: str = ""
     email_verification_token_hours: int = 24
     email_verification_max_per_hour: int = 5
+    # The API checks for due reminder emails this often. 0 turns the in-app
+    # scheduler off (run `python -m app.study.reminders` from cron instead).
+    reminder_interval_minutes: int = 10
 
     cors_origins: str = "http://localhost:3000"
 

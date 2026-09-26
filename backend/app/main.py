@@ -1,3 +1,7 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,6 +15,7 @@ from app.interviews.router import router as interviews_router
 from app.learn.router import router as learn_router
 from app.lists.router import router as lists_router
 from app.notes.router import router as notes_router
+from app.study import reminders
 from app.study.router import router as study_router
 from app.problems.router import router as problems_router
 from app.progress.router import router as progress_router
@@ -25,7 +30,22 @@ from app.users.router import router as users_router
 settings = get_settings()
 configure_logging(settings)
 
-app = FastAPI(title=settings.app_name, version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    task: asyncio.Task[None] | None = None
+    if settings.reminder_interval_minutes > 0:
+        task = asyncio.create_task(reminders.run_scheduler(settings.reminder_interval_minutes))
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+
+
+app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 register_exception_handlers(app)
 
 app.add_middleware(
