@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CircleCheck,
   CircleHelp,
   ListOrdered,
@@ -341,83 +343,89 @@ export function LessonView({ slug }: { slug: string }) {
             {studyRail}
           </div>
 
-          {/* Sticky Bottom Navigation Bar */}
-          <div className="sticky bottom-3 z-10 rounded-2xl border border-steel-800/90 bg-steel-900/95 px-4 py-3 shadow-xl backdrop-blur-xl">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              {data.previous ? (
-                <Button asChild variant="ghost" size="sm" className="shrink-0 justify-start text-xs">
-                  <Link
-                    href={data.previous.href}
-                    title={data.previous.title}
-                    aria-label={`Previous lesson: ${data.previous.title}`}
-                  >
-                    ← Previous <kbd className="ml-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">[</kbd>
-                  </Link>
-                </Button>
-              ) : (
-                <span className="shrink-0 px-2 text-xs text-muted-foreground">First lesson</span>
-              )}
+          {/* Floating action dock */}
+          <div className="pointer-events-none sticky bottom-4 z-10 flex justify-center">
+            <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full border border-steel-800/90 bg-steel-900/95 p-1.5 shadow-xl backdrop-blur-xl">
+              <DockLink direction="previous" href={data.previous?.href} title={data.previous?.title} shortcut="[" />
 
-              <div className="flex items-center gap-2">
+              {topicLessons.length > 0 ? (
+                <>
+                  <DockDivider />
+                  <div
+                    className="flex items-center gap-2 px-2"
+                    aria-label={`Lesson ${lessonIdx + 1} of ${topicLessons.length} in ${data.topic_title}`}
+                    title={`Lesson ${lessonIdx + 1} of ${topicLessons.length}`}
+                  >
+                    <span className="hidden items-center gap-1 sm:flex" aria-hidden>
+                      {topicLessons.map((item, i) => (
+                        <span
+                          key={item.id}
+                          className={cn(
+                            "h-1.5 rounded-full transition-all",
+                            i === lessonIdx
+                              ? "w-4 bg-accent"
+                              : item.status === "COMPLETED"
+                                ? "w-1.5 bg-emerald-500/70"
+                                : "w-1.5 bg-steel-700",
+                          )}
+                        />
+                      ))}
+                    </span>
+                    <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
+                      {lessonIdx + 1}/{topicLessons.length}
+                    </span>
+                  </div>
+                </>
+              ) : null}
+
+              <DockDivider />
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9 gap-1.5 rounded-full px-3 text-xs text-muted-foreground hover:text-foreground lg:hidden"
+                onClick={() => setCurriculumOpen(true)}
+              >
+                <ListOrdered className="h-3.5 w-3.5 text-accent" />
+                <span className="hidden sm:inline">Outline</span>
+              </Button>
+
+              {signedIn ? (
                 <Button
-                  type="button"
-                  variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 px-3 text-xs lg:hidden"
-                  onClick={() => setCurriculumOpen(true)}
-                >
-                  <ListOrdered className="h-3.5 w-3.5 text-accent" />
-                  <span>Outline</span>
-                  <kbd className="hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">O</kbd>
-                </Button>
-
-                {signedIn ? (
-                  <Button
-                    size="sm"
-                    variant={isCompleted ? "secondary" : "default"}
-                    className={cn(
-                      "h-8 gap-1.5 text-xs font-bold transition-all",
-                      isCompleted ? "bg-steel-800 text-emerald-400 border border-emerald-500/30" : "bg-accent text-white hover:bg-accent-light",
-                    )}
-                    disabled={complete.isPending || isCompleted}
-                    onClick={() => complete.mutate()}
-                  >
-                    <CheckCircle2 className={cn("h-3.5 w-3.5", isCompleted ? "text-emerald-400" : "text-white")} />
-                    <span>{isCompleted ? "Completed" : complete.isPending ? "Saving…" : "Mark Complete"}</span>
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs font-bold bg-accent text-white hover:bg-accent-light"
-                    onClick={() => setAuthPrompt("progress")}
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-white" />
-                    <span>Mark Complete</span>
-                  </Button>
-                )}
-              </div>
-
-              {data.next ? (
-                <Button
-                  asChild
-                  variant={isCompleted ? "default" : "ghost"}
-                  size="sm"
+                  variant={isCompleted ? "secondary" : "default"}
                   className={cn(
-                    "shrink-0 justify-end text-xs font-semibold",
-                    isCompleted && "bg-accent text-white hover:bg-accent-light shadow-2xs font-bold",
+                    "h-9 gap-1.5 rounded-full px-4 text-xs font-bold transition-all",
+                    isCompleted
+                      ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 disabled:opacity-100"
+                      : "bg-accent text-white hover:bg-accent-light",
                   )}
+                  disabled={complete.isPending || isCompleted}
+                  onClick={() => complete.mutate()}
                 >
-                  <Link
-                    href={data.next.href}
-                    title={data.next.title}
-                    aria-label={`Next lesson: ${data.next.title}`}
-                  >
-                    <kbd className="mr-1.5 hidden rounded bg-steel-800 px-1 py-0.5 text-[10px] text-muted-foreground sm:inline-block font-mono">]</kbd> Next →
-                  </Link>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>{isCompleted ? "Completed" : complete.isPending ? "Saving…" : "Mark Complete"}</span>
                 </Button>
               ) : (
-                <span className="shrink-0 px-2 text-xs text-muted-foreground">Last lesson</span>
+                <Button
+                  size="sm"
+                  className="h-9 gap-1.5 rounded-full bg-accent px-4 text-xs font-bold text-white hover:bg-accent-light"
+                  onClick={() => setAuthPrompt("progress")}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Mark Complete</span>
+                </Button>
               )}
+
+              <DockDivider />
+              <DockLink
+                direction="next"
+                href={data.next?.href}
+                title={data.next?.title}
+                shortcut="]"
+                highlight={isCompleted && Boolean(data.next)}
+              />
             </div>
           </div>
         </div>
@@ -453,5 +461,56 @@ export function LessonView({ slug }: { slug: string }) {
     </AskAiController>
   ) : (
     page
+  );
+}
+
+function DockDivider() {
+  return <span className="mx-0.5 h-5 w-px shrink-0 bg-steel-800" aria-hidden />;
+}
+
+function DockLink({
+  direction,
+  href,
+  title,
+  shortcut,
+  highlight = false,
+}: {
+  direction: "previous" | "next";
+  href?: string;
+  title?: string;
+  shortcut: string;
+  highlight?: boolean;
+}) {
+  const isNext = direction === "next";
+  const Arrow = isNext ? ChevronRight : ChevronLeft;
+  const label = isNext ? "Next" : "Prev";
+  const base = "flex h-9 items-center gap-1 rounded-full px-3 text-xs font-medium transition-colors";
+
+  if (!href) {
+    return (
+      <span className={cn(base, "cursor-not-allowed text-muted-foreground/40")} aria-disabled title={`No ${label.toLowerCase()} lesson`}>
+        {!isNext ? <Arrow className="h-4 w-4" /> : null}
+        <span className="hidden sm:inline">{label}</span>
+        {isNext ? <Arrow className="h-4 w-4" /> : null}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      title={`${isNext ? "Next" : "Previous"}: ${title} (${shortcut})`}
+      aria-label={`${isNext ? "Next" : "Previous"} lesson: ${title}`}
+      className={cn(
+        base,
+        highlight
+          ? "bg-accent text-white hover:bg-accent-light"
+          : "text-muted-foreground hover:bg-steel-800 hover:text-foreground",
+      )}
+    >
+      {!isNext ? <Arrow className="h-4 w-4" /> : null}
+      <span className="hidden sm:inline">{label}</span>
+      {isNext ? <Arrow className="h-4 w-4" /> : null}
+    </Link>
   );
 }
