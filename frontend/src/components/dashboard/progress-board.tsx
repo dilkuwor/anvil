@@ -65,11 +65,7 @@ export function ProgressBoard() {
       <div className="min-w-0 space-y-5">
         <PracticeOverview data={data} goal={goal} />
 
-        <ActivityHeatmap
-          days={data.activity_calendar ?? []}
-          currentStreak={data.current_streak}
-          longestStreak={data.longest_streak}
-        />
+        <ActivityHeatmap days={data.activity_calendar ?? []} />
 
         <div className="grid items-start gap-5 lg:grid-cols-2">
           <div className="space-y-5">

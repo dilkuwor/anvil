@@ -30,15 +30,7 @@ function toKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export const ActivityHeatmap = memo(function ActivityHeatmap({
-  days,
-  currentStreak,
-  longestStreak,
-}: {
-  days: ActivityDay[];
-  currentStreak: number;
-  longestStreak: number;
-}) {
+export const ActivityHeatmap = memo(function ActivityHeatmap({ days }: { days: ActivityDay[] }) {
   const years = useMemo(() => {
     const found = new Set(days.map((day) => Number(day.date.slice(0, 4))));
     found.add(new Date().getUTCFullYear());
@@ -130,23 +122,10 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
         </div>
       </div>
 
-      <dl className="mt-3.5 grid grid-cols-3 gap-2.5 text-sm">
-        <Stat label="Active days" value={String(activeDays)} />
-        <Stat label="Current streak" value={`${currentStreak} days`} />
-        <Stat label="Best streak" value={`${longestStreak} days`} />
-      </dl>
     </SectionCard>
   );
 });
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-steel-800/80 bg-steel-950/40 px-3 py-2 shadow-2xs">
-      <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 text-base font-bold tabular-nums tracking-tight text-foreground">{value}</dd>
-    </div>
-  );
-}
 
 function buildGrid(year: number, byDate: Map<string, ActivityDay>) {
   const start = new Date(Date.UTC(year, 0, 1));

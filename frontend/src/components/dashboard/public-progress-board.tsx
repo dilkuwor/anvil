@@ -38,11 +38,7 @@ export function PublicProgressBoard({ username }: { username: string }) {
       </aside>
       <div className="min-w-0 space-y-5">
         <PracticeOverview data={toPracticeOverview(progress)} />
-        <ActivityHeatmap
-          days={progress.activity_calendar}
-          currentStreak={progress.current_streak}
-          longestStreak={progress.longest_streak}
-        />
+        <ActivityHeatmap days={progress.activity_calendar} />
         <TopicProgress rows={progress.topic_progress} hasSolved={progress.total_solved > 0} />
       </div>
     </div>
