@@ -11,8 +11,6 @@ import { api, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/interview";
 import { loginHref, registerHref, useSession } from "@/lib/session";
 
-const WORKFLOW = ["Practice", "Learn", "Interview", "Improve"] as const;
-
 const INITIAL_CODE = `class Solution {
     public int[] twoSum(int[] nums, int target) {
         Map<Integer, Integer> map = new HashMap<>();
@@ -167,25 +165,18 @@ export function HeroPreview() {
           <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
         </div>
-        <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Interactive Workspace</p>
-        <p className="ml-auto hidden min-w-0 items-center gap-x-2 text-[11px] font-medium text-muted-foreground sm:flex">
-          {WORKFLOW.map((step, index) => (
-            <span key={step} className="inline-flex items-center gap-x-2">
-              {index > 0 ? <span className="opacity-40" aria-hidden>→</span> : null}
-              <span className={index === 0 ? "text-accent font-semibold" : undefined}>{step}</span>
-            </span>
-          ))}
+        <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sandbox</p>
+        <p className="ml-auto flex min-w-0 items-center gap-x-2 text-[11px] font-medium text-muted-foreground">
+          <span className="hidden sm:inline">Java</span>
+          <span className="hidden opacity-40 sm:inline" aria-hidden>·</span>
+          <span className="hidden sm:inline">hidden tests</span>
+          <span className="hidden opacity-40 sm:inline" aria-hidden>·</span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+            Live
+          </span>
         </p>
       </div>
-
-      <p className="flex flex-wrap items-center gap-x-2 border-b border-steel-800/80 bg-steel-950/30 px-4 py-1.5 text-[11px] text-muted-foreground sm:hidden">
-        {WORKFLOW.map((step, index) => (
-          <span key={step} className="inline-flex items-center gap-x-2">
-            {index > 0 ? <span className="opacity-40" aria-hidden>→</span> : null}
-            <span>{step}</span>
-          </span>
-        ))}
-      </p>
 
       <div className="grid min-h-0 md:grid-cols-2">
         <section className="flex min-h-0 flex-col border-b border-steel-800/80 md:border-b-0 md:border-r">
@@ -247,7 +238,7 @@ export function HeroPreview() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-6 px-2 text-[11px] border-accent/40 text-accent hover:bg-accent/10"
+                    className="h-8 px-3 text-xs border-accent/40 text-accent hover:bg-accent/10"
                     disabled={starting}
                     onClick={() => (session ? setShowInterviewer(true) : void startMock())}
                   >
@@ -377,7 +368,7 @@ export function HeroPreview() {
               >
                 {runState === "running" ? "Running…" : runState === "passed" ? "✓ 3 tests passed" : "Run sample tests to see results."}
               </p>
-              <Button size="sm" className="h-6 px-2 text-[11px]" disabled={runState === "running"} onClick={handleRun}>
+              <Button size="sm" className="h-8 px-3 text-xs" disabled={runState === "running"} onClick={handleRun}>
                 {runState === "running" ? "Running..." : "▶ Run"}
               </Button>
             </div>

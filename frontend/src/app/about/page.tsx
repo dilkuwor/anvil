@@ -89,7 +89,7 @@ export default function AboutPage() {
   return (
     <div className="flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-clip">
       <PublicHeader />
-      <main className="ia-content flex-1 py-10 sm:py-14">
+      <main className="ia-content max-w-5xl flex-1 py-10 sm:py-14">
         <PageHeader
           title="About Anvil"
           description="Interview preparation built around how people actually remember things."

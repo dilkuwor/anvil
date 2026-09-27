@@ -4,7 +4,7 @@ export const SITE_NAME = "Anvil";
 export const SITE_TAGLINE = "Build Skills. Break Limits. Ace the Interview.";
 export const SITE_DEFAULT_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
 export const SITE_DESCRIPTION =
-  "Anvil is a ByteTech LLC product that helps software engineers prepare for technical interviews with coding problems, system design, AI/ML lessons, mock interviews, and cheat sheets.";
+  "Anvil is a ByteTech LLC product that helps software engineers prepare for technical interviews with lessons that check understanding, spaced review, coding problems, system design, AI/ML, and mock interviews.";
 export const SITE_PUBLISHER = "ByteTech LLC";
 
 const PRIVATE_PATHS = [

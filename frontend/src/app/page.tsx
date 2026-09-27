@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Binary, BookOpen, Code2, ListChecks, MessageSquare, Network, Sparkles, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Binary,
+  BookOpen,
+  Brain,
+  CalendarCheck,
+  CircleDot,
+  Code2,
+  ListChecks,
+  MessageSquare,
+  Network,
+  Sparkles,
+  Zap,
+} from "lucide-react";
 
 import { HeroDesignFloat } from "@/components/landing/hero-design-float";
 import { HeroPreview } from "@/components/landing/hero-preview";
@@ -19,48 +32,51 @@ export const metadata: Metadata = pageMeta({
 
 const FEATURES = [
   {
+    title: "Lessons that stick",
+    body: "Short lessons with a knowledge check at the end and spaced review after.",
+    icon: BookOpen,
+    href: "/learn",
+  },
+  {
     title: "DSA & Coding",
-    body: "Practice interview patterns, algorithms, and coding problems.",
+    body: "Interview patterns and problems, run in a sandbox against hidden tests.",
     icon: Binary,
     href: "/problems",
   },
   {
     title: "System Design",
-    body: "Learn scalable architecture, capacity estimation, APIs, databases, caching, and distributed systems.",
+    body: "Architecture, capacity, data, and a simulator that shows designs under load.",
     icon: Network,
     href: "/system-design",
   },
   {
-    title: "Behavioral",
-    body: "Build a bank of STAR stories, then sit a mock loop where the interviewer probes each one.",
-    icon: MessageSquare,
-    href: "/behavioral",
-  },
-  {
     title: "AI & Machine Learning",
-    body: "Prepare for modern AI interviews covering ML, LLMs, RAG, agents, and production AI.",
+    body: "ML fundamentals, LLMs, RAG, agents, evaluation, and production AI.",
     icon: Sparkles,
     href: "/learn/ai-ml",
   },
   {
     title: "Mock Interviews",
-    body: "Coding, system design, and behavioral interviews with an AI interviewer and structured feedback.",
-    icon: Code2,
-    href: "/problems",
+    body: "Coding, design, and behavioral rounds with an AI interviewer and feedback.",
+    icon: MessageSquare,
+    href: "/system-design/interview",
   },
   {
-    title: "Cheat Sheets & Notes",
-    body: "One-page references for every topic, plus your own notes and STAR stories in one place.",
-    icon: ListChecks,
-    href: "/cheatsheets",
+    title: "A plan for today",
+    body: "What is due, the next lesson, the next problem, spread over the weeks you have.",
+    icon: CalendarCheck,
+    href: "/today",
   },
 ];
 
+const PROOF = ["342 lessons", "178 coding problems", "57 visualizations", "3 kinds of mock interview"];
+
 const STEPS = [
-  { n: "01", title: "Solve", body: "Practice realistic interview problems.", icon: Code2 },
-  { n: "02", title: "Learn", body: "Understand the concepts and patterns behind them.", icon: BookOpen },
-  { n: "03", title: "Interview", body: "Practice explaining your thinking through mock interviews.", icon: MessageSquare },
-  { n: "04", title: "Improve", body: "Review interview feedback, target weak areas, and use cheat sheets.", icon: ListChecks },
+  { n: "01", title: "Learn", body: "A short lesson with a clear mental model.", icon: BookOpen },
+  { n: "02", title: "Check", body: "A few questions. All correct once and it is checked.", icon: CircleDot },
+  { n: "03", title: "Remember", body: "Questions return right before you would forget.", icon: Brain },
+  { n: "04", title: "Practice", body: "The linked problems and design questions.", icon: Code2 },
+  { n: "05", title: "Interview", body: "Explain your thinking and get feedback.", icon: ListChecks },
 ];
 
 export default function HomePage() {
@@ -74,13 +90,12 @@ export default function HomePage() {
             <div className="absolute left-1/2 top-0 h-[28rem] w-[46rem] -translate-x-1/2 bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_18%,transparent),transparent)]" />
             <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(var(--steel-800)_1px,transparent_1px),linear-gradient(90deg,var(--steel-800)_1px,transparent_1px)] [background-size:52px_52px] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />
           </div>
-          <div className="ia-content relative pt-14 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
-            <div className="grid min-w-0 items-center gap-6 lg:grid-cols-[minmax(17rem,30rem)_minmax(0,1fr)] lg:gap-8">
+          <div className="ia-content relative max-w-6xl py-16 sm:py-20 lg:py-24">
+            <div className="grid min-w-0 items-center gap-8 lg:grid-cols-[minmax(0,11fr)_minmax(0,10fr)] lg:gap-14">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[12px] font-medium text-accent shadow-xs">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                <Zap className="h-3.5 w-3.5" aria-hidden />
-                Forge Your Interview Skills
+              <div className="inline-flex items-center gap-2 rounded-full border border-steel-800 bg-steel-900/80 px-3 py-1 text-[12px] font-medium text-muted-foreground shadow-xs">
+                <Zap className="h-3.5 w-3.5 text-accent" aria-hidden />
+                Interview prep that remembers for you
               </div>
               <h1 className="mt-4 text-[2.25rem] font-bold leading-[1.08] tracking-tight text-balance sm:text-[3.25rem] lg:text-[3.4rem]">
                 Build skills.
@@ -92,8 +107,8 @@ export default function HomePage() {
                 </span>
               </h1>
               <p className="mt-4 max-w-xl text-[15px] leading-7 text-muted-foreground">
-                Everything you need to prepare for software engineering interviews — coding, system design, AI/ML,
-                AI-powered mock interviews, and focused practice.
+                Lessons that check what you understood, review that brings it back before you forget, and realistic
+                practice: coding, system design, AI/ML, and mock interviews.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Button asChild size="lg" className="gap-2 shadow-sm hover:shadow-md">
@@ -108,42 +123,62 @@ export default function HomePage() {
                   variant="outline"
                   className="bg-card/70 backdrop-blur-sm"
                 >
-                  <Link href="/learn">Explore Learning</Link>
+                  <Link href="/learn">Explore Lessons</Link>
                 </Button>
               </div>
+              <p className="mt-6 text-[13px] text-muted-foreground">
+                {PROOF.map((item, index) => (
+                  <span key={item}>
+                    {index > 0 ? <span className="mx-2 text-steel-600">·</span> : null}
+                    {item}
+                  </span>
+                ))}
+              </p>
             </div>
 
             <HeroDesignFloat />
             </div>
 
-            <div className="mt-8">
+          </div>
+        </section>
+
+        <section className="border-b border-steel-800">
+          <div className="ia-content max-w-6xl py-14 lg:py-16">
+            <p className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Try it</p>
+            <h2 className="mt-1.5 text-center text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">
+              Solve a problem right here.
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-center text-[14px] text-muted-foreground">
+              The same workspace you get inside: problem, editor, tests, and an interviewer beside you.
+            </p>
+            <div className="mt-8 lg:mt-10">
               <HeroPreview />
             </div>
           </div>
         </section>
 
         <section className="border-b border-steel-800 bg-steel-900/60">
-          <div className="ia-content py-12 lg:py-14">
+          <div className="ia-content max-w-6xl py-14 lg:py-16">
             <p className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Features</p>
             <h2 className="mt-1.5 text-center text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">
               Everything you need for the interview.
             </h2>
-            <div className="mt-8 overflow-hidden rounded-2xl border border-steel-800 shadow-xs">
-              <div className="grid gap-px bg-steel-800 sm:grid-cols-2">
+            <div className="mt-8 overflow-hidden rounded-2xl border border-steel-800 shadow-xs lg:mt-10">
+              <div className="grid gap-px bg-steel-800 sm:grid-cols-2 lg:grid-cols-3">
                 {FEATURES.map((item) => (
                   <Link
                     key={item.title}
                     href={item.href}
-                    className="group flex cursor-pointer items-start gap-4 bg-steel-900 px-6 py-6 transition-all duration-200 hover:bg-steel-950/70"
+                    className="group flex cursor-pointer items-start gap-3.5 bg-steel-900 px-5 py-5 transition-all duration-200 hover:bg-steel-950/70"
                   >
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent transition-all duration-200 group-hover:scale-105 group-hover:border-accent/40 group-hover:bg-accent/15 group-hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]">
-                      <item.icon className="h-5 w-5" aria-hidden />
+                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/10 text-accent transition-all duration-200 group-hover:scale-105 group-hover:border-accent/40 group-hover:bg-accent/15 group-hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]">
+                      <item.icon className="h-4.5 w-4.5" aria-hidden />
                     </span>
                     <div className="min-w-0">
                       <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-accent">
                         {item.title}
                       </h3>
-                      <p className="mt-1 max-w-sm text-[13px] leading-6 text-muted-foreground">{item.body}</p>
+                      <p className="mt-1 text-[13px] leading-6 text-muted-foreground">{item.body}</p>
                     </div>
                   </Link>
                 ))}
@@ -153,29 +188,29 @@ export default function HomePage() {
         </section>
 
         <section className="border-b border-steel-800 bg-[color-mix(in_srgb,var(--accent)_5%,var(--background))]">
-          <div className="ia-content py-8 lg:py-10">
+          <div className="ia-content max-w-6xl py-12 lg:py-14">
             <p className="text-center text-[11px] font-medium uppercase tracking-[0.16em] text-accent">How it works</p>
-            <h2 className="mt-1.5 text-center text-xl font-semibold tracking-tight sm:text-2xl">Practice with a purpose.</h2>
-            <ol className="mt-5 flex flex-col md:flex-row">
+            <h2 className="mt-1.5 text-center text-xl font-semibold tracking-tight sm:text-2xl">Built around how memory works.</h2>
+            <ol className="mt-8 flex flex-col lg:flex-row">
               {STEPS.map((step, index) => {
                 const last = index === STEPS.length - 1;
                 return (
-                  <li key={step.n} className="flex min-w-0 gap-4 md:flex-1 md:flex-col">
-                    <div className="flex flex-col items-center md:flex-row md:items-center">
+                  <li key={step.n} className="flex min-w-0 gap-4 lg:flex-1 lg:flex-col">
+                    <div className="flex flex-col items-center lg:flex-row lg:items-center">
                       <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/25 bg-steel-900 text-accent">
                         <step.icon className="h-4 w-4" aria-hidden />
                       </span>
                       {last ? null : (
                         <span
                           aria-hidden
-                          className="w-px min-h-6 flex-1 bg-steel-700 md:mx-3 md:h-px md:min-h-0 md:w-auto md:min-w-4 md:flex-1"
+                          className="w-px min-h-6 flex-1 bg-steel-700 lg:mx-3 lg:h-px lg:min-h-0 lg:w-auto lg:min-w-4 lg:flex-1"
                         />
                       )}
                     </div>
-                    <div className={last ? "pb-0 pt-0.5 md:pt-3" : "pb-6 pt-0.5 md:pb-0 md:pr-4 md:pt-3"}>
+                    <div className={last ? "pb-0 pt-0.5 lg:pt-3" : "pb-6 pt-0.5 lg:pb-0 lg:pr-4 lg:pt-3"}>
                       <p className="text-[11px] font-medium tabular-nums tracking-[0.12em] text-accent">{step.n}</p>
                       <h3 className="mt-0.5 text-sm font-semibold tracking-tight">{step.title}</h3>
-                      <p className="mt-1 max-w-[18ch] text-[13px] leading-5 text-muted-foreground md:max-w-none">
+                      <p className="mt-1 max-w-[40ch] text-[13px] leading-5 text-muted-foreground lg:max-w-none">
                         {step.body}
                       </p>
                     </div>
@@ -187,22 +222,22 @@ export default function HomePage() {
         </section>
 
         <section className="bg-[color-mix(in_srgb,var(--accent)_8%,var(--steel-900))]">
-          <div className="ia-content py-14 lg:py-16">
+          <div className="ia-content max-w-6xl py-14 lg:py-16">
             <div className="rounded-2xl border border-steel-800 bg-[color-mix(in_srgb,var(--accent)_6%,var(--steel-900))] px-6 py-8 sm:px-8 lg:flex lg:items-start lg:justify-between lg:gap-16 lg:px-10 lg:py-10">
               <h2 className="max-w-[22ch] text-xl font-semibold tracking-tight sm:text-2xl">
-                One workflow for the entire interview loop.
+                One loop from first read to interview day.
               </h2>
               <div className="mt-4 max-w-xl lg:mt-0">
                 <p className="text-[15px] leading-7 text-muted-foreground">
-                  Practice problems, learn the underlying concepts, prepare for system design and AI/ML interviews,
-                  simulate interviews, and review your weak areas with focused cheat sheets.
+                  Learn a concept, check that it landed, let spaced review keep it, then apply it in problems, design
+                  questions, and mock interviews. Today shows what to do next, and nothing is locked.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild>
                     <Link href="/problems">Start Practicing</Link>
                   </Button>
                   <Button asChild variant="secondary">
-                    <Link href="/learn">Explore Learning</Link>
+                    <Link href="/learn">Explore Lessons</Link>
                   </Button>
                 </div>
               </div>
