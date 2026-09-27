@@ -169,8 +169,15 @@ function LessonHeading({ title }: { title: string }) {
   const id = headingSlug(title);
   const reader = useLessonReader();
   const reading = reader?.activeId === id;
-  // A calm, steady marker on the section being read aloud so eyes and ears stay together.
-  const activeClass = reading ? "-mx-2 rounded-lg bg-accent/[0.08] px-2 ring-1 ring-accent/30" : "";
+  // A calm, steady marker on the section being read aloud so eyes and ears stay together:
+  // a slim accent bar in the left gutter, aligned with the first text line, nothing moves.
+  // It breathes slowly while audio plays and holds still when paused (see globals.css).
+  const activeClass = reading
+    ? cn(
+        "relative before:absolute before:-left-3.5 before:top-2 before:h-[1lh] before:w-[3px] before:rounded-full before:bg-accent before:content-[''] sm:before:-left-4",
+        reader?.status === "playing" && "reader-active-playing",
+      )
+    : "";
   const numbered = title.match(/^(\d+)\.\s+(.*)$/);
   if (numbered) {
     return (

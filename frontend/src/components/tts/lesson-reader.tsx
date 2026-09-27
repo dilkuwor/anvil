@@ -454,7 +454,11 @@ export function SectionListenButton({ id, className }: { id: string; className?:
       )}
       onClick={() => (active ? reader.toggle() : reader.playSection(id))}
     >
-      {active ? <AudioLines className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+      {active ? (
+        <AudioLines className={cn("h-3.5 w-3.5", reader.status === "playing" && "reader-wave")} />
+      ) : (
+        <Volume2 className="h-3.5 w-3.5" />
+      )}
     </button>
   );
 }

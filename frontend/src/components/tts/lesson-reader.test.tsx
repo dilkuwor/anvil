@@ -70,7 +70,7 @@ describe("LessonReader", () => {
     fireEvent.click(screen.getByLabelText("Next section"));
     await waitFor(() => expect(screen.getByText(/Reading · 2 of 4/)).toBeInTheDocument());
     const heading = screen.getByRole("heading", { level: 2, name: /Mental Model/ });
-    expect(heading.className).toContain("ring-1");
+    expect(heading.className).toContain("before:bg-accent");
     expect(screen.getByLabelText("Reading this section")).toBeInTheDocument();
     expect(window.localStorage.getItem("anvil-tts-pos:lesson-1")).toBe("1");
 

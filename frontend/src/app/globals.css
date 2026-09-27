@@ -361,3 +361,40 @@ select.select-field:focus-visible {
     animation: none !important;
   }
 }
+
+/* Lesson reader: the heading being read aloud breathes slowly while audio plays, and holds still when paused. */
+@keyframes reader-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes reader-wave {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.72);
+  }
+}
+
+.reader-active-playing::before {
+  animation: reader-breathe 2.6s ease-in-out infinite;
+}
+
+.reader-wave {
+  transform-origin: center;
+  animation: reader-wave 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-active-playing::before,
+  .reader-wave {
+    animation: none;
+  }
+}
