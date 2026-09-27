@@ -184,6 +184,29 @@ export type StudySettingsUpdate = Partial<Omit<StudySettings, "email_configured"
   clear_interview_date?: boolean;
 };
 
+export type ReminderDelivery = {
+  id: string;
+  day: string;
+  kind: "daily" | "test";
+  status: "sent" | "skipped" | "failed";
+  reason: "nothing_due" | "no_email" | "provider_error" | "error" | null;
+  subject: string;
+  task_count: number;
+  task_titles: string[];
+  error: string | null;
+  created_at: string | null;
+};
+
+export type ReminderStatus = {
+  enabled: boolean;
+  email_configured: boolean;
+  timezone: string;
+  reminder_time: string;
+  next_at: string | null;
+  service: { last_run_at: string | null; last_status: string | null; interval_minutes: number; healthy: boolean };
+  history: ReminderDelivery[];
+};
+
 export type DesignOutline = {
   slug: string;
   title: string;
@@ -201,6 +224,7 @@ export const studyKeys = {
   reviews: ["study", "reviews"] as const,
   path: ["study", "path"] as const,
   settings: ["study", "settings"] as const,
+  reminderStatus: ["study", "settings", "reminders"] as const,
   readiness: ["study", "readiness"] as const,
   memory: ["study", "memory"] as const,
   progress: ["study", "progress"] as const,
@@ -332,6 +356,14 @@ export function useStudySettings() {
   });
 }
 
+export function useReminderStatus() {
+  return useQuery({
+    queryKey: studyKeys.reminderStatus,
+    queryFn: () => api.get<ReminderStatus>("/api/v1/study/settings/reminders"),
+    staleTime: 15_000,
+  });
+}
+
 export function useSaveStudySettings() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -340,6 +372,7 @@ export function useSaveStudySettings() {
       queryClient.setQueryData(studyKeys.settings, settings);
       queryClient.invalidateQueries({ queryKey: studyKeys.path });
       queryClient.invalidateQueries({ queryKey: studyKeys.today });
+      queryClient.invalidateQueries({ queryKey: studyKeys.reminderStatus });
     },
   });
 }

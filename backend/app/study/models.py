@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint, Uuid, func
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.database import Base
@@ -107,4 +107,29 @@ class StudyDay(Base):
     coverage: Mapped[float | None] = mapped_column(Float, nullable=True)
     retention: Mapped[float | None] = mapped_column(Float, nullable=True)
     readiness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ReminderDelivery(Base):
+    """One row per reminder attempt for a user: sent, skipped with a reason, or failed with the error.
+
+    This is what the settings page shows, so a learner can see exactly what the reminder
+    service did on each day instead of wondering whether it ran.
+    """
+
+    __tablename__ = "reminder_deliveries"
+    __table_args__ = (Index("ix_reminder_deliveries_user_created", "user_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)  # the learner's local day the reminder was for
+    kind: Mapped[str] = mapped_column(String(10), nullable=False, default="daily")  # daily | test
+    status: Mapped[str] = mapped_column(String(10), nullable=False)  # sent | skipped | failed
+    reason: Mapped[str | None] = mapped_column(String(40), nullable=True)  # nothing_due | no_email | provider_error | error
+    subject: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    task_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    task_titles: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

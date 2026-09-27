@@ -5,14 +5,17 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import { PageHeader } from "@/components/layout/page-header";
+import { ReminderLog } from "@/components/study/reminder-log";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionCard } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api, ApiError } from "@/lib/api";
-import { browserTimezone, useSaveStudySettings, useStudySettings, type StudySettings } from "@/lib/study";
+import { browserTimezone, studyKeys, useSaveStudySettings, useStudySettings, type StudySettings } from "@/lib/study";
 import { cn } from "@/lib/utils";
 
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -56,6 +59,7 @@ export function ReminderSettings() {
 
 function Editor({ initial }: { initial: StudySettings }) {
   const save = useSaveStudySettings();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({
     reminders_enabled: initial.reminders_enabled,
     reminder_time: initial.reminder_time,
@@ -97,8 +101,10 @@ function Editor({ initial }: { initial: StudySettings }) {
     try {
       await api.post("/api/v1/study/settings/test-email");
       toast.success("Test email sent.");
+      queryClient.invalidateQueries({ queryKey: studyKeys.reminderStatus });
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Unable to send a test email.");
+      queryClient.invalidateQueries({ queryKey: studyKeys.reminderStatus });
     } finally {
       setTesting(false);
     }
@@ -219,6 +225,8 @@ function Editor({ initial }: { initial: StudySettings }) {
             </div>
           </SectionCard>
         </form>
+
+        <ReminderLog />
       </div>
     </div>
   );

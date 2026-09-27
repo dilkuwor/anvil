@@ -175,6 +175,14 @@ def test_email(
     return Response(status_code=204)
 
 
+@router.get("/settings/reminders")
+def reminder_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    return reminders.reminder_status(db, current_user)
+
+
 @router.get("/settings/cron-status")
 def cron_status(
     db: Session = Depends(get_db),

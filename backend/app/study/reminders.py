@@ -25,7 +25,7 @@ from app.auth.verification import frontend_base_url
 from app.common.cron import acquire_job_lease, finalize_job_run, get_job_status
 from app.email.resend import EmailSendError, is_configured, send_email
 from app.study import service
-from app.study.models import StudySettings
+from app.study.models import ReminderDelivery, StudySettings
 from app.study.schemas import TodayOut
 from app.users.models import User
 
@@ -83,6 +83,7 @@ def send_due_reminders_with_stats(db: Session, now: datetime | None = None) -> R
             stats.failed += 1
             stats.details.append({"user_id": str(user.id), "status": "failed", "error": str(exc)})
             log.warning("failed to send reminder for %s: %s", user.id, exc)
+            _record(db, user.id, service.local_today(settings, now), "daily", "failed", reason="error", error=str(exc)[:2000])
 
     return stats
 
@@ -112,7 +113,7 @@ def _is_due(settings: StudySettings, now: datetime) -> bool:
 
 
 def send_reminder(db: Session, user: User, *, now: datetime | None = None, force: bool = False) -> bool:
-    """Send one user's reminder for today. Skips quietly when there is nothing to do."""
+    """Send one user's reminder for today and log the outcome. Skips quietly when there is nothing to do."""
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -120,6 +121,8 @@ def send_reminder(db: Session, user: User, *, now: datetime | None = None, force
     today = service.local_today(settings, now)
     plan = service.get_today(db, user.id, today)
     open_tasks = [task for task in plan.tasks if not task.done and not task.optional]
+    kind = "test" if force else "daily"
+    titles = [task.title for task in open_tasks]
 
     # Claim the day first so a slow or failing send never doubles up. A forced send
     # (the "send test email" button) must not use up the day's real reminder.
@@ -129,8 +132,10 @@ def send_reminder(db: Session, user: User, *, now: datetime | None = None, force
         db.commit()
 
     if not open_tasks and not force:
+        _record(db, user.id, today, kind, "skipped", reason="nothing_due")
         return False
     if not user.email:
+        _record(db, user.id, today, kind, "skipped", reason="no_email")
         return False
     content = reminder_email(plan, frontend_base_url())
     try:
@@ -142,8 +147,136 @@ def send_reminder(db: Session, user: User, *, now: datetime | None = None, force
             settings.last_reminder_on = None
             db.add(settings)
             db.commit()
+        _record(db, user.id, today, kind, "failed", reason="provider_error", error=str(exc)[:2000], subject=content["subject"], titles=titles)
         return False
+    _record(db, user.id, today, kind, "sent", subject=content["subject"], titles=titles)
     return True
+
+
+def _record(
+    db: Session,
+    user_id,
+    day,
+    kind: str,
+    status: str,
+    *,
+    reason: str | None = None,
+    error: str | None = None,
+    subject: str = "",
+    titles: list[str] | None = None,
+) -> None:
+    """Append one row to the delivery log. Never lets a logging problem break a send."""
+    try:
+        db.add(
+            ReminderDelivery(
+                user_id=user_id,
+                day=day,
+                kind=kind,
+                status=status,
+                reason=reason,
+                subject=subject,
+                task_count=len(titles or []),
+                task_titles=list(titles or []),
+                error=error,
+            )
+        )
+        db.commit()
+    except Exception:  # noqa: BLE001
+        db.rollback()
+        log.exception("could not record reminder delivery for %s", user_id)
+
+
+def next_reminder_at(settings: StudySettings, now: datetime | None = None) -> datetime | None:
+    """When the next reminder can go out, in the learner's time zone. None when reminders are off."""
+    if not (settings.reminders_enabled and settings.reminder_email and settings.reminder_days):
+        return None
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    try:
+        zone = ZoneInfo(settings.timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = timezone.utc
+    local = now.astimezone(zone)
+    try:
+        hours, minutes = (int(part) for part in settings.reminder_time.split(":"))
+    except (ValueError, TypeError):
+        hours, minutes = 8, 30
+    days = set(settings.reminder_days)
+    for offset in range(8):
+        day = (local + timedelta(days=offset)).date()
+        if day.weekday() not in days:
+            continue
+        candidate = datetime.combine(day, datetime.min.time(), tzinfo=zone).replace(hour=hours, minute=minutes)
+        if offset == 0:
+            if settings.last_reminder_on == day:
+                continue
+            if local >= candidate + SEND_WINDOW:
+                continue
+            if local >= candidate:
+                return local  # inside the window: the next tick sends it
+        return candidate
+    return None
+
+
+def _zoned(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat()
+
+
+def reminder_status(db: Session, user: User, *, now: datetime | None = None, history_limit: int = 5) -> dict:
+    """Everything the settings page shows: next reminder, whether the service is alive, recent deliveries."""
+    now = now or datetime.now(timezone.utc)
+    settings = service.get_or_create_settings(db, user.id)
+    job = get_job_status(db, JOB_NAME, history_limit=1)
+    last_run = job.get("last_run_at")
+    interval = job.get("interval_minutes") or 10
+    healthy = False
+    if last_run:
+        # SQLite hands back naive timestamps; treat them as UTC and always send a zoned ISO string.
+        last_dt = datetime.fromisoformat(last_run)
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=timezone.utc)
+        last_run = last_dt.astimezone(timezone.utc).isoformat()
+        healthy = now - last_dt <= timedelta(minutes=interval * 3)
+    rows = db.scalars(
+        select(ReminderDelivery)
+        .where(ReminderDelivery.user_id == user.id)
+        .order_by(ReminderDelivery.created_at.desc())
+        .limit(history_limit)
+    ).all()
+    nxt = next_reminder_at(settings, now)
+    return {
+        "enabled": bool(settings.reminders_enabled and settings.reminder_email),
+        "email_configured": is_configured(),
+        "timezone": settings.timezone,
+        "reminder_time": settings.reminder_time,
+        "next_at": nxt.isoformat() if nxt else None,
+        "service": {
+            "last_run_at": last_run,
+            "last_status": job.get("last_status"),
+            "interval_minutes": interval,
+            "healthy": healthy,
+        },
+        "history": [
+            {
+                "id": str(row.id),
+                "day": row.day.isoformat(),
+                "kind": row.kind,
+                "status": row.status,
+                "reason": row.reason,
+                "subject": row.subject,
+                "task_count": row.task_count,
+                "task_titles": list(row.task_titles or []),
+                "error": row.error,
+                "created_at": _zoned(row.created_at),
+            }
+            for row in rows
+        ],
+    }
 
 
 def reminder_email(plan: TodayOut, app_url: str) -> dict[str, str]:
