@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import httpx
 
 from app.common.config import get_settings
 from app.common.logging import get_logger
 from app.interviews.providers.base import LLMProvider, parse_json_object
 from app.interviews.providers.errors import raise_if_provider_error
+from app.interviews.providers.openai_stream import stream_chat_completions
 
 logger = get_logger(__name__)
 
@@ -37,6 +40,31 @@ class OpenAIProvider(LLMProvider):
             json_mode=True,
         )
         return parse_json_object(raw)
+
+    def stream(
+        self,
+        system: str,
+        transcript: list[dict[str, str]],
+        user_turn: str,
+        *,
+        max_tokens: int = 900,
+    ) -> Iterator[str]:
+        settings = get_settings()
+        api_key = self.api_key or (settings.openai_api_key or "").strip()
+        if not api_key:
+            raise RuntimeError("An OpenAI API key is required. Add one in Settings.")
+        url = settings.openai_base_url.rstrip("/") + "/chat/completions"
+        payload = {
+            "model": self.model or settings.openai_model,
+            "messages": [{"role": "system", "content": system}, *transcript, {"role": "user", "content": user_turn}],
+            "temperature": 0.45,
+            "max_tokens": max_tokens,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        yield from stream_chat_completions(url, headers, payload)
 
     def _chat(self, messages: list[dict[str, str]], *, json_mode: bool = False) -> str:
         settings = get_settings()

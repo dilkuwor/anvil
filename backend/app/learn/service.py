@@ -767,6 +767,12 @@ def _prepare_lesson_tutor(
     return _PreparedTutor(lesson_slug=lesson.slug, system=system, user_turn=user_turn, history=history)
 
 
+def lesson_context_for_slug(db: Session, slug: str) -> str:
+    """The same lesson briefing the Ask AI tutor gets, for other assistants such as Buddy."""
+    lesson = _lesson_by_slug(db, slug)
+    return _lesson_tutor_context(lesson, lesson.topic)
+
+
 def _lesson_by_id(db: Session, lesson_id: UUID) -> LearningLesson:
     lesson = db.scalar(
         select(LearningLesson)

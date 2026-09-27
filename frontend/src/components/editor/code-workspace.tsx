@@ -2,10 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Play, RotateCcw, Send } from "lucide-react";
+
+import { useBuddyPageContext } from "@/components/buddy/buddy-provider";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotesPanel } from "@/components/notes/notes-drawer";
@@ -72,6 +74,12 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     if (typeof window === "undefined") return problem.starter_code;
     return localStorage.getItem(storageKey(problem.slug)) || problem.starter_code;
   });
+  const codeRef = useRef(code);
+  useEffect(() => {
+    codeRef.current = code;
+  }, [code]);
+  const getCode = useCallback(() => codeRef.current, []);
+  useBuddyPageContext({ kind: "problem", id: problem.slug, title: problem.title, noteSourceId: problem.id, getCode });
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [tab, setTab] = useState<ProblemTab>(() => {
     // `?tab=story` opens straight on the Visual Story (links from the problem list and the roadmap).

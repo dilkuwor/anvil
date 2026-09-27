@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 
 _JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
 
@@ -33,6 +34,17 @@ class LLMProvider(ABC):
     @abstractmethod
     def complete_json(self, system: str, user_turn: str) -> dict:
         """Return a parsed JSON object for evaluation."""
+
+    def stream(
+        self,
+        system: str,
+        transcript: list[dict[str, str]],
+        user_turn: str,
+        *,
+        max_tokens: int = 900,
+    ) -> Iterator[str]:
+        """Yield the reply in pieces. Providers without streaming yield it whole."""
+        yield self.complete(system, transcript, user_turn)
 
 
 def parse_json_object(raw: str) -> dict:

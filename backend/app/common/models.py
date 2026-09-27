@@ -1,6 +1,7 @@
 """Import every ORM model so SQLAlchemy relationship strings resolve."""
 
 from app.auth.models import EmailVerificationToken
+from app.buddy.models import BuddyMessage, BuddyThread
 from app.cheatsheets.models import CheatSheet, CheatSheetSection, CheatSheetSectionContent
 from app.interviews.models import InterviewEvent, InterviewMessage, InterviewSession
 from app.lists.models import ProblemList, ProblemListItem
@@ -22,6 +23,8 @@ from app.common.cron_models import CronJob, CronJobRun
 from app.users.models import User, UserLlmKey
 
 __all__ = [
+    "BuddyMessage",
+    "BuddyThread",
     "CronJob",
     "CronJobRun",
     "CheatSheet",
