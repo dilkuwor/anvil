@@ -1,16 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  CircleCheck,
-  CircleHelp,
-  ListOrdered,
-  Maximize2,
-  Sparkles,
-} from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, ListOrdered, Maximize2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -19,13 +10,12 @@ import { AskAiButton, AskAiController, AskAiPanel } from "@/components/learn/ask
 import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LessonCurriculum } from "@/components/learn/lesson-curriculum";
 import { LessonOverlay } from "@/components/learn/lesson-overlay";
+import { StudyRail, StudyRailEdgeTab, useStudyRailCollapsed } from "@/components/learn/study-rail";
 import { headingSlug, LessonMarkdown } from "@/components/learn/markdown";
 import { TopicSidebar, useTopicSidebarCollapsed } from "@/components/learn/topic-sidebar";
 import { NotesPanel } from "@/components/notes/notes-drawer";
 import { LessonReaderBar, LessonReaderButton, LessonReaderProvider } from "@/components/tts/lesson-reader";
-import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Button } from "@/components/ui/button";
-import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { LearningLessonDetail, LearningTopicDetail } from "@/lib/learn";
@@ -37,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 export function LessonView({ slug }: { slug: string }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useTopicSidebarCollapsed();
+  const [railCollapsed, setRailCollapsed] = useStudyRailCollapsed();
   const queryClient = useQueryClient();
   const { signedIn } = useSession();
   const [authPrompt, setAuthPrompt] = useState<AuthPromptKind | null>(null);
@@ -116,11 +107,14 @@ export function LessonView({ slug }: { slug: string }) {
       } else if (e.key === "m" || e.key === "M") {
         e.preventDefault();
         setOverlayOpen((prev) => !prev);
+      } else if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        setRailCollapsed();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [lessonData, signedIn, complete]);
+  }, [lessonData, signedIn, complete, setRailCollapsed]);
 
   const lessonContent = lessonData?.content;
   // Extract headings from markdown content for the in-page TOC
@@ -150,116 +144,11 @@ export function LessonView({ slug }: { slug: string }) {
   const topicLessons = topic.data?.lessons ?? [];
   const lessonIdx = topicLessons.findIndex((item) => item.slug === data.slug);
 
-  const studyRail = (
-    <>
-      {/* On this page TOC (if there are headings) */}
-      {headings.length > 1 ? (
-        <SectionCard className="p-4">
-          <SectionTitle>On this page</SectionTitle>
-          <nav aria-label="Page sections" className="mt-2.5 space-y-1">
-            {headings.map((h) => (
-              <a
-                key={h.id}
-                href={`#${h.id}`}
-                className="block truncate rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-steel-800/60 hover:text-foreground"
-              >
-                {h.text}
-              </a>
-            ))}
-          </nav>
-        </SectionCard>
-      ) : null}
-
-      {data.category_slug === "behavioral" ? (
-        <SectionCard>
-          <SectionTitle>Next step</SectionTitle>
-          <div className="mt-3 flex flex-col gap-2">
-            <Button asChild size="sm" className="font-semibold">
-              <Link href={`/behavioral#${data.topic_slug}`}>Write your STAR story</Link>
-            </Button>
-            <Button asChild size="sm" variant="secondary" className="font-semibold">
-              <Link href="/behavioral">Mock Interview</Link>
-            </Button>
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {firstProblem ? (
-        <SectionCard>
-          <SectionTitle>Next step</SectionTitle>
-          <div className="mt-3 flex flex-col gap-2">
-            <Button asChild size="sm" className="font-semibold">
-              <Link
-                href={
-                  topic.data?.practice_tag
-                    ? `/problems?tag=${topic.data.practice_tag}`
-                    : `/problems/${firstProblem.slug}`
-                }
-              >
-                Practice Problems
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="secondary" className="font-semibold">
-              <Link href={`/problems/${firstProblem.slug}`}>Mock Interview</Link>
-            </Button>
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {data.takeaways.length ? (
-        <SectionCard>
-          <SectionTitle>Key takeaways</SectionTitle>
-          <ul className="mt-3 space-y-2 text-[13px] leading-relaxed">
-            {data.takeaways.map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <span className="flex h-5 w-3.5 shrink-0 items-center justify-center">
-                  <CircleCheck className="block h-3.5 w-3.5 text-emerald-400" strokeWidth={2.25} aria-hidden />
-                </span>
-                <span className="min-w-0 break-words text-foreground/90 font-medium">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-      ) : null}
-
-      {data.interview_questions.length ? (
-        <SectionCard>
-          <SectionTitle>Interview questions</SectionTitle>
-          <ul className="mt-3 space-y-2 text-[13px] leading-relaxed">
-            {data.interview_questions.map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <span className="flex h-5 w-3.5 shrink-0 items-center justify-center">
-                  <CircleHelp className="block h-3.5 w-3.5 text-accent" aria-hidden />
-                </span>
-                <span className="min-w-0 break-words text-foreground/90 font-medium">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-      ) : null}
-
-      {data.related_problems.length ? (
-        <SectionCard className="p-0">
-          <div className="p-4 pb-2">
-            <SectionTitle>Related problems</SectionTitle>
-          </div>
-          <ul className="divide-y divide-steel-800/80 border-t border-steel-800/80">
-            {data.related_problems.map((problem) => (
-              <li key={problem.id}>
-                <Link
-                  href={`/problems/${problem.slug}`}
-                  className="flex items-center justify-between gap-3 p-3.5 text-xs transition-colors hover:bg-steel-950/50"
-                >
-                  <span className="min-w-0 truncate font-semibold text-foreground hover:text-accent">{problem.title}</span>
-                  <DifficultyBadge difficulty={problem.difficulty} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-      ) : null}
-    </>
-  );
+  const practiceHref = topic.data?.practice_tag
+    ? `/problems?tag=${topic.data.practice_tag}`
+    : firstProblem
+      ? `/problems/${firstProblem.slug}`
+      : null;
 
   const page = (
     <div className="space-y-4">
@@ -333,9 +222,9 @@ export function LessonView({ slug }: { slug: string }) {
             </div>
           </div>
 
-          {/* On this page and takeaways on smaller screens */}
+          {/* Study panel below the lesson on smaller screens */}
           <div className="space-y-4 xl:hidden">
-            {studyRail}
+            <StudyRail lesson={data} headings={headings} practiceHref={practiceHref} />
           </div>
 
           {/* Floating action dock, with the reader controls stacked above it while a lesson is read aloud.
@@ -434,10 +323,28 @@ export function LessonView({ slug }: { slug: string }) {
           </div>
         </div>
 
-        {/* Right Column: Desktop XL Study Rail */}
-        <aside className={cn("hidden w-72 shrink-0 space-y-4 xl:block xl:sticky xl:top-16", sidebarCollapsed && "xl:ml-5")}>
-          {studyRail}
-        </aside>
+        {/* Right Column: Desktop XL Study Rail. Collapses to a thin edge tab; scrolls on its own so every card stays reachable. */}
+        {railCollapsed ? (
+          <aside className="hidden shrink-0 xl:block xl:sticky xl:top-16" aria-label="Study panel, collapsed">
+            <StudyRailEdgeTab onExpand={() => setRailCollapsed(false)} />
+          </aside>
+        ) : (
+          <aside
+            className={cn(
+              "study-rail hidden w-72 shrink-0 space-y-4 xl:block xl:sticky xl:top-16 scrollbar-none",
+              sidebarCollapsed && "xl:ml-5",
+            )}
+            aria-label="Study panel"
+          >
+            <StudyRail
+              lesson={data}
+              headings={headings}
+              practiceHref={practiceHref}
+              collapsible
+              onCollapse={() => setRailCollapsed(true)}
+            />
+          </aside>
+        )}
       </div>
 
       {curriculumOpen ? (

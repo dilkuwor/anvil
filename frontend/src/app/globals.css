@@ -398,3 +398,12 @@ select.select-field:focus-visible {
     animation: none;
   }
 }
+
+/* Lesson study panel (right column on wide screens): scrolls on its own so every card stays reachable. */
+@media (width >= 80rem) {
+  .study-rail {
+    max-height: calc(100dvh - 5rem);
+    overflow-y: auto;
+    padding-bottom: 0.5rem;
+  }
+}
