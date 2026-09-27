@@ -59,7 +59,7 @@ const FEATURES = [
     title: "Mock Interviews",
     body: "Coding, design, and behavioral rounds with an AI interviewer and feedback.",
     icon: MessageSquare,
-    href: "/problems",
+    href: "/system-design/interview",
   },
   {
     title: "A plan for today",
@@ -191,26 +191,26 @@ export default function HomePage() {
           <div className="ia-content max-w-6xl py-12 lg:py-14">
             <p className="text-center text-[11px] font-medium uppercase tracking-[0.16em] text-accent">How it works</p>
             <h2 className="mt-1.5 text-center text-xl font-semibold tracking-tight sm:text-2xl">Built around how memory works.</h2>
-            <ol className="mt-8 flex flex-col md:flex-row">
+            <ol className="mt-8 flex flex-col lg:flex-row">
               {STEPS.map((step, index) => {
                 const last = index === STEPS.length - 1;
                 return (
-                  <li key={step.n} className="flex min-w-0 gap-4 md:flex-1 md:flex-col">
-                    <div className="flex flex-col items-center md:flex-row md:items-center">
+                  <li key={step.n} className="flex min-w-0 gap-4 lg:flex-1 lg:flex-col">
+                    <div className="flex flex-col items-center lg:flex-row lg:items-center">
                       <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/25 bg-steel-900 text-accent">
                         <step.icon className="h-4 w-4" aria-hidden />
                       </span>
                       {last ? null : (
                         <span
                           aria-hidden
-                          className="w-px min-h-6 flex-1 bg-steel-700 md:mx-3 md:h-px md:min-h-0 md:w-auto md:min-w-4 md:flex-1"
+                          className="w-px min-h-6 flex-1 bg-steel-700 lg:mx-3 lg:h-px lg:min-h-0 lg:w-auto lg:min-w-4 lg:flex-1"
                         />
                       )}
                     </div>
-                    <div className={last ? "pb-0 pt-0.5 md:pt-3" : "pb-6 pt-0.5 md:pb-0 md:pr-4 md:pt-3"}>
+                    <div className={last ? "pb-0 pt-0.5 lg:pt-3" : "pb-6 pt-0.5 lg:pb-0 lg:pr-4 lg:pt-3"}>
                       <p className="text-[11px] font-medium tabular-nums tracking-[0.12em] text-accent">{step.n}</p>
                       <h3 className="mt-0.5 text-sm font-semibold tracking-tight">{step.title}</h3>
-                      <p className="mt-1 max-w-[18ch] text-[13px] leading-5 text-muted-foreground md:max-w-none">
+                      <p className="mt-1 max-w-[40ch] text-[13px] leading-5 text-muted-foreground lg:max-w-none">
                         {step.body}
                       </p>
                     </div>
