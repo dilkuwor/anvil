@@ -144,3 +144,53 @@ export async function transcribeAudio(
   }
   return String(data?.text ?? "").trim();
 }
+
+export type BuddyVoiceBody = {
+  content: string;
+  mode: BuddyMode;
+  context: { kind: BuddyContextKind; id: string; title: string; code?: string };
+  history: { role: "user" | "assistant"; content: string }[];
+};
+
+/** A spoken turn: streamed like chat, written for the ear, never saved. */
+export async function sendBuddyVoice(
+  body: BuddyVoiceBody,
+  onDelta: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const text = await streamSsePost(
+    "/api/v1/buddy/voice",
+    body,
+    onDelta,
+    signal,
+  );
+  if (!text.trim())
+    throw new ApiError(503, BUDDY_UNAVAILABLE, "service_unavailable");
+  return text;
+}
+
+const SENTENCE_END = /[.!?]["')\]]?(?=\s)|\n+/g;
+
+/**
+ * Cut streamed text into speakable pieces at sentence ends, so reading can start before the
+ * reply is complete. Returns the pieces found after `from` and where the next scan should start.
+ */
+export function speakableChunks(
+  text: string,
+  from: number,
+  minLength = 40,
+): { chunks: string[]; next: number } {
+  const chunks: string[] = [];
+  let start = from;
+  SENTENCE_END.lastIndex = from;
+  let match: RegExpExecArray | null;
+  while ((match = SENTENCE_END.exec(text)) !== null) {
+    const end = match.index + match[0].length;
+    const piece = text.slice(start, end).trim();
+    if (piece.length >= minLength || match[0].includes("\n")) {
+      if (piece) chunks.push(piece);
+      start = end;
+    }
+  }
+  return { chunks, next: start };
+}

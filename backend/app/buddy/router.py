@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.buddy import service
-from app.buddy.schemas import BuddySendIn, BuddyThreadDetail, BuddyThreadOut, ContextKind
+from app.buddy.schemas import BuddySendIn, BuddyThreadDetail, BuddyThreadOut, BuddyVoiceIn, ContextKind
 from app.common.database import get_db
 from app.common.deps import get_current_user
 from app.users.models import User
@@ -51,6 +51,20 @@ def send_message(
     """Stream Buddy's reply as server-sent events: thread_id, delta..., done."""
     return StreamingResponse(
         service.send(db, current_user, payload),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/voice")
+def voice_turn(
+    payload: BuddyVoiceIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    """Stream a reply written for text-to-speech. Not saved to any thread."""
+    return StreamingResponse(
+        service.voice(db, current_user, payload),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

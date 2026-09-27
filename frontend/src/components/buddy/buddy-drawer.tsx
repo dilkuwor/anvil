@@ -18,6 +18,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuddy } from "@/components/buddy/buddy-provider";
+import { VoicePanel } from "@/components/buddy/voice-panel";
 import { useRecorder } from "@/components/buddy/use-recorder";
 import { useSpeaker } from "@/components/buddy/use-speaker";
 import { TutorMarkdown } from "@/components/learn/markdown";
@@ -107,7 +108,9 @@ function Drawer({
   const contextId = pageContext?.id ?? "";
   const contextKey = `${contextKind}:${contextId}`;
 
-  const [view, setView] = useState<"chat" | "history">("chat");
+  const [view, setView] = useState<"chat" | "voice" | "history">("chat");
+  // Bumped by "New conversation" while in voice view; the voice panel keeps nothing across it.
+  const [voiceKey, setVoiceKey] = useState(0);
   const [mode, setMode] = useState<BuddyMode>("ask");
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
@@ -317,7 +320,8 @@ function Drawer({
       if (
         (event.metaKey || event.ctrlKey) &&
         event.key.toLowerCase() === "m" &&
-        recorder.supported
+        recorder.supported &&
+        view === "chat"
       ) {
         event.preventDefault();
         toggleMic();
@@ -325,7 +329,7 @@ function Drawer({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, recorder.supported, toggleMic]);
+  }, [onClose, recorder.supported, toggleMic, view]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView?.({ block: "end" });
@@ -397,6 +401,24 @@ function Drawer({
           <div className="flex shrink-0 items-center gap-0.5">
             {view === "chat" ? (
               <>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={readAloud}
+                  aria-label="Read replies aloud"
+                  title="Read replies aloud"
+                  className={cn(
+                    "inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-steel-800 hover:text-foreground",
+                    readAloud && "text-accent",
+                  )}
+                  onClick={() => setReadAloud(!readAloud)}
+                >
+                  {readAloud ? (
+                    <Volume2 className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <VolumeX className="h-4 w-4" aria-hidden />
+                  )}
+                </button>
                 <IconButton
                   label="New conversation"
                   onClick={() => {
@@ -411,6 +433,13 @@ function Drawer({
                   <History className="h-4 w-4" />
                 </IconButton>
               </>
+            ) : view === "voice" ? (
+              <IconButton
+                label="New conversation"
+                onClick={() => setVoiceKey((value) => value + 1)}
+              >
+                <Plus className="h-4 w-4" />
+              </IconButton>
             ) : (
               <IconButton label="Back to chat" onClick={() => setView("chat")}>
                 <ArrowLeft className="h-4 w-4" />
@@ -438,6 +467,24 @@ function Drawer({
               <div
                 className="inline-flex rounded-md border border-steel-800 bg-steel-950/40 p-0.5"
                 role="tablist"
+                aria-label="Panel"
+              >
+                <ModeTab
+                  active={view === "chat"}
+                  onClick={() => setView("chat")}
+                >
+                  Chat
+                </ModeTab>
+                <ModeTab
+                  active={view === "voice"}
+                  onClick={() => setView("voice")}
+                >
+                  Voice
+                </ModeTab>
+              </div>
+              <div
+                className="inline-flex rounded-md border border-steel-800 bg-steel-950/40 p-0.5"
+                role="tablist"
                 aria-label="Mode"
               >
                 <ModeTab active={mode === "ask"} onClick={() => setMode("ask")}>
@@ -450,179 +497,178 @@ function Drawer({
                   Explain it back
                 </ModeTab>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={readAloud}
-                className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11.5px] text-muted-foreground hover:bg-steel-800 hover:text-foreground",
-                  readAloud && "text-accent",
-                )}
-                title="Read replies aloud"
-                onClick={() => setReadAloud(!readAloud)}
-              >
-                {readAloud ? (
-                  <Volume2 className="h-3.5 w-3.5" aria-hidden />
-                ) : (
-                  <VolumeX className="h-3.5 w-3.5" aria-hidden />
-                )}
-                Read aloud
-              </button>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3">
-              {loading ? (
-                <p className="text-[13px] text-muted-foreground">Loading…</p>
-              ) : !messages.length ? (
-                <EmptyState mode={mode} hasContext={Boolean(pageContext)} />
-              ) : null}
-              {messages.map((message, index) => {
-                const last = index === messages.length - 1;
-                const thinking =
-                  pending &&
-                  last &&
-                  message.role === "assistant" &&
-                  !message.content;
-                if (message.role === "user") {
-                  return (
-                    <div
-                      key={message.id}
-                      className="ml-6 rounded-lg bg-steel-800/80 px-3 py-2"
-                    >
-                      <p className="text-[13px] leading-6 text-foreground whitespace-pre-wrap">
-                        {message.content}
-                      </p>
-                    </div>
-                  );
-                }
-                return (
-                  <div
-                    key={message.id}
-                    className="rounded-lg border border-steel-800 px-3 py-2"
-                  >
-                    {thinking ? (
-                      <p className="text-[13px] text-muted-foreground">
-                        Thinking…
-                      </p>
-                    ) : (
-                      <>
-                        <TutorMarkdown content={message.content} />
-                        {!(pending && last) && message.content.trim() ? (
-                          <div className="mt-1.5 flex items-center gap-1">
-                            <button
-                              type="button"
-                              className={cn(
-                                "inline-flex h-6 items-center gap-1 rounded px-1.5 text-[11px] text-muted-foreground hover:bg-steel-800 hover:text-foreground",
-                                speaker.speakingId === message.id &&
-                                  "text-accent",
-                              )}
-                              aria-label={
-                                speaker.speakingId === message.id
-                                  ? "Stop reading"
-                                  : "Read this reply aloud"
-                              }
-                              onClick={() =>
-                                speaker.speakingId === message.id
-                                  ? speaker.stop()
-                                  : void speaker.speak(
-                                      message.id,
-                                      message.content,
-                                    )
-                              }
-                            >
-                              {speaker.loadingId === message.id ? (
-                                <Loader2
-                                  className="h-3.5 w-3.5 animate-spin"
-                                  aria-hidden
-                                />
-                              ) : speaker.speakingId === message.id ? (
-                                <Square className="h-3 w-3" aria-hidden />
-                              ) : (
-                                <Volume2 className="h-3.5 w-3.5" aria-hidden />
-                              )}
-                              {speaker.speakingId === message.id
-                                ? "Stop"
-                                : "Listen"}
-                            </button>
-                            {noteContext ? (
-                              <SaveAiNoteButton
-                                context={noteContext}
-                                body={message.content}
-                              />
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-              {error ? (
-                <div className="rounded-md border border-coral/30 bg-coral/5 px-3 py-2 text-[13px] text-coral">
-                  {error}
-                </div>
-              ) : null}
-              <div ref={bottomRef} />
-            </div>
-
-            <form
-              className="border-t border-steel-800/80 px-3 py-2.5"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void send(draft);
-              }}
-            >
-              <div className="flex items-end gap-1.5">
-                {recorder.supported ? (
-                  <MicButton
-                    status={recorder.status}
-                    level={recorder.level}
-                    disabled={pending}
-                    onClick={toggleMic}
-                  />
-                ) : null}
-                <textarea
-                  ref={inputRef}
-                  value={draft}
-                  rows={1}
-                  onChange={(event) => setDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      void send(draft);
+            {view === "voice" ? (
+              <VoicePanel
+                key={voiceKey}
+                pageContext={pageContext}
+                contextKind={contextKind}
+                contextId={contextId}
+                mode={mode}
+              />
+            ) : (
+              <>
+                <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3">
+                  {loading ? (
+                    <p className="text-[13px] text-muted-foreground">
+                      Loading…
+                    </p>
+                  ) : !messages.length ? (
+                    <EmptyState mode={mode} hasContext={Boolean(pageContext)} />
+                  ) : null}
+                  {messages.map((message, index) => {
+                    const last = index === messages.length - 1;
+                    const thinking =
+                      pending &&
+                      last &&
+                      message.role === "assistant" &&
+                      !message.content;
+                    if (message.role === "user") {
+                      return (
+                        <div
+                          key={message.id}
+                          className="ml-6 rounded-lg bg-steel-800/80 px-3 py-2"
+                        >
+                          <p className="text-[13px] leading-6 text-foreground whitespace-pre-wrap">
+                            {message.content}
+                          </p>
+                        </div>
+                      );
                     }
+                    return (
+                      <div
+                        key={message.id}
+                        className="rounded-lg border border-steel-800 px-3 py-2"
+                      >
+                        {thinking ? (
+                          <p className="text-[13px] text-muted-foreground">
+                            Thinking…
+                          </p>
+                        ) : (
+                          <>
+                            <TutorMarkdown content={message.content} />
+                            {!(pending && last) && message.content.trim() ? (
+                              <div className="mt-1.5 flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    "inline-flex h-6 items-center gap-1 rounded px-1.5 text-[11px] text-muted-foreground hover:bg-steel-800 hover:text-foreground",
+                                    speaker.speakingId === message.id &&
+                                      "text-accent",
+                                  )}
+                                  aria-label={
+                                    speaker.speakingId === message.id
+                                      ? "Stop reading"
+                                      : "Read this reply aloud"
+                                  }
+                                  onClick={() =>
+                                    speaker.speakingId === message.id
+                                      ? speaker.stop()
+                                      : void speaker.speak(
+                                          message.id,
+                                          message.content,
+                                        )
+                                  }
+                                >
+                                  {speaker.loadingId === message.id ? (
+                                    <Loader2
+                                      className="h-3.5 w-3.5 animate-spin"
+                                      aria-hidden
+                                    />
+                                  ) : speaker.speakingId === message.id ? (
+                                    <Square className="h-3 w-3" aria-hidden />
+                                  ) : (
+                                    <Volume2
+                                      className="h-3.5 w-3.5"
+                                      aria-hidden
+                                    />
+                                  )}
+                                  {speaker.speakingId === message.id
+                                    ? "Stop"
+                                    : "Listen"}
+                                </button>
+                                {noteContext ? (
+                                  <SaveAiNoteButton
+                                    context={noteContext}
+                                    body={message.content}
+                                  />
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {error ? (
+                    <div className="rounded-md border border-coral/30 bg-coral/5 px-3 py-2 text-[13px] text-coral">
+                      {error}
+                    </div>
+                  ) : null}
+                  <div ref={bottomRef} />
+                </div>
+
+                <form
+                  className="border-t border-steel-800/80 px-3 py-2.5"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void send(draft);
                   }}
-                  placeholder={
-                    recorder.status === "recording"
-                      ? "Listening… tap the mic or pause to stop."
-                      : recorder.status === "processing"
-                        ? "Transcribing…"
-                        : placeholder
-                  }
-                  disabled={pending || loading}
-                  className="max-h-40 min-h-9 w-full flex-1 resize-none rounded-md border border-input-border bg-background px-3 py-2 text-sm leading-5 text-input-foreground outline-none placeholder:text-input-placeholder disabled:opacity-60"
-                  style={{
-                    height: `${Math.min(160, 20 * Math.max(1, draft.split("\n").length) + 16)}px`,
-                  }}
-                />
-                <button
-                  type="submit"
-                  aria-label="Send"
-                  disabled={pending || loading || !draft.trim()}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-white hover:brightness-105 disabled:opacity-50"
                 >
-                  {pending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Send className="h-4 w-4" aria-hidden />
-                  )}
-                </button>
-              </div>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Enter to send · Shift+Enter for a new line
-                {recorder.supported ? " · ⌘M mic" : ""}
-              </p>
-            </form>
+                  <div className="flex items-end gap-1.5">
+                    {recorder.supported ? (
+                      <MicButton
+                        status={recorder.status}
+                        level={recorder.level}
+                        disabled={pending}
+                        onClick={toggleMic}
+                      />
+                    ) : null}
+                    <textarea
+                      ref={inputRef}
+                      value={draft}
+                      rows={1}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          void send(draft);
+                        }
+                      }}
+                      placeholder={
+                        recorder.status === "recording"
+                          ? "Listening… tap the mic or pause to stop."
+                          : recorder.status === "processing"
+                            ? "Transcribing…"
+                            : placeholder
+                      }
+                      disabled={pending || loading}
+                      className="max-h-40 min-h-9 w-full flex-1 resize-none rounded-md border border-input-border bg-background px-3 py-2 text-sm leading-5 text-input-foreground outline-none placeholder:text-input-placeholder disabled:opacity-60"
+                      style={{
+                        height: `${Math.min(160, 20 * Math.max(1, draft.split("\n").length) + 16)}px`,
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      aria-label="Send"
+                      disabled={pending || loading || !draft.trim()}
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-white hover:brightness-105 disabled:opacity-50"
+                    >
+                      {pending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Send className="h-4 w-4" aria-hidden />
+                      )}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    Enter to send · Shift+Enter for a new line
+                    {recorder.supported ? " · ⌘M mic" : ""}
+                  </p>
+                </form>
+              </>
+            )}
           </>
         )}
       </aside>

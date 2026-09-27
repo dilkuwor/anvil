@@ -23,6 +23,20 @@ class BuddySendIn(BaseModel):
     context: BuddyContextIn = Field(default_factory=BuddyContextIn)
 
 
+class BuddyHistoryItem(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class BuddyVoiceIn(BaseModel):
+    """A spoken turn. Nothing is stored: the client keeps the short history for the session."""
+
+    content: str = Field(min_length=1, max_length=4000)
+    mode: Mode = "ask"
+    context: BuddyContextIn = Field(default_factory=BuddyContextIn)
+    history: list[BuddyHistoryItem] = Field(default_factory=list, max_length=24)
+
+
 class BuddyMessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
