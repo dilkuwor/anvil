@@ -106,13 +106,14 @@ export function useVoicePlayer({
       if (generation !== generationRef.current) return;
       const audio = ensureAudio();
       audio.src = url;
-      audio.onended = () => {
+      const advance = () => {
         if (generation !== generationRef.current) return;
         indexRef.current += 1;
         busyRef.current = false;
         void pumpRef.current();
       };
-      audio.onerror = audio.onended;
+      audio.onended = advance;
+      audio.onerror = advance;
       await audio.play();
     } catch (cause) {
       if (generation !== generationRef.current) return;
