@@ -11,6 +11,7 @@ import httpx
 
 from app.common.config import get_settings
 from app.common.logging import get_logger
+from app.interviews.providers.thinking import strip_think_blocks, strip_thinking
 
 logger = get_logger(__name__)
 
@@ -32,6 +33,9 @@ def chat(
         "model": settings.ollama_model,
         "messages": messages,
         "stream": False,
+        # Thinking models (qwen3 and friends) otherwise spend the budget on a private scratchpad and
+        # leak it into replies; the answer is all we want.
+        "think": False,
         "options": {"temperature": 0.45, "num_predict": num_predict},
     }
     if json_mode:
@@ -106,6 +110,7 @@ def chat_stream(
         "model": settings.ollama_model,
         "messages": messages,
         "stream": True,
+        "think": False,
         "options": {"temperature": 0.45, "num_predict": num_predict},
     }
     with httpx.Client(timeout=timeout) as client:
@@ -113,18 +118,22 @@ def chat_stream(
             if response.status_code >= 400:
                 response.read()
                 raise RuntimeError(_ollama_error(response))
-            for line in response.iter_lines():
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                delta = ((data.get("message") or {}).get("content") or "")
-                if delta:
-                    yield delta
-                if data.get("done"):
-                    break
+            yield from strip_thinking(_content_deltas(response.iter_lines()))
+
+
+def _content_deltas(lines):
+    for line in lines:
+        if not line:
+            continue
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        delta = (data.get("message") or {}).get("content") or ""
+        if delta:
+            yield delta
+        if data.get("done"):
+            break
 
 
 def _ollama_error(response: httpx.Response) -> str:
@@ -190,7 +199,7 @@ def parse_feedback_json(raw: str) -> dict[str, Any]:
 
 
 def _clean_reply(text: str, max_chars: int = 900) -> str:
-    cleaned = text.strip().strip('"').strip()
+    cleaned = strip_think_blocks(text).strip().strip('"').strip()
     cleaned = re.sub(r"^\s*(interviewer|assistant)\s*:\s*", "", cleaned, flags=re.I)
     if max_chars and len(cleaned) > max_chars:
         cleaned = cleaned[: max_chars - 1].rsplit(" ", 1)[0] + "…"

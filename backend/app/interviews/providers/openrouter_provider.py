@@ -11,6 +11,7 @@ from app.common.logging import get_logger
 from app.interviews.providers.base import LLMProvider, parse_json_object
 from app.interviews.providers.errors import raise_if_provider_error
 from app.interviews.providers.openai_stream import stream_chat_completions
+from app.interviews.providers.thinking import strip_think_blocks
 
 logger = get_logger(__name__)
 
@@ -59,6 +60,8 @@ class OpenRouterProvider(LLMProvider):
             "messages": [{"role": "system", "content": system}, *transcript, {"role": "user", "content": user_turn}],
             "temperature": 0.45,
             "max_tokens": max_tokens,
+            # Reasoning models otherwise stream their scratchpad first; only the answer is wanted.
+            "reasoning": {"enabled": False, "exclude": True},
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -78,6 +81,7 @@ class OpenRouterProvider(LLMProvider):
             "model": self.model or settings.openrouter_model,
             "messages": messages,
             "temperature": 0.45,
+            "reasoning": {"enabled": False, "exclude": True},
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
@@ -95,7 +99,7 @@ class OpenRouterProvider(LLMProvider):
         except (KeyError, IndexError, TypeError) as exc:
             logger.warning("openrouter_bad_payload", error=str(exc))
             raise ValueError("OpenRouter response missing message content.") from exc
-        text = (content or "").strip()
+        text = strip_think_blocks(content or "").strip()
         if not text:
             raise ValueError("Empty OpenRouter response.")
         return text
