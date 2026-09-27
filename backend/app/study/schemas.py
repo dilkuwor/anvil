@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Rating = Literal["forgot", "shaky", "good"]
-CardKind = Literal["PROBLEM", "LESSON", "DESIGN", "CHECK"]
+CardKind = Literal["PROBLEM", "LESSON", "DESIGN", "CHECK", "PATTERN"]
 Confidence = Literal["sure", "unsure"]
 
 
@@ -97,6 +97,43 @@ class AnswerCardOut(RateOut):
     explanation: str
     learn_state: str
     needs_refresh: bool = False
+
+
+class DrillItem(BaseModel):
+    problem_id: UUID
+    slug: str
+    difficulty: str
+    statement: str
+    example_input: str = ""
+    example_output: str = ""
+    options: list[str]
+    due: bool = False
+
+
+class DrillOut(BaseModel):
+    items: list[DrillItem]
+    drilled_today: int
+    families: list[str]
+
+
+class DrillAnswerIn(BaseModel):
+    choice: int = Field(ge=0)
+    confidence: Confidence = "unsure"
+    time_ms: int | None = Field(default=None, ge=0, le=3_600_000)
+
+
+class DrillAnswerOut(BaseModel):
+    correct: bool
+    correct_index: int
+    family: str
+    family_hint: str
+    pattern: str
+    trigger: str
+    summary: str
+    title: str
+    href: str
+    next_due_on: date
+    box: int
 
 
 class MemoryDay(BaseModel):

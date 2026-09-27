@@ -8,6 +8,8 @@ from app.common.database import get_db
 from app.common.deps import get_current_user, get_optional_user
 from app.learn import service
 from app.learn.schemas import (
+    RecallRequest,
+    RecallResponse,
     AnswerCheckIn,
     AnswerCheckOut,
     CatalogCategory,
@@ -163,6 +165,17 @@ def answer_check(
     current_user: User = Depends(get_current_user),
 ) -> AnswerCheckOut:
     return service.answer_check(db, current_user.id, lesson_id, check_id, payload)
+
+
+@router.post("/lessons/{lesson_id}/recall", response_model=RecallResponse)
+def recall_lesson(
+    lesson_id: UUID,
+    payload: RecallRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> RecallResponse:
+    """Free recall: grade what the learner remembers against the lesson's takeaways."""
+    return service.recall_lesson(db, current_user, lesson_id, payload.text)
 
 
 @router.post("/lessons/{lesson_id}/complete", response_model=LearningLessonDetail)

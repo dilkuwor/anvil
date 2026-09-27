@@ -130,6 +130,31 @@ class ProblemSolutionOut(BaseModel):
     updated_at: datetime | None = None
 
 
+class WorkedExampleOut(BaseModel):
+    approach: str
+    idea: str
+    steps: list[str]
+    language: str
+    header: str
+    blocks: list[str]
+    footer: str
+    total_levels: int
+    levels_done: int
+
+
+class WorkedCheckIn(BaseModel):
+    level: int = Field(ge=1, le=64)
+    filled: list[str] = Field(default_factory=list, max_length=64)
+
+
+class WorkedCheckOut(BaseModel):
+    passed: bool
+    level: int
+    levels_done: int
+    total_levels: int
+    result: "ExecutionResult"
+
+
 class RunRequest(BaseModel):
     source_code: str = Field(min_length=1, max_length=100_000)
 
@@ -137,3 +162,7 @@ class RunRequest(BaseModel):
 class SubmitRequest(BaseModel):
     source_code: str = Field(min_length=1, max_length=100_000)
     language: str = "JAVA"
+
+from app.submissions.schemas import ExecutionResult  # noqa: E402
+
+WorkedCheckOut.model_rebuild()

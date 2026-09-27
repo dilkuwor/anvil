@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { RecallDialog } from "@/components/learn/recall-dialog";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { useLessonReader } from "@/components/tts/lesson-reader-context";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,7 @@ export function StudyRail({
   const behavioral = lesson.category_slug === "behavioral";
   const firstProblem = lesson.related_problems[0];
   const hasPractice = behavioral || Boolean(firstProblem);
+  const [recallOpen, setRecallOpen] = useState(false);
 
   return (
     <>
@@ -251,7 +253,21 @@ export function StudyRail({
                 ? `${answered.size} of ${lesson.interview_questions.length}`
                 : undefined
             }
+            action={
+              lesson.takeaways.length ? (
+                <button
+                  type="button"
+                  className="text-[12px] font-medium text-accent hover:underline"
+                  onClick={() => setRecallOpen(true)}
+                >
+                  Recall
+                </button>
+              ) : undefined
+            }
           />
+          {recallOpen ? (
+            <RecallDialog lessonId={lesson.id} lessonTitle={lesson.title} onClose={() => setRecallOpen(false)} />
+          ) : null}
           <div className="p-4">
             {lesson.takeaways.length ? (
               <ul className="space-y-2 text-[13px] leading-relaxed">

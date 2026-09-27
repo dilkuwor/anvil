@@ -24,15 +24,19 @@ def chat(
     num_predict: int = 220,
     max_chars: int = 900,
     attempts: int = 3,
+    json_mode: bool = False,
 ) -> str:
     settings = get_settings()
     url = f"{settings.ollama_base_url.rstrip('/')}/api/chat"
-    payload = {
+    payload: dict[str, Any] = {
         "model": settings.ollama_model,
         "messages": messages,
         "stream": False,
         "options": {"temperature": 0.45, "num_predict": num_predict},
     }
+    if json_mode:
+        # Ollama constrains the output to valid JSON; the reply is not clipped, so it stays parseable.
+        payload["format"] = "json"
     last_error: Exception | None = None
     tries = max(1, attempts)
     with httpx.Client(timeout=timeout) as client:
@@ -108,7 +112,7 @@ def chat_stream(
         with client.stream("POST", url, json=payload) as response:
             if response.status_code >= 400:
                 response.read()
-                response.raise_for_status()
+                raise RuntimeError(_ollama_error(response))
             for line in response.iter_lines():
                 if not line:
                     continue
@@ -121,6 +125,15 @@ def chat_stream(
                     yield delta
                 if data.get("done"):
                     break
+
+
+def _ollama_error(response: httpx.Response) -> str:
+    """Ollama's own reason ("model failed to load…") beats a bare status code in the logs."""
+    try:
+        detail = str((response.json() or {}).get("error") or "").strip()
+    except ValueError:
+        detail = ""
+    return f"Ollama returned HTTP {response.status_code}" + (f": {detail[:300]}" if detail else "")
 
 
 def _tutor_messages(
@@ -158,7 +171,8 @@ def evaluate_interview(system: str, user_turn: str) -> dict[str, Any]:
         {"role": "user", "content": user_turn},
     ]
     try:
-        raw = chat(messages, timeout=60.0)
+        # Structured replies (interview feedback, recall grading) need room: the default budget clipped them mid-object.
+        raw = chat(messages, timeout=90.0, num_predict=1200, max_chars=0, json_mode=True)
         return parse_feedback_json(raw)
     except Exception as exc:
         logger.warning("ollama_feedback_failed", error=str(exc))

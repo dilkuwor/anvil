@@ -27,7 +27,11 @@ from app.study import fsrs as scheduler
 from app.study.mastery import is_mastered
 from app.study.models import ReviewCard, StudyCompletion, StudyDay, StudySettings
 from app.study.path import BOX_DAYS, DAILY_REVIEW_CAP, UNITS
+from app.study import patterns
 from app.study.schemas import (
+    DrillAnswerOut,
+    DrillItem,
+    DrillOut,
     AnswerCardOut,
     DesignOutlineIn,
     MemoryDay,
@@ -60,6 +64,8 @@ KIND_PROBLEM = "PROBLEM"
 KIND_LESSON = "LESSON"
 KIND_DESIGN = "DESIGN"
 KIND_CHECK = "CHECK"
+KIND_PATTERN = "PATTERN"
+DRILL_SIZE = 10
 
 MAX_BOX = max(BOX_DAYS)
 LEVELS = ["Not started", "Learning", "Familiar", "Proficient", "Mastered"]
@@ -473,8 +479,10 @@ def answer_check_card(
 ) -> AnswerCardOut:
     """A knowledge-check card answered in review: graded here, rated from the answer and the confidence."""
     card = db.scalar(select(ReviewCard).where(ReviewCard.id == card_id, ReviewCard.user_id == user_id))
-    if card is None or card.kind != KIND_CHECK:
+    if card is None or card.kind not in {KIND_CHECK, KIND_PATTERN}:
         raise NotFoundError("Review card not found")
+    if card.kind == KIND_PATTERN:
+        return _answer_pattern_card(db, user_id, card, choice, confidence, today)
     check = db.get(LessonCheck, UUID(card.ref))
     if check is None or check.kind == "short_answer":
         raise NotFoundError("Question not found")
@@ -503,6 +511,44 @@ def answer_check_card(
         explanation=check.explanation,
         learn_state=learn_state(row),
         needs_refresh=bool(row.needs_refresh) if row is not None else False,
+    )
+
+
+def _answer_pattern_card(
+    db: Session, user_id: UUID, card: ReviewCard, choice: int, confidence: str, today: date
+) -> AnswerCardOut:
+    row = db.execute(
+        select(Problem, ProblemSolution)
+        .join(ProblemSolution, ProblemSolution.problem_id == Problem.id)
+        .where(Problem.slug == card.ref)
+    ).first()
+    if row is None:
+        raise NotFoundError("Problem not found")
+    problem, solution = row
+    family = patterns.family_for(solution.pattern)
+    options = patterns.options_for(problem.slug, family)
+    if not 0 <= choice < len(options):
+        raise NotFoundError("Pick one of the options")
+    correct = options[choice] == family
+    fsrs_rating = scheduler.rating_for_answer(correct, confidence)
+    _apply_review(db, card, fsrs_rating, scheduler.NAME_BY_RATING[fsrs_rating], today)
+    db.commit()
+    db.refresh(card)
+    facts = Facts(db, user_id, today)
+    rate, count = observed_recall(db, user_id, today)
+    explanation = f"{family}: {patterns.DESCRIPTIONS.get(family, '')}"
+    if solution.trigger.strip():
+        explanation += f"\n\nTrigger: {solution.trigger.strip()}"
+    return AnswerCardOut(
+        card=card_out(db, facts, card),
+        remaining=len(due_cards(facts)),
+        next_due_on=card.due_on,
+        recall_rate=rate,
+        recall_reviews=count,
+        correct=correct,
+        correct_index=options.index(family),
+        explanation=explanation,
+        learn_state="",
     )
 
 
@@ -588,7 +634,149 @@ def card_out(db: Session, facts: Facts, card: ReviewCard) -> ReviewCardOut:
         return _lesson_card(facts, card)
     if card.kind == KIND_CHECK:
         return _check_card(facts, card)
+    if card.kind == KIND_PATTERN:
+        return _pattern_card(db, card)
     return _design_card(db, facts, card)
+
+
+def _pattern_card(db: Session, card: ReviewCard) -> ReviewCardOut:
+    row = db.execute(
+        select(Problem, ProblemSolution)
+        .join(ProblemSolution, ProblemSolution.problem_id == Problem.id)
+        .where(Problem.slug == card.ref, Problem.is_active.is_(True))
+    ).first()
+    if row is None:
+        return _missing_card(card, "Problem no longer in the catalog")
+    problem, solution = row
+    family = patterns.family_for(solution.pattern)
+    example_in, example_out = _first_example(problem)
+    prompt = _statement_excerpt(problem.description)
+    if example_in:
+        prompt += f"\n\nExample: {example_in} → {example_out}"
+    return ReviewCardOut(
+        id=card.id,
+        kind=KIND_PATTERN,
+        ref=card.ref,
+        box=card.box,
+        due_on=card.due_on,
+        title="Which pattern solves this?",
+        label=f"Pattern drill · Level {card.box}",
+        prompt=prompt,
+        answer="",
+        answer_label="Why",
+        detail=solution.trigger.strip(),
+        href=f"/problems/{problem.slug}",
+        note_source_type=NoteSourceType.PROBLEM.value,
+        note_source_id=str(problem.id),
+        check_kind="choice",
+        options=patterns.options_for(problem.slug, family),
+    )
+
+
+def _statement_excerpt(description: str, limit: int = 420) -> str:
+    text = " ".join((description or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rsplit(" ", 1)[0] + "…"
+
+
+def _first_example(problem: Problem) -> tuple[str, str]:
+    for item in problem.examples or []:
+        if isinstance(item, dict) and item.get("input"):
+            return str(item.get("input", "")).strip(), str(item.get("output", "")).strip()
+    return "", ""
+
+
+def _drill_pool(db: Session) -> list[tuple[Problem, ProblemSolution]]:
+    rows = db.execute(
+        select(Problem, ProblemSolution)
+        .join(ProblemSolution, ProblemSolution.problem_id == Problem.id)
+        .where(Problem.is_active.is_(True), ProblemSolution.pattern != "")
+    ).all()
+    return [(problem, solution) for problem, solution in rows]
+
+
+def pattern_drill(db: Session, user_id: UUID, today: date, limit: int = DRILL_SIZE) -> DrillOut:
+    """Ten problems to name the pattern for: due cards first, then never-drilled ones, then the rest."""
+    import random
+
+    pool = _drill_pool(db)
+    cards = {
+        card.ref: card
+        for card in db.scalars(
+            select(ReviewCard).where(ReviewCard.user_id == user_id, ReviewCard.kind == KIND_PATTERN)
+        ).all()
+    }
+    due = [pair for pair in pool if pair[0].slug in cards and cards[pair[0].slug].due_on <= today]
+    fresh = [pair for pair in pool if pair[0].slug not in cards]
+    rest = [pair for pair in pool if pair[0].slug in cards and cards[pair[0].slug].due_on > today]
+    rng = random.Random()
+    rng.shuffle(due)
+    rng.shuffle(fresh)
+    rest.sort(key=lambda pair: cards[pair[0].slug].due_on)
+    chosen = (due + fresh + rest)[:limit]
+    items: list[DrillItem] = []
+    for problem, solution in chosen:
+        example_in, example_out = _first_example(problem)
+        items.append(
+            DrillItem(
+                problem_id=problem.id,
+                slug=problem.slug,
+                difficulty=problem.difficulty,
+                statement=_statement_excerpt(problem.description),
+                example_input=example_in,
+                example_output=example_out,
+                options=patterns.options_for(problem.slug, patterns.family_for(solution.pattern)),
+                due=problem.slug in cards and cards[problem.slug].due_on <= today,
+            )
+        )
+    drilled_today = sum(1 for card in cards.values() if card.last_reviewed_on == today)
+    return DrillOut(items=items, drilled_today=drilled_today, families=list(patterns.FAMILY_NAMES))
+
+
+def answer_pattern(
+    db: Session, user_id: UUID, today: date, problem_id: UUID, choice: int, confidence: str, time_ms: int | None = None
+) -> DrillAnswerOut:
+    """Grade a drill answer and schedule the problem's pattern card from it."""
+    row = db.execute(
+        select(Problem, ProblemSolution)
+        .join(ProblemSolution, ProblemSolution.problem_id == Problem.id)
+        .where(Problem.id == problem_id, Problem.is_active.is_(True))
+    ).first()
+    if row is None:
+        raise NotFoundError("Problem not found")
+    problem, solution = row
+    family = patterns.family_for(solution.pattern)
+    options = patterns.options_for(problem.slug, family)
+    if not 0 <= choice < len(options):
+        raise NotFoundError("Pick one of the options")
+    correct = options[choice] == family
+    card = db.scalar(
+        select(ReviewCard).where(
+            ReviewCard.user_id == user_id, ReviewCard.kind == KIND_PATTERN, ReviewCard.ref == problem.slug
+        )
+    )
+    if card is None:
+        card = _new_card(user_id, KIND_PATTERN, problem.slug, today)
+        db.add(card)
+        db.flush()
+    fsrs_rating = scheduler.rating_for_answer(correct, confidence)
+    _apply_review(db, card, fsrs_rating, scheduler.NAME_BY_RATING[fsrs_rating], today)
+    db.commit()
+    db.refresh(card)
+    return DrillAnswerOut(
+        correct=correct,
+        correct_index=options.index(family),
+        family=family,
+        family_hint=patterns.DESCRIPTIONS.get(family, ""),
+        pattern=solution.pattern,
+        trigger=solution.trigger.strip(),
+        summary=solution.summary.strip(),
+        title=problem.title,
+        href=f"/problems/{problem.slug}",
+        next_due_on=card.due_on,
+        box=card.box,
+    )
 
 
 def _check_card(facts: Facts, card: ReviewCard) -> ReviewCardOut:
@@ -985,12 +1173,20 @@ def _get_or_plan_day(db: Session, facts: Facts) -> StudyDay:
         if not _commit_or_lose_race(db):
             day = db.scalar(select(StudyDay).where(StudyDay.user_id == facts.user_id, StudyDay.day == facts.today))
         db.refresh(day)
-    elif "review" not in day.plan and due_cards(facts):
-        # Cards became due after the plan was made (a problem solved yesterday, say).
-        day.plan = ["review", *day.plan]
-        db.add(day)
-        db.commit()
-        db.refresh(day)
+    else:
+        plan = list(day.plan)
+        if "review" not in plan and due_cards(facts):
+            # Cards became due after the plan was made (a problem solved yesterday, say).
+            plan = ["review", *plan]
+        if "drill" not in plan and len(_drill_pool(db)) >= DRILL_SIZE:
+            # Plans made before the drill existed pick it up right after review.
+            at = 1 if plan and plan[0] == "review" else 0
+            plan.insert(at, "drill")
+        if plan != list(day.plan):
+            day.plan = plan
+            db.add(day)
+            db.commit()
+            db.refresh(day)
     return day
 
 
@@ -998,6 +1194,8 @@ def _plan_tasks(facts: Facts) -> list[str]:
     plan: list[str] = []
     if due_cards(facts):
         plan.append("review")
+    if len(_drill_pool(facts.db)) >= DRILL_SIZE:
+        plan.append("drill")
     unit = facts.current_unit()
 
     next_problem = next((slug for slug in unit["problems"] if not facts.problem_solved(slug)), None)
@@ -1080,6 +1278,23 @@ def _task_out(db: Session, facts: Facts, task_id: str, manual: bool) -> TaskOut 
             href="/today/review",
             action="Start review",
             done=manual or not due,
+            manual=manual,
+        )
+    if kind == "drill":
+        drilled = sum(
+            1
+            for (card_kind, _), card in facts.cards.items()
+            if card_kind == KIND_PATTERN and card.last_reviewed_on == facts.today
+        )
+        return TaskOut(
+            id=task_id,
+            kind="drill",
+            title="Pattern drill",
+            why=f"Name the pattern for {DRILL_SIZE} problems in a few seconds each. Recognition is most of the interview.",
+            minutes=4,
+            href="/today/drill",
+            action="Start drill",
+            done=manual or drilled >= DRILL_SIZE,
             manual=manual,
         )
     if kind == "problem":
@@ -1166,7 +1381,13 @@ def _task_out(db: Session, facts: Facts, task_id: str, manual: bool) -> TaskOut 
 
 def _review_mix(cards: list[ReviewCard]) -> str:
     """'2 problems, 3 lessons' rather than a wall of titles."""
-    labels = {KIND_PROBLEM: "problem", KIND_LESSON: "lesson", KIND_DESIGN: "design question", KIND_CHECK: "question"}
+    labels = {
+        KIND_PROBLEM: "problem",
+        KIND_LESSON: "lesson",
+        KIND_DESIGN: "design question",
+        KIND_CHECK: "question",
+        KIND_PATTERN: "pattern",
+    }
     parts: list[str] = []
     for kind, label in labels.items():
         n = sum(1 for card in cards if card.kind == kind)

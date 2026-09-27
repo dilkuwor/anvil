@@ -184,6 +184,7 @@ def test_voice_turn_streams_without_saving(auth_client, provider, db):
     call = provider.calls[0]
     assert "read aloud" in call["system"]
     assert "Lesson context:" in call["system"]
+    assert call["user_turn"].startswith("What is a quorum?") and "under 120 words" in call["user_turn"]
     assert call["transcript"] == [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "Hello."}]
     assert auth_client.get("/api/v1/buddy/threads").json() == []
 

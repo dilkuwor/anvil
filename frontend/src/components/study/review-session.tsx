@@ -30,6 +30,7 @@ const KIND_LABEL: Record<ReviewCard["kind"], { label: string; dot: string; text:
   LESSON: { label: "Design concept", dot: "bg-violet-500", text: "text-violet-600 dark:text-violet-300" },
   DESIGN: { label: "Design question", dot: "bg-violet-500", text: "text-violet-600 dark:text-violet-300" },
   CHECK: { label: "Knowledge check", dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-300" },
+  PATTERN: { label: "Pattern drill", dot: "bg-amber-500", text: "text-amber-600 dark:text-amber-300" },
 };
 
 type Outcome = { cardId: string; rating: Rating; box: number; nextDue: string; recallRate: number | null };
@@ -105,7 +106,7 @@ export function ReviewSession() {
     setDraft("");
   }
 
-  if (card.kind === "CHECK" && !card.wants_text) {
+  if ((card.kind === "CHECK" || card.kind === "PATTERN") && !card.wants_text) {
     return (
       <Shell {...shellProps} dots={cards.map((c, i) => dotColor(c, i, index, outcomes))} position={`${index + 1} of ${cards.length}`}>
         <QuestionCard key={card.id} card={card} onDone={advance} />
@@ -221,7 +222,7 @@ function QuestionCard({
   const [choice, setChoice] = useState<number | null>(null);
   const [confidence, setConfidence] = useState<Confidence | null>(null);
   const startedAt = useRef(0);
-  const kind = KIND_LABEL.CHECK;
+  const kind = KIND_LABEL[card.kind];
   useEffect(() => {
     startedAt.current = Date.now();
   }, [card.id]);

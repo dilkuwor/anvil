@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export type Rating = "forgot" | "shaky" | "good";
-export type CardKind = "PROBLEM" | "LESSON" | "DESIGN" | "CHECK";
+export type CardKind = "PROBLEM" | "LESSON" | "DESIGN" | "CHECK" | "PATTERN";
 export type Confidence = "sure" | "unsure";
 
 export type StudyTask = {
@@ -219,8 +219,36 @@ export type DesignOutline = {
   note_id: string | null;
 };
 
+export type DrillItem = {
+  problem_id: string;
+  slug: string;
+  difficulty: string;
+  statement: string;
+  example_input: string;
+  example_output: string;
+  options: string[];
+  due: boolean;
+};
+
+export type Drill = { items: DrillItem[]; drilled_today: number; families: string[] };
+
+export type DrillAnswer = {
+  correct: boolean;
+  correct_index: number;
+  family: string;
+  family_hint: string;
+  pattern: string;
+  trigger: string;
+  summary: string;
+  title: string;
+  href: string;
+  next_due_on: string;
+  box: number;
+};
+
 export const studyKeys = {
   today: ["study", "today"] as const,
+  drill: ["study", "drill", "patterns"] as const,
   reviews: ["study", "reviews"] as const,
   path: ["study", "path"] as const,
   settings: ["study", "settings"] as const,
@@ -412,4 +440,25 @@ export function nextDueLabel(iso: string, from: string): string {
   if (days === 1) return "tomorrow";
   if (days < 14) return `in ${days} days`;
   return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+export function useDrill() {
+  return useQuery({
+    queryKey: studyKeys.drill,
+    queryFn: () => api.get<Drill>("/api/v1/study/drill/patterns"),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useAnswerDrill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ problemId, choice, confidence, timeMs }: { problemId: string; choice: number; confidence: Confidence; timeMs?: number }) =>
+      api.post<DrillAnswer>(`/api/v1/study/drill/patterns/${problemId}/answer`, { choice, confidence, time_ms: timeMs }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studyKeys.today });
+      queryClient.invalidateQueries({ queryKey: studyKeys.memory });
+    },
+  });
 }
