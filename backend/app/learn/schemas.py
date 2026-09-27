@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -55,6 +56,9 @@ class LearningTopicSummary(BaseModel):
     href: str
 
 
+LearnState = Literal["not_started", "learning", "checked", "mastered"]
+
+
 class LearningLessonSummary(BaseModel):
     id: UUID
     slug: str
@@ -62,7 +66,60 @@ class LearningLessonSummary(BaseModel):
     short_description: str
     estimated_minutes: int
     status: str
+    learn_state: LearnState = "not_started"
+    needs_refresh: bool = False
     href: str
+
+
+class LessonCheckOut(BaseModel):
+    """A question as the client sees it: never the correct option or the explanation."""
+
+    id: UUID
+    key: str
+    kind: Literal["choice", "spot_mistake", "short_answer"]
+    prompt: str
+    options: list[str]
+    section: str
+    concept: str
+    # Only for short_answer, which the learner grades against it after answering.
+    model_answer: str | None = None
+
+
+class LessonCheckStateOut(BaseModel):
+    total: int
+    checked: int
+    correct_ids: list[UUID]
+    attempted_ids: list[UUID]
+
+
+class LessonReviewOut(BaseModel):
+    cards: int
+    reviews: int
+    next_due_on: date | None
+    last_reviewed_on: date | None
+    mastered_at: datetime | None
+
+
+class AnswerCheckIn(BaseModel):
+    choice: int | None = None
+    text: str | None = Field(default=None, max_length=2000)
+    # short_answer only: the learner's own verdict after comparing with the model answer.
+    correct: bool | None = None
+    confidence: Literal["sure", "unsure"] = "unsure"
+    time_ms: int | None = Field(default=None, ge=0, le=3_600_000)
+
+
+class AnswerCheckOut(BaseModel):
+    check_id: UUID
+    correct: bool
+    correct_index: int | None
+    model_answer: str | None
+    explanation: str
+    section: str
+    checked: int
+    total: int
+    just_checked: bool
+    learn_state: LearnState
 
 
 class LearningCategoryDetail(BaseModel):
@@ -112,6 +169,11 @@ class LearningLessonDetail(BaseModel):
     previous: LearningLessonSummary | None = None
     next: LearningLessonSummary | None = None
     related_problems: list[RelatedProblemOut]
+    learn_state: LearnState = "not_started"
+    needs_refresh: bool = False
+    checks: list[LessonCheckOut] = []
+    check_state: LessonCheckStateOut | None = None
+    review: LessonReviewOut | None = None
 
 
 class LearningSearchHit(BaseModel):

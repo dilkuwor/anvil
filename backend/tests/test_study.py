@@ -14,7 +14,7 @@ from app.problems.seed_catalog import seed_problem_catalog
 from app.progress.models import UserProblemProgress
 from app.study import reminders, service
 from app.study.models import ReviewCard, StudySettings
-from app.study.path import BOX_DAYS, UNITS, validate_path
+from app.study.path import UNITS, validate_path
 from app.study.schemas import DesignOutlineIn, StudySettingsUpdate
 from app.users.models import User
 from database.seeds.catalog import PROBLEMS as CATALOG
@@ -139,7 +139,8 @@ def test_solving_creates_a_card_due_tomorrow_and_moves_the_plan(auth_client, db)
     assert plan.due_reviews == 1
 
 
-def test_rating_moves_cards_between_boxes(auth_client, db):
+def test_rating_schedules_with_fsrs(auth_client, db):
+    """Intervals come from the memory model: they grow with good recalls and shrink after a lapse."""
     seed_problem_catalog(db)
     _seed_lessons(db)
     user = _user(db, auth_client)
@@ -153,15 +154,23 @@ def test_rating_moves_cards_between_boxes(auth_client, db):
     assert card.answer
 
     good = service.rate_card(db, user.id, card.id, "good", TODAY)
-    assert good.card.box == 2 and good.next_due_on == TODAY + timedelta(days=BOX_DAYS[2])
+    first_gap = (good.next_due_on - TODAY).days
+    assert 1 <= first_gap <= 4  # a first "got it" comes back within a few days
     assert good.remaining == 0
+    row = db.get(ReviewCard, card.id)
+    assert row.stability is not None and row.difficulty is not None and row.last_review is not None
 
     later = good.next_due_on
-    shaky = service.rate_card(db, user.id, card.id, "shaky", later)
-    assert shaky.card.box == 2 and shaky.next_due_on == later + timedelta(days=BOX_DAYS[2])
+    good_again = service.rate_card(db, user.id, card.id, "good", later)
+    second_gap = (good_again.next_due_on - later).days
+    assert second_gap > first_gap  # spacing expands
+    assert good_again.card.box >= 2  # the derived level follows the memory estimate
 
+    later = good_again.next_due_on
     forgot = service.rate_card(db, user.id, card.id, "forgot", later)
-    assert forgot.card.box == 1 and forgot.next_due_on == later + timedelta(days=1)
+    assert (forgot.next_due_on - later).days <= 3  # a lapse brings it back soon
+    assert forgot.card.box == 1
+    assert db.get(ReviewCard, card.id).lapses == 1
 
     response = auth_client.post(f"/api/v1/study/reviews/{card.id}/rate", json={"rating": "good"})
     assert response.status_code == 200

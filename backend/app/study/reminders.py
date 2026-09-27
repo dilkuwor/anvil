@@ -12,6 +12,7 @@ day they chose, who has not been sent one today yet.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
 import html
 import logging
 from datetime import datetime, timedelta, timezone
@@ -21,6 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.verification import frontend_base_url
+from app.common.cron import acquire_job_lease, finalize_job_run, get_job_status
 from app.email.resend import EmailSendError, is_configured, send_email
 from app.study import service
 from app.study.models import StudySettings
@@ -29,6 +31,7 @@ from app.users.models import User
 
 log = logging.getLogger(__name__)
 
+JOB_NAME = "study_reminders"
 SUBJECT = "Today on Anvil"
 
 # A reminder is sent only inside this window after the chosen time. Outside it (say the user
@@ -36,28 +39,62 @@ SUBJECT = "Today on Anvil"
 SEND_WINDOW = timedelta(hours=3)
 
 
+@dataclass
+class ReminderRunStats:
+    processed: int = 0
+    sent: int = 0
+    failed: int = 0
+    details: list[dict] = field(default_factory=list)
+
+
 def email_ready() -> bool:
     return is_configured()
 
 
-def send_due_reminders(db: Session, now: datetime | None = None) -> int:
-    """Send every reminder that is due right now. Returns how many were sent."""
+def send_due_reminders_with_stats(db: Session, now: datetime | None = None) -> ReminderRunStats:
+    """Send every reminder that is due right now. Returns detailed execution statistics."""
     now = now or datetime.now(timezone.utc)
-    sent = 0
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
+    stats = ReminderRunStats()
     rows = db.execute(
         select(StudySettings, User)
         .join(User, User.id == StudySettings.user_id)
-        .where(StudySettings.reminders_enabled.is_(True), StudySettings.reminder_email.is_(True))
+        .where(
+            StudySettings.reminders_enabled.is_(True),
+            StudySettings.reminder_email.is_(True),
+            User.is_active.is_(True),
+        )
     ).all()
+    stats.processed = len(rows)
+
     for settings, user in rows:
         if not _is_due(settings, now):
             continue
-        if send_reminder(db, user, now=now):
-            sent += 1
-    return sent
+        try:
+            if send_reminder(db, user, now=now):
+                stats.sent += 1
+                stats.details.append({"user_id": str(user.id), "status": "sent"})
+            else:
+                stats.details.append({"user_id": str(user.id), "status": "skipped"})
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            stats.failed += 1
+            stats.details.append({"user_id": str(user.id), "status": "failed", "error": str(exc)})
+            log.warning("failed to send reminder for %s: %s", user.id, exc)
+
+    return stats
+
+
+def send_due_reminders(db: Session, now: datetime | None = None) -> int:
+    """Send every reminder that is due right now. Returns how many were sent."""
+    return send_due_reminders_with_stats(db, now).sent
 
 
 def _is_due(settings: StudySettings, now: datetime) -> bool:
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
     try:
         local = now.astimezone(ZoneInfo(settings.timezone))
     except (ZoneInfoNotFoundError, ValueError):
@@ -68,15 +105,17 @@ def _is_due(settings: StudySettings, now: datetime) -> bool:
         return False
     try:
         hours, minutes = (int(part) for part in settings.reminder_time.split(":"))
-    except ValueError:
-        hours, minutes = 8, 30
-    start = local.replace(hour=hours, minute=minutes, second=0, microsecond=0)
+        start = local.replace(hour=hours, minute=minutes, second=0, microsecond=0)
+    except (ValueError, TypeError, OverflowError):
+        start = local.replace(hour=8, minute=30, second=0, microsecond=0)
     return start <= local < start + SEND_WINDOW
 
 
 def send_reminder(db: Session, user: User, *, now: datetime | None = None, force: bool = False) -> bool:
     """Send one user's reminder for today. Skips quietly when there is nothing to do."""
     now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
     settings = service.get_or_create_settings(db, user.id)
     today = service.local_today(settings, now)
     plan = service.get_today(db, user.id, today)
@@ -156,21 +195,47 @@ def reminder_email(plan: TodayOut, app_url: str) -> dict[str, str]:
     return {"subject": SUBJECT, "html": html_doc, "text": "\n".join(text_lines)}
 
 
-def run_once() -> int:
-    """One scheduler tick: open a session, send what is due, never raise."""
+def run_once(*, now: datetime | None = None) -> int:
+    """One scheduler tick: acquires DB lease, sends due reminders, records history."""
     from app.common import models as _models  # noqa: F401
     from app.common.database import SessionLocal
 
     if not is_configured():
         return 0
+
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
     db = SessionLocal()
+    lease = None
     try:
-        sent = send_due_reminders(db)
+        if hasattr(db, "get") and hasattr(db, "execute"):
+            lease = acquire_job_lease(db, JOB_NAME, default_interval_minutes=10, now=now)
+            if lease is None:
+                # Job is disabled in DB or actively running on another worker
+                return 0
+        sent = send_due_reminders(db, now=now)
+        if lease is not None:
+            _, run = lease
+            finalize_job_run(
+                db,
+                run,
+                status="SUCCESS",
+                items_sent=sent,
+                now=now,
+            )
         if sent:
             log.info("sent %d reminder(s)", sent)
         return sent
-    except Exception:  # noqa: BLE001 - the loop must survive a bad tick
+    except Exception as exc:  # noqa: BLE001 - the loop must survive a bad tick
         log.exception("reminder run failed")
+        if lease is not None:
+            _, run = lease
+            try:
+                finalize_job_run(db, run, status="FAILED", error_message=str(exc), now=now)
+            except Exception:
+                log.exception("failed to record failure in cron history")
         return 0
     finally:
         db.close()
@@ -182,10 +247,21 @@ async def run_scheduler(interval_minutes: int, *, first_delay_seconds: float = 3
     The first check happens shortly after startup so a restart inside a user's send
     window does not push their reminder back by a full interval.
     """
+    if interval_minutes <= 0:
+        return
     await asyncio.sleep(first_delay_seconds)
     while True:
-        await asyncio.to_thread(run_once)
+        try:
+            await asyncio.to_thread(run_once)
+        except Exception:  # noqa: BLE001
+            log.exception("Unexpected error in reminder scheduler tick")
         await asyncio.sleep(interval_minutes * 60)
+
+
+def get_status(db: Session, *, history_limit: int = 10) -> dict:
+    """Get status and history for the study reminders cron job."""
+
+    return get_job_status(db, JOB_NAME, history_limit=history_limit)
 
 
 def main() -> int:

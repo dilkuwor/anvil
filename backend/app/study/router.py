@@ -10,9 +10,13 @@ from app.common.deps import get_current_user
 from app.common.errors import ServiceUnavailableError
 from app.study import reminders, service
 from app.study.schemas import (
+    AnswerCardIn,
+    AnswerCardOut,
     DesignOutlineIn,
     DesignOutlineOut,
+    MemoryOut,
     PathOut,
+    ProgressOut,
     RateIn,
     RateOut,
     ReadinessOut,
@@ -52,10 +56,19 @@ def toggle_task(
 
 @router.get("/reviews", response_model=ReviewQueueOut)
 def reviews(
+    scope: str | None = Query(default=None, max_length=400, description="Quiz scope: lesson:<slug>, topic:<slug> or category:<slug>"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ReviewQueueOut:
-    return service.review_queue(db, current_user.id, _today(db, current_user, None))
+    return service.review_queue(db, current_user.id, _today(db, current_user, None), scope)
+
+
+@router.get("/progress", response_model=ProgressOut)
+def progress(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProgressOut:
+    return service.get_progress(db, current_user.id, _today(db, current_user, None))
 
 
 @router.post("/reviews/{card_id}/rate", response_model=RateOut)
@@ -66,6 +79,26 @@ def rate(
     current_user: User = Depends(get_current_user),
 ) -> RateOut:
     return service.rate_card(db, current_user.id, card_id, payload.rating, _today(db, current_user, None))
+
+
+@router.post("/reviews/{card_id}/answer", response_model=AnswerCardOut)
+def answer_card(
+    card_id: UUID,
+    payload: AnswerCardIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AnswerCardOut:
+    return service.answer_check_card(
+        db, current_user.id, card_id, payload.choice, payload.confidence, _today(db, current_user, None), payload.time_ms
+    )
+
+
+@router.get("/memory", response_model=MemoryOut)
+def memory(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MemoryOut:
+    return service.get_memory(db, current_user.id, _today(db, current_user, None))
 
 
 @router.get("/readiness", response_model=ReadinessOut)
@@ -136,5 +169,15 @@ def test_email(
 ) -> Response:
     if not reminders.email_ready():
         raise ServiceUnavailableError("Email is not set up on this server.")
-    reminders.send_reminder(db, current_user, force=True)
+    sent = reminders.send_reminder(db, current_user, force=True)
+    if not sent:
+        raise ServiceUnavailableError("Failed to send test email. Please check your email configuration.")
     return Response(status_code=204)
+
+
+@router.get("/settings/cron-status")
+def cron_status(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> dict:
+    return reminders.get_status(db)

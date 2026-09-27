@@ -18,9 +18,12 @@ from app.submissions.models import Submission, SubmissionTestResult
 from app.study.models import ReviewCard, StudyCompletion, StudyDay, StudySettings
 from app.mcp.models import McpAccessLog, McpToken
 from app.oauth.models import OAuthAuthorizationCode, OAuthClient, OAuthRefreshToken
+from app.common.cron_models import CronJob, CronJobRun
 from app.users.models import User, UserLlmKey
 
 __all__ = [
+    "CronJob",
+    "CronJobRun",
     "CheatSheet",
     "CheatSheetSection",
     "CheatSheetSectionContent",

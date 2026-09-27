@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.learn.models import LearningCategory, LearningLesson, LearningLessonProblem, LearningTopic
+from app.learn.models import LearningCategory, LearningLesson, LearningLessonProblem, LearningTopic, LessonCheck
 from app.problems.models import Problem
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from database.seeds.learn import CATEGORIES, TOPICS  # noqa: E402
+from database.seeds.learn_checks import CHECKS  # noqa: E402
 
 
 def seed_learning(db: Session) -> tuple[int, int, int]:
@@ -88,5 +89,39 @@ def seed_learning(db: Session) -> tuple[int, int, int]:
                     )
                 )
 
+    seed_checks(db)
     db.flush()
     return len(CATEGORIES), len(TOPICS), sum(len(spec["lessons"]) for spec in TOPICS)
+
+
+def seed_checks(db: Session, checks: dict[str, list[dict]] = CHECKS) -> int:
+    """Upsert knowledge-check questions by (lesson, key) so ids, and learners' attempts, survive reseeding."""
+    count = 0
+    for slug, items in checks.items():
+        lesson = db.scalar(select(LearningLesson).where(LearningLesson.slug == slug))
+        if lesson is None:
+            continue
+        existing = {row.key: row for row in db.scalars(select(LessonCheck).where(LessonCheck.lesson_id == lesson.id)).all()}
+        keep: set[str] = set()
+        for order, item in enumerate(items, start=1):
+            row = existing.get(item["key"])
+            if row is None:
+                row = LessonCheck(id=uuid.uuid4(), lesson_id=lesson.id, key=item["key"])
+                db.add(row)
+            row.display_order = order
+            row.kind = item["kind"]
+            row.prompt = item["prompt"]
+            row.options = list(item.get("options") or [])
+            row.answer_index = item.get("answer") if item["kind"] != "short_answer" else None
+            row.model_answer = item.get("model_answer", "") or ""
+            row.explanation = item["explanation"]
+            row.section = item["section"]
+            row.concept = item["concept"]
+            row.mistake = item.get("mistake")
+            keep.add(item["key"])
+            count += 1
+        for key, row in existing.items():
+            if key not in keep:
+                db.delete(row)
+    db.flush()
+    return count

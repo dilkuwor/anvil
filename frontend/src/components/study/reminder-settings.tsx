@@ -34,21 +34,21 @@ export function ReminderSettings() {
   const settings = useStudySettings();
   if (settings.isLoading) {
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-2xl">
           <CardSkeleton rows={5} />
         </div>
-      </main>
+      </div>
     );
   }
   if (settings.isError || !settings.data) {
     const message = settings.error instanceof ApiError ? settings.error.message : "Unable to load settings.";
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-2xl">
           <ErrorState message={message} onRetry={() => settings.refetch()} />
         </div>
-      </main>
+      </div>
     );
   }
   return <Editor key={settings.data.timezone + settings.data.reminder_time} initial={settings.data} />;
@@ -105,7 +105,7 @@ function Editor({ initial }: { initial: StudySettings }) {
   }
 
   return (
-    <main className="ia-content py-6">
+    <div className="w-full">
       <div className="mx-auto max-w-2xl space-y-5">
         <Link href="/today" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -220,6 +220,6 @@ function Editor({ initial }: { initial: StudySettings }) {
           </SectionCard>
         </form>
       </div>
-    </main>
+    </div>
   );
 }

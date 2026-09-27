@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export type Rating = "forgot" | "shaky" | "good";
-export type CardKind = "PROBLEM" | "LESSON" | "DESIGN";
+export type CardKind = "PROBLEM" | "LESSON" | "DESIGN" | "CHECK";
+export type Confidence = "sure" | "unsure";
 
 export type StudyTask = {
   id: string;
@@ -50,6 +51,10 @@ export type ReviewCard = {
   note_source_type: string | null;
   note_source_id: string | null;
   wants_text: boolean;
+  /** Knowledge-check cards: the options to pick from; the right one arrives only after answering. */
+  check_kind?: "choice" | "spot_mistake" | "short_answer" | null;
+  options?: string[];
+  section?: string | null;
 };
 
 export type ReviewQueue = {
@@ -57,7 +62,31 @@ export type ReviewQueue = {
   cards: ReviewCard[];
   due_total: number;
   boxes: Record<string, number>;
+  practice?: boolean;
+  scope_title?: string | null;
 };
+
+export type ProgressItem = {
+  kind: "lesson" | "problem";
+  slug: string;
+  title: string;
+  href: string;
+  topic: string;
+  topic_slug: string;
+  learn_state: "not_started" | "learning" | "checked" | "mastered";
+  needs_refresh: boolean;
+  questions: number;
+  first_try_correct: number;
+  first_try_total: number;
+  cards: number;
+  reviews: number;
+  last_reviewed_on: string | null;
+  next_due_on: string | null;
+  quiz_scope: string | null;
+};
+export type ProgressGroup = { category: string; slug: string; items: ProgressItem[]; checked: number; total: number; quiz_scope: string | null };
+export type SureButWrong = { kind: string; prompt: string; item_title: string; href: string; when: string; times: number };
+export type Progress = { groups: ProgressGroup[]; sure_but_wrong: SureButWrong[] };
 
 export type RateResult = {
   card: ReviewCard;
@@ -66,6 +95,30 @@ export type RateResult = {
   recall_rate: number | null;
   recall_reviews: number;
 };
+
+export type AnswerCardResult = RateResult & {
+  correct: boolean;
+  correct_index: number;
+  explanation: string;
+  learn_state: string;
+  needs_refresh: boolean;
+};
+
+export type MemoryDay = { day: string; due: number };
+export type MemoryLesson = {
+  slug: string;
+  title: string;
+  category: string;
+  href: string;
+  learn_state: "not_started" | "learning" | "checked" | "mastered";
+  needs_refresh: boolean;
+  cards: number;
+  reviews: number;
+  next_due_on: string | null;
+  last_reviewed_on: string | null;
+};
+export type WeakSpot = { concept: string; misses: number; lesson_title: string; href: string };
+export type Memory = { week: MemoryDay[]; lessons: MemoryLesson[]; weak: WeakSpot[]; due_today: number };
 
 export type ReadinessPoint = { day: string; readiness: number; coverage: number; retention: number | null };
 export type Readiness = {
@@ -149,6 +202,9 @@ export const studyKeys = {
   path: ["study", "path"] as const,
   settings: ["study", "settings"] as const,
   readiness: ["study", "readiness"] as const,
+  memory: ["study", "memory"] as const,
+  progress: ["study", "progress"] as const,
+  quiz: (scope: string) => ["study", "reviews", scope] as const,
   outline: (slug: string) => ["study", "outline", slug] as const,
 };
 
@@ -183,11 +239,48 @@ export function useToggleTask() {
   });
 }
 
-export function useReviewQueue() {
+export function useReviewQueue(scope?: string | null) {
   return useQuery({
-    queryKey: studyKeys.reviews,
-    queryFn: () => api.get<ReviewQueue>("/api/v1/study/reviews"),
+    queryKey: scope ? studyKeys.quiz(scope) : studyKeys.reviews,
+    queryFn: () => api.get<ReviewQueue>(scope ? `/api/v1/study/reviews?scope=${encodeURIComponent(scope)}` : "/api/v1/study/reviews"),
     staleTime: 0,
+  });
+}
+
+export function useProgress(enabled = true) {
+  return useQuery({
+    queryKey: studyKeys.progress,
+    queryFn: () => api.get<Progress>("/api/v1/study/progress"),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/** Link to a quiz over a scope such as lesson:<slug>, topic:<slug> or category:<slug>. */
+export function quizHref(scope: string): string {
+  return `/today/review?scope=${encodeURIComponent(scope)}`;
+}
+
+export function useMemory(enabled = true) {
+  return useQuery({
+    queryKey: studyKeys.memory,
+    queryFn: () => api.get<Memory>("/api/v1/study/memory"),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useAnswerCard() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ cardId, choice, confidence, timeMs }: { cardId: string; choice: number; confidence: Confidence; timeMs?: number }) =>
+      api.post<AnswerCardResult>(`/api/v1/study/reviews/${cardId}/answer`, { choice, confidence, time_ms: timeMs }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studyKeys.today });
+      queryClient.invalidateQueries({ queryKey: studyKeys.readiness });
+      queryClient.invalidateQueries({ queryKey: studyKeys.memory });
+      queryClient.invalidateQueries({ queryKey: ["learn"] });
+    },
   });
 }
 

@@ -28,22 +28,22 @@ export function PathView() {
 
   if (path.isLoading) {
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-3xl space-y-4">
           <CardSkeleton rows={2} />
           <CardSkeleton rows={5} />
         </div>
-      </main>
+      </div>
     );
   }
   if (path.isError || !path.data) {
     const message = path.error instanceof ApiError ? path.error.message : "Unable to load your path.";
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-3xl">
           <ErrorState message={message} onRetry={() => path.refetch()} />
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -51,7 +51,7 @@ export function PathView() {
   const expanded = openUnit ?? data.current_unit;
 
   return (
-    <main className="ia-content py-6">
+    <div className="w-full">
       <div className="mx-auto max-w-3xl space-y-6">
         <PageHeader
           title="Your path"
@@ -88,7 +88,7 @@ export function PathView() {
 
         <p className="px-1 text-[12px] text-muted-foreground">Nothing is locked. Open any unit; the order only decides what Today suggests next.</p>
       </div>
-    </main>
+    </div>
   );
 }
 

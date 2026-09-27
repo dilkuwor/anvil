@@ -30,22 +30,22 @@ export function TodayView() {
 
   if (today.isLoading) {
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-3xl space-y-4">
           <CardSkeleton rows={2} />
           <CardSkeleton rows={4} />
         </div>
-      </main>
+      </div>
     );
   }
   if (today.isError || !today.data) {
     const message = today.error instanceof ApiError ? today.error.message : "Unable to load today's plan.";
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-3xl">
           <ErrorState message={message} onRetry={() => today.refetch()} />
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -56,7 +56,7 @@ export function TodayView() {
   const minutesLeft = open.filter((task) => !task.optional).reduce((sum, task) => sum + task.minutes, 0);
 
   return (
-    <main className="ia-content py-6">
+    <div className="w-full">
       <div className="mx-auto max-w-3xl space-y-5">
         <PageHeader
           title="Today"
@@ -128,7 +128,7 @@ export function TodayView() {
           Two 25-minute sessions is a full day. Missed days are not counted against you; the plan just moves on.
         </p>
       </div>
-    </main>
+    </div>
   );
 }
 

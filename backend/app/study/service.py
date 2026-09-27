@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -19,14 +19,25 @@ from app.common.errors import NotFoundError
 from app.email.resend import is_configured as email_configured
 from app.interviews.models import InterviewSession
 from app.interviews.scenarios import get_scenario
-from app.learn.models import LearningLesson, LearningTopic, UserLearningProgress
+from app.learn.models import CheckAttempt, LearningLesson, LearningTopic, LessonCheck, UserLearningProgress
 from app.notes.models import Note
 from app.problems.models import Problem, ProblemSolution
 from app.progress.models import UserProblemProgress
+from app.study import fsrs as scheduler
+from app.study.mastery import is_mastered
 from app.study.models import ReviewCard, StudyCompletion, StudyDay, StudySettings
 from app.study.path import BOX_DAYS, DAILY_REVIEW_CAP, UNITS
 from app.study.schemas import (
+    AnswerCardOut,
     DesignOutlineIn,
+    MemoryDay,
+    MemoryLesson,
+    MemoryOut,
+    ProgressGroup,
+    ProgressItem,
+    ProgressOut,
+    SureButWrong,
+    WeakSpot,
     DesignOutlineOut,
     PathDesignOut,
     PathLessonOut,
@@ -48,6 +59,7 @@ from app.study.schemas import (
 KIND_PROBLEM = "PROBLEM"
 KIND_LESSON = "LESSON"
 KIND_DESIGN = "DESIGN"
+KIND_CHECK = "CHECK"
 
 MAX_BOX = max(BOX_DAYS)
 LEVELS = ["Not started", "Learning", "Familiar", "Proficient", "Mastered"]
@@ -210,6 +222,24 @@ class Facts:
             for card in db.scalars(select(ReviewCard).where(ReviewCard.user_id == user_id)).all()
         }
 
+        self.checks: dict[str, LessonCheck] = {}
+        self.check_lessons: dict[UUID, LearningLesson] = {}
+        self.load_checks()
+
+    def load_checks(self) -> None:
+        """Questions behind the CHECK cards; they may belong to lessons outside the path."""
+        check_ids = [UUID(ref) for kind, ref in self.cards if kind == KIND_CHECK]
+        if not check_ids:
+            return
+        rows = self.db.scalars(
+            select(LessonCheck)
+            .options(selectinload(LessonCheck.lesson).selectinload(LearningLesson.topic).selectinload(LearningTopic.category))
+            .where(LessonCheck.id.in_(check_ids))
+        ).all()
+        for check in rows:
+            self.checks[str(check.id)] = check
+            self.check_lessons[check.lesson_id] = check.lesson
+
     # -- item state
 
     def problem_solved(self, slug: str) -> bool:
@@ -275,13 +305,31 @@ def sync_cards(db: Session, facts: Facts) -> None:
         if slug in facts.problems and (KIND_PROBLEM, slug) not in facts.cards:
             new_cards.append(_new_card(facts.user_id, KIND_PROBLEM, slug, solved_on))
     for slug, done_on in facts.lessons_done.items():
-        if slug in facts.lessons and (KIND_LESSON, slug) not in facts.cards:
+        lesson = facts.lessons.get(slug)
+        # A lesson with knowledge-check questions is reviewed through them, not a summary card.
+        if lesson is not None and not lesson.checks and (KIND_LESSON, slug) not in facts.cards:
             new_cards.append(_new_card(facts.user_id, KIND_LESSON, slug, done_on))
     for key, done_on in facts.completions.items():
         if key.startswith("outline:"):
             design = key.split(":", 1)[1]
             if (KIND_DESIGN, design) not in facts.cards:
                 new_cards.append(_new_card(facts.user_id, KIND_DESIGN, design, done_on))
+    # Questions added to a lesson after it was checked join review as fresh cards.
+    checked_rows = db.execute(
+        select(UserLearningProgress.lesson_id, UserLearningProgress.completed_at)
+        .where(
+            UserLearningProgress.user_id == facts.user_id,
+            UserLearningProgress.status == LearningProgressStatus.COMPLETED.value,
+        )
+    ).all()
+    if checked_rows:
+        lesson_ids = [lesson_id for lesson_id, _ in checked_rows]
+        done_on_by_lesson = {
+            lesson_id: (completed_at or datetime.now(timezone.utc)).date() for lesson_id, completed_at in checked_rows
+        }
+        for check in db.scalars(select(LessonCheck).where(LessonCheck.lesson_id.in_(lesson_ids))).all():
+            if (KIND_CHECK, str(check.id)) not in facts.cards:
+                new_cards.append(_new_card(facts.user_id, KIND_CHECK, str(check.id), done_on_by_lesson[check.lesson_id]))
     if not new_cards:
         return
     db.add_all(new_cards)
@@ -293,6 +341,8 @@ def sync_cards(db: Session, facts: Facts) -> None:
     for card in new_cards:
         db.refresh(card)
         facts.cards[(card.kind, card.ref)] = card
+    if any(card.kind == KIND_CHECK for card in new_cards):
+        facts.load_checks()
 
 
 def _commit_or_lose_race(db: Session) -> bool:
@@ -315,12 +365,76 @@ def due_cards(facts: Facts) -> list[ReviewCard]:
     return due
 
 
-def review_queue(db: Session, user_id: UUID, today: date) -> ReviewQueueOut:
+def review_queue(db: Session, user_id: UUID, today: date, scope: str | None = None) -> ReviewQueueOut:
     facts = Facts(db, user_id, today)
     sync_cards(db, facts)
+    if scope:
+        return _quiz_queue(db, facts, scope)
     due = due_cards(facts)
     cards = [card_out(db, facts, card) for card in due[:DAILY_REVIEW_CAP]]
     return ReviewQueueOut(day=today, cards=cards, due_total=len(due), boxes=box_counts(facts))
+
+
+def scope_lessons(db: Session, scope: str) -> tuple[str, list[LearningLesson]]:
+    """Resolve ``lesson:<slug>``, ``topic:<slug>`` or ``category:<slug>`` (comma separated) to lessons."""
+    lessons: list[LearningLesson] = []
+    titles: list[str] = []
+    for part in scope.split(","):
+        kind, _, slug = part.strip().partition(":")
+        if not slug:
+            continue
+        if kind == "lesson":
+            lesson = db.scalar(select(LearningLesson).where(LearningLesson.slug == slug, LearningLesson.is_published.is_(True)))
+            if lesson:
+                lessons.append(lesson)
+                titles.append(lesson.title)
+        elif kind == "topic":
+            topic = db.scalar(select(LearningTopic).where(LearningTopic.slug == slug))
+            if topic:
+                lessons.extend(item for item in topic.lessons if item.is_published)
+                titles.append(topic.title)
+        elif kind == "category":
+            from app.learn.models import LearningCategory
+
+            category = db.scalar(select(LearningCategory).where(LearningCategory.slug == slug))
+            if category:
+                for topic in category.topics:
+                    lessons.extend(item for item in topic.lessons if item.is_published)
+                titles.append(category.title)
+    return ", ".join(titles), lessons
+
+
+def _quiz_queue(db: Session, facts: Facts, scope: str) -> ReviewQueueOut:
+    """Every question card in the scope, shuffled and interleaved across lessons, due or not."""
+    import random
+
+    title, lessons = scope_lessons(db, scope)
+    lesson_ids = {lesson.id for lesson in lessons}
+    by_lesson: dict[UUID, list[ReviewCard]] = {}
+    for (kind, ref), card in facts.cards.items():
+        if kind != KIND_CHECK:
+            continue
+        check = facts.checks.get(ref)
+        if check is not None and check.lesson_id in lesson_ids:
+            by_lesson.setdefault(check.lesson_id, []).append(card)
+    buckets = list(by_lesson.values())
+    for bucket in buckets:
+        random.shuffle(bucket)
+    random.shuffle(buckets)
+    ordered: list[ReviewCard] = []
+    while any(buckets):
+        for bucket in buckets:
+            if bucket:
+                ordered.append(bucket.pop())
+    cards = [card_out(db, facts, card) for card in ordered]
+    return ReviewQueueOut(
+        day=facts.today,
+        cards=cards,
+        due_total=len(cards),
+        boxes=box_counts(facts),
+        practice=True,
+        scope_title=title or None,
+    )
 
 
 def box_counts(facts: Facts) -> dict[int, int]:
@@ -331,27 +445,18 @@ def box_counts(facts: Facts) -> dict[int, int]:
 
 
 def rate_card(db: Session, user_id: UUID, card_id: UUID, rating: str, today: date) -> RateOut:
+    """Self-rated cards (problem, lesson, design, and short-answer questions)."""
     card = db.scalar(select(ReviewCard).where(ReviewCard.id == card_id, ReviewCard.user_id == user_id))
     if card is None:
         raise NotFoundError("Review card not found")
-    if rating == "forgot":
-        card.box = 1
-    elif rating == "good":
-        card.box = min(card.box + 1, MAX_BOX)
-    card.due_on = today + timedelta(days=BOX_DAYS[card.box])
-    card.reviews += 1
-    card.last_rating = rating
-    card.last_reviewed_on = today
-    db.add(card)
+    fsrs_rating = scheduler.RATING_BY_NAME[rating]
+    _apply_review(db, card, fsrs_rating, rating, today)
+    if card.kind == KIND_CHECK:
+        _record_review_attempt(db, user_id, card, correct=rating != "forgot", confidence="sure" if rating == "good" else "unsure", response="", rating=rating)
+        _update_mastery(db, user_id, card, fsrs_rating)
     db.commit()
     db.refresh(card)
     facts = Facts(db, user_id, today)
-    day = _get_or_plan_day(db, facts)
-    day.reviews_done += 1
-    if rating == "good":
-        day.reviews_good += 1
-    db.add(day)
-    db.commit()
     remaining = len(due_cards(facts))
     rate, count = observed_recall(db, user_id, today)
     return RateOut(
@@ -363,12 +468,156 @@ def rate_card(db: Session, user_id: UUID, card_id: UUID, rating: str, today: dat
     )
 
 
+def answer_check_card(
+    db: Session, user_id: UUID, card_id: UUID, choice: int, confidence: str, today: date, time_ms: int | None = None
+) -> AnswerCardOut:
+    """A knowledge-check card answered in review: graded here, rated from the answer and the confidence."""
+    card = db.scalar(select(ReviewCard).where(ReviewCard.id == card_id, ReviewCard.user_id == user_id))
+    if card is None or card.kind != KIND_CHECK:
+        raise NotFoundError("Review card not found")
+    check = db.get(LessonCheck, UUID(card.ref))
+    if check is None or check.kind == "short_answer":
+        raise NotFoundError("Question not found")
+    if not 0 <= choice < len(check.options or []):
+        raise NotFoundError("Pick one of the options")
+    correct = choice == check.answer_index
+    fsrs_rating = scheduler.rating_for_answer(correct, confidence)
+    rating = scheduler.NAME_BY_RATING[fsrs_rating]
+    _apply_review(db, card, fsrs_rating, rating, today)
+    _record_review_attempt(db, user_id, card, correct=correct, confidence=confidence, response=str(choice), rating=rating, time_ms=time_ms)
+    row = _update_mastery(db, user_id, card, fsrs_rating)
+    db.commit()
+    db.refresh(card)
+    facts = Facts(db, user_id, today)
+    rate, count = observed_recall(db, user_id, today)
+    from app.learn.service import learn_state
+
+    return AnswerCardOut(
+        card=card_out(db, facts, card),
+        remaining=len(due_cards(facts)),
+        next_due_on=card.due_on,
+        recall_rate=rate,
+        recall_reviews=count,
+        correct=correct,
+        correct_index=int(check.answer_index or 0),
+        explanation=check.explanation,
+        learn_state=learn_state(row),
+        needs_refresh=bool(row.needs_refresh) if row is not None else False,
+    )
+
+
+def _apply_review(db: Session, card: ReviewCard, fsrs_rating, rating: str, today: date) -> None:
+    scheduler.schedule(card, fsrs_rating, today=today)
+    card.reviews += 1
+    card.last_rating = rating
+    card.last_reviewed_on = today
+    db.add(card)
+    db.flush()
+    facts_day = _get_or_plan_day(db, Facts(db, card.user_id, today))
+    facts_day.reviews_done += 1
+    if rating == "good":
+        facts_day.reviews_good += 1
+    db.add(facts_day)
+
+
+def _record_review_attempt(
+    db: Session,
+    user_id: UUID,
+    card: ReviewCard,
+    *,
+    correct: bool,
+    confidence: str,
+    response: str,
+    rating: str,
+    time_ms: int | None = None,
+) -> None:
+    check = db.get(LessonCheck, UUID(card.ref))
+    if check is None:
+        return
+    prior = db.scalar(
+        select(func.count()).select_from(CheckAttempt).where(
+            CheckAttempt.user_id == user_id, CheckAttempt.check_id == check.id, CheckAttempt.source == "review"
+        )
+    ) or 0
+    db.add(
+        CheckAttempt(
+            user_id=user_id,
+            check_id=check.id,
+            lesson_id=check.lesson_id,
+            source="review",
+            response=response,
+            correct=correct,
+            confidence=confidence,
+            rating=rating,
+            attempt_number=prior + 1,
+            time_ms=time_ms,
+        )
+    )
+
+
+def _update_mastery(db: Session, user_id: UUID, card: ReviewCard, fsrs_rating) -> UserLearningProgress | None:
+    """Apply the mastery policy to the lesson this question belongs to."""
+    check = db.get(LessonCheck, UUID(card.ref))
+    if check is None:
+        return None
+    refs = [str(item.id) for item in check.lesson.checks]
+    cards = db.scalars(
+        select(ReviewCard).where(ReviewCard.user_id == user_id, ReviewCard.kind == KIND_CHECK, ReviewCard.ref.in_(refs))
+    ).all()
+    row = db.scalar(
+        select(UserLearningProgress).where(
+            UserLearningProgress.user_id == user_id, UserLearningProgress.lesson_id == check.lesson_id
+        )
+    )
+    if row is None:
+        return None
+    if is_mastered(list(cards)):
+        if row.mastered_at is None:
+            row.mastered_at = datetime.now(timezone.utc)
+        row.needs_refresh = False
+    elif row.mastered_at is not None and fsrs_rating == scheduler.Rating.Again:
+        row.needs_refresh = True
+    db.add(row)
+    return row
+
+
 def card_out(db: Session, facts: Facts, card: ReviewCard) -> ReviewCardOut:
     if card.kind == KIND_PROBLEM:
         return _problem_card(db, facts, card)
     if card.kind == KIND_LESSON:
         return _lesson_card(facts, card)
+    if card.kind == KIND_CHECK:
+        return _check_card(facts, card)
     return _design_card(db, facts, card)
+
+
+def _check_card(facts: Facts, card: ReviewCard) -> ReviewCardOut:
+    check = facts.checks.get(card.ref)
+    if check is None:
+        return _missing_card(card, "Question no longer in the lesson")
+    lesson = facts.check_lessons.get(check.lesson_id)
+    href = facts.lesson_href(lesson) if lesson is not None else "/learn"
+    short = check.kind == "short_answer"
+    return ReviewCardOut(
+        id=card.id,
+        kind=KIND_CHECK,
+        ref=card.ref,
+        box=card.box,
+        due_on=card.due_on,
+        title=lesson.title if lesson is not None else "Lesson",
+        label=f"Knowledge check · Level {card.box}",
+        prompt=check.prompt,
+        answer=check.model_answer if short else "",
+        answer_label="Model answer" if short else "Why",
+        detail="",
+        href=f"{href}#{check.section}" if check.section else href,
+        note_source_type=NoteSourceType.LESSON.value,
+        note_source_id=str(check.lesson_id) if lesson is not None else None,
+        wants_text=short,
+        check_kind=check.kind,
+        options=[] if short else list(check.options or []),
+        section=check.section or None,
+    )
 
 
 def _problem_card(db: Session, facts: Facts, card: ReviewCard) -> ReviewCardOut:
@@ -917,7 +1166,7 @@ def _task_out(db: Session, facts: Facts, task_id: str, manual: bool) -> TaskOut 
 
 def _review_mix(cards: list[ReviewCard]) -> str:
     """'2 problems, 3 lessons' rather than a wall of titles."""
-    labels = {KIND_PROBLEM: "problem", KIND_LESSON: "lesson", KIND_DESIGN: "design question"}
+    labels = {KIND_PROBLEM: "problem", KIND_LESSON: "lesson", KIND_DESIGN: "design question", KIND_CHECK: "question"}
     parts: list[str] = []
     for kind, label in labels.items():
         n = sum(1 for card in cards if card.kind == kind)
@@ -960,10 +1209,7 @@ HISTORY_DAYS = 56
 
 
 def retrievability(card: ReviewCard, today: date) -> float:
-    stability = BOX_DAYS.get(card.box, BOX_DAYS[1])
-    last = card.last_reviewed_on or (card.due_on - timedelta(days=BOX_DAYS[1]))
-    elapsed = max((today - last).days, 0)
-    return 1.0 / (1.0 + elapsed / (9.0 * stability))
+    return scheduler.retrievability(card, today)
 
 
 def coverage_fraction(facts: Facts) -> float:
@@ -1027,6 +1273,194 @@ def _snapshot_readiness(db: Session, facts: Facts, day: StudyDay) -> dict:
         db.add(day)
         db.commit()
     return {"coverage": coverage, "retention": retention, "readiness": readiness}
+
+
+def get_progress(db: Session, user_id: UUID, today: date) -> ProgressOut:
+    """Every lesson, grouped by category, with first-try recall and review state; plus sure-but-wrong misses."""
+    from app.learn.models import LearningCategory
+    from app.learn.service import learn_state
+
+    facts = Facts(db, user_id, today)
+    sync_cards(db, facts)
+
+    categories = db.scalars(
+        select(LearningCategory)
+        .options(selectinload(LearningCategory.topics).selectinload(LearningTopic.lessons).selectinload(LearningLesson.checks))
+        .where(LearningCategory.is_active.is_(True))
+        .order_by(LearningCategory.display_order)
+    ).all()
+    progress = {
+        row.lesson_id: row
+        for row in db.scalars(select(UserLearningProgress).where(UserLearningProgress.user_id == user_id)).all()
+    }
+    cards_by_lesson: dict[UUID, list[ReviewCard]] = {}
+    for (kind, ref), card in facts.cards.items():
+        if kind == KIND_CHECK:
+            check = facts.checks.get(ref)
+            if check is not None:
+                cards_by_lesson.setdefault(check.lesson_id, []).append(card)
+
+    attempts = db.scalars(
+        select(CheckAttempt).where(CheckAttempt.user_id == user_id).order_by(CheckAttempt.created_at)
+    ).all()
+    first_try: dict[UUID, dict[UUID, bool]] = {}
+    latest: dict[UUID, CheckAttempt] = {}
+    sure_wrong_count: dict[UUID, int] = {}
+    for attempt in attempts:
+        if attempt.source == "lesson" and attempt.attempt_number == 1:
+            first_try.setdefault(attempt.lesson_id, {})[attempt.check_id] = attempt.correct
+        latest[attempt.check_id] = attempt
+        if attempt.confidence == "sure" and not attempt.correct:
+            sure_wrong_count[attempt.check_id] = sure_wrong_count.get(attempt.check_id, 0) + 1
+
+    groups: list[ProgressGroup] = []
+    for category in categories:
+        items: list[ProgressItem] = []
+        for topic in sorted(category.topics, key=lambda t: t.display_order):
+            if not topic.is_active:
+                continue
+            for lesson in sorted(topic.lessons, key=lambda item: (item.display_order, item.title)):
+                if not lesson.is_published:
+                    continue
+                row = progress.get(lesson.id)
+                lesson_cards = cards_by_lesson.get(lesson.id, [])
+                firsts = first_try.get(lesson.id, {})
+                reviewed = [card.last_reviewed_on for card in lesson_cards if card.last_reviewed_on]
+                items.append(
+                    ProgressItem(
+                        kind="lesson",
+                        slug=lesson.slug,
+                        title=lesson.title,
+                        href=f"/learn/{category.slug}/{topic.slug}/{lesson.slug}",
+                        topic=topic.title,
+                        topic_slug=topic.slug,
+                        learn_state=learn_state(row),
+                        needs_refresh=bool(row.needs_refresh) if row is not None else False,
+                        questions=len(lesson.checks),
+                        first_try_correct=sum(1 for ok in firsts.values() if ok),
+                        first_try_total=len(firsts),
+                        cards=len(lesson_cards),
+                        reviews=sum(card.reviews or 0 for card in lesson_cards),
+                        last_reviewed_on=max(reviewed) if reviewed else None,
+                        next_due_on=min(card.due_on for card in lesson_cards) if lesson_cards else None,
+                        quiz_scope=f"lesson:{lesson.slug}" if lesson_cards else None,
+                    )
+                )
+        if not items:
+            continue
+        checked = sum(1 for item in items if item.learn_state in ("checked", "mastered"))
+        groups.append(
+            ProgressGroup(
+                category=category.title,
+                slug=category.slug,
+                items=items,
+                checked=checked,
+                total=len(items),
+                quiz_scope=f"category:{category.slug}" if any(item.cards for item in items) else None,
+            )
+        )
+
+    sure_wrong: list[SureButWrong] = []
+    for check_id, attempt in latest.items():
+        if not (attempt.confidence == "sure" and not attempt.correct):
+            continue
+        check = db.get(LessonCheck, check_id)
+        if check is None:
+            continue
+        lesson = check.lesson
+        href = facts.lesson_href(lesson)
+        sure_wrong.append(
+            SureButWrong(
+                kind="question",
+                prompt=check.prompt,
+                item_title=lesson.title,
+                href=f"{href}#{check.section}" if check.section else href,
+                when=attempt.created_at.date() if attempt.created_at else today,
+                times=sure_wrong_count.get(check_id, 1),
+            )
+        )
+    sure_wrong.sort(key=lambda item: (item.when, item.times), reverse=True)
+
+    return ProgressOut(groups=groups, sure_but_wrong=sure_wrong[:20])
+
+
+def get_memory(db: Session, user_id: UUID, today: date) -> MemoryOut:
+    """The Dashboard's memory card: what is coming this week, which lessons to refresh, weak spots."""
+    facts = Facts(db, user_id, today)
+    sync_cards(db, facts)
+    cards = list(facts.cards.values())
+
+    week: list[MemoryDay] = []
+    for offset in range(7):
+        day = today + timedelta(days=offset)
+        if offset == 0:
+            due = sum(1 for card in cards if card.due_on <= day)
+        else:
+            due = sum(1 for card in cards if card.due_on == day)
+        week.append(MemoryDay(day=day, due=due))
+
+    # Group check cards by lesson; lesson cards by their lesson too.
+    by_lesson: dict[UUID, list[ReviewCard]] = {}
+    for card in cards:
+        if card.kind == KIND_CHECK:
+            check = facts.checks.get(card.ref)
+            if check is not None:
+                by_lesson.setdefault(check.lesson_id, []).append(card)
+        elif card.kind == KIND_LESSON:
+            lesson = facts.lessons.get(card.ref)
+            if lesson is not None:
+                by_lesson.setdefault(lesson.id, []).append(card)
+    progress = {
+        row.lesson_id: row
+        for row in db.scalars(select(UserLearningProgress).where(UserLearningProgress.user_id == user_id)).all()
+    }
+    from app.learn.service import learn_state
+
+    lessons_out: list[MemoryLesson] = []
+    for lesson_id, lesson_cards in by_lesson.items():
+        lesson = facts.check_lessons.get(lesson_id) or next(
+            (item for item in facts.lessons.values() if item.id == lesson_id), None
+        )
+        if lesson is None:
+            continue
+        row = progress.get(lesson_id)
+        reviewed = [card.last_reviewed_on for card in lesson_cards if card.last_reviewed_on]
+        lessons_out.append(
+            MemoryLesson(
+                slug=lesson.slug,
+                title=lesson.title,
+                category=lesson.topic.category.title if lesson.topic and lesson.topic.category else "",
+                href=facts.lesson_href(lesson),
+                learn_state=learn_state(row),
+                needs_refresh=bool(row.needs_refresh) if row is not None else False,
+                cards=len(lesson_cards),
+                reviews=sum(card.reviews or 0 for card in lesson_cards),
+                next_due_on=min(card.due_on for card in lesson_cards),
+                last_reviewed_on=max(reviewed) if reviewed else None,
+            )
+        )
+    lessons_out.sort(key=lambda item: (not item.needs_refresh, item.next_due_on or today, item.title))
+
+    misses = db.execute(
+        select(LessonCheck.concept, LessonCheck.lesson_id, func.count())
+        .join(CheckAttempt, CheckAttempt.check_id == LessonCheck.id)
+        .where(
+            CheckAttempt.user_id == user_id,
+            CheckAttempt.correct.is_(False),
+            CheckAttempt.created_at >= datetime.now(timezone.utc) - timedelta(days=30),
+        )
+        .group_by(LessonCheck.concept, LessonCheck.lesson_id)
+        .order_by(func.count().desc())
+        .limit(3)
+    ).all()
+    weak: list[WeakSpot] = []
+    for concept, lesson_id, count in misses:
+        lesson = db.get(LearningLesson, lesson_id)
+        if lesson is None or count < 2:
+            continue
+        weak.append(WeakSpot(concept=concept, misses=int(count), lesson_title=lesson.title, href=facts.lesson_href(lesson)))
+
+    return MemoryOut(week=week, lessons=lessons_out, weak=weak, due_today=week[0].due if week else 0)
 
 
 def get_readiness(db: Session, user_id: UUID, today: date) -> ReadinessOut:

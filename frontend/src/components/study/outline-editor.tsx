@@ -22,21 +22,21 @@ export function OutlineEditor({ slug }: { slug: string }) {
   const outline = useOutline(slug);
   if (outline.isLoading) {
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-3xl">
           <CardSkeleton rows={6} />
         </div>
-      </main>
+      </div>
     );
   }
   if (outline.isError || !outline.data) {
     const message = outline.error instanceof ApiError ? outline.error.message : "Unable to load this question.";
     return (
-      <main className="ia-content py-6">
+      <div className="w-full">
         <div className="mx-auto max-w-3xl">
           <ErrorState message={message} onRetry={() => outline.refetch()} />
         </div>
-      </main>
+      </div>
     );
   }
   return <Editor key={outline.data.note_id ?? "new"} data={outline.data} />;
@@ -57,7 +57,7 @@ function Editor({ data }: { data: DesignOutline }) {
   }
 
   return (
-    <main className="ia-content py-6">
+    <div className="w-full">
       <div className="mx-auto max-w-3xl space-y-5">
         <Link href="/today" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -106,7 +106,7 @@ function Editor({ data }: { data: DesignOutline }) {
           </SectionCard>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

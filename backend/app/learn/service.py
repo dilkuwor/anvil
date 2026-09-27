@@ -3,16 +3,18 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.common.enums import LearningProgressStatus, ProgressStatus
-from app.common.errors import NotFoundError, ServiceUnavailableError
+from app.common.errors import AppError, NotFoundError, ServiceUnavailableError
 from app.interviews import ollama
 from app.learn.models import (
+    CheckAttempt,
+    LessonCheck,
     LearningCategory,
     LearningLesson,
     LearningLessonProblem,
@@ -20,6 +22,11 @@ from app.learn.models import (
     UserLearningProgress,
 )
 from app.learn.schemas import (
+    AnswerCheckIn,
+    AnswerCheckOut,
+    LessonCheckOut,
+    LessonCheckStateOut,
+    LessonReviewOut,
     CatalogCategory,
     CatalogLesson,
     CatalogTopic,
@@ -361,6 +368,8 @@ def get_lesson(
     nxt = siblings[index + 1] if index + 1 < len(siblings) else None
     problem_status = _problem_status_map(db, user_id)
     related = _related_problems_for_lessons(db, [lesson.id], problem_status)
+    row = progress.get(lesson.id)
+    checks = sorted(lesson.checks, key=lambda item: item.display_order)
     return LearningLessonDetail(
         id=lesson.id,
         slug=lesson.slug,
@@ -370,7 +379,8 @@ def get_lesson(
         takeaways=list(lesson.takeaways or []),
         interview_questions=list(lesson.interview_questions or []),
         estimated_minutes=lesson.estimated_minutes,
-        status=progress.get(
+        status=_status_of(
+            progress,
             lesson.id,
             LearningProgressStatus.IN_PROGRESS.value if user_id is not None else LearningProgressStatus.NOT_STARTED.value,
         ),
@@ -381,6 +391,161 @@ def get_lesson(
         previous=_lesson_summary(topic.category, topic, previous, progress) if previous else None,
         next=_lesson_summary(topic.category, topic, nxt, progress) if nxt else None,
         related_problems=related,
+        learn_state=learn_state(row) if user_id is not None else "not_started",
+        needs_refresh=bool(row.needs_refresh) if row is not None else False,
+        checks=[_check_out(item) for item in checks],
+        check_state=_check_state(db, user_id, lesson, checks) if user_id is not None else None,
+        review=_lesson_review(db, user_id, row, checks) if user_id is not None else None,
+    )
+
+
+def _check_out(item: LessonCheck) -> LessonCheckOut:
+    return LessonCheckOut(
+        id=item.id,
+        key=item.key,
+        kind=item.kind,  # type: ignore[arg-type]
+        prompt=item.prompt,
+        options=list(item.options or []),
+        section=item.section,
+        concept=item.concept,
+        model_answer=item.model_answer if item.kind == "short_answer" else None,
+    )
+
+
+def _check_state(db: Session, user_id: UUID, lesson: LearningLesson, checks: list[LessonCheck]) -> LessonCheckStateOut:
+    rows = db.execute(
+        select(CheckAttempt.check_id, CheckAttempt.correct).where(
+            CheckAttempt.user_id == user_id, CheckAttempt.lesson_id == lesson.id, CheckAttempt.source == "lesson"
+        )
+    ).all()
+    attempted = {check_id for check_id, _ in rows}
+    correct = {check_id for check_id, ok in rows if ok}
+    ids = [item.id for item in checks]
+    return LessonCheckStateOut(
+        total=len(checks),
+        checked=sum(1 for item in ids if item in correct),
+        correct_ids=[item for item in ids if item in correct],
+        attempted_ids=[item for item in ids if item in attempted],
+    )
+
+
+def _lesson_review(
+    db: Session, user_id: UUID, row: UserLearningProgress | None, checks: list[LessonCheck]
+) -> LessonReviewOut | None:
+    from app.study.models import ReviewCard
+    from app.study.service import KIND_CHECK
+
+    if not checks:
+        return None
+    refs = [str(item.id) for item in checks]
+    cards = db.scalars(
+        select(ReviewCard).where(ReviewCard.user_id == user_id, ReviewCard.kind == KIND_CHECK, ReviewCard.ref.in_(refs))
+    ).all()
+    if not cards:
+        return None
+    reviewed = [card.last_reviewed_on for card in cards if card.last_reviewed_on]
+    return LessonReviewOut(
+        cards=len(cards),
+        reviews=sum(card.reviews or 0 for card in cards),
+        next_due_on=min(card.due_on for card in cards),
+        last_reviewed_on=max(reviewed) if reviewed else None,
+        mastered_at=row.mastered_at if row is not None else None,
+    )
+
+
+def answer_check(db: Session, user_id: UUID, lesson_id: UUID, check_id: UUID, payload: AnswerCheckIn) -> AnswerCheckOut:
+    """Grade one knowledge-check answer. Earns "Checked" when every question has been right once."""
+    from app.study import fsrs as scheduler
+    from app.study.models import ReviewCard
+    from app.study.service import KIND_CHECK, get_or_create_settings, local_today
+
+    lesson = _lesson_by_id(db, lesson_id)
+    check = db.get(LessonCheck, check_id)
+    if check is None or check.lesson_id != lesson.id:
+        raise NotFoundError("Question not found.")
+
+    if check.kind == "short_answer":
+        if payload.correct is None:
+            raise AppError("Say whether you had it after comparing with the model answer.", status_code=422, code="check_answer")
+        correct = bool(payload.correct)
+        response = (payload.text or "").strip()
+    else:
+        if payload.choice is None or not 0 <= payload.choice < len(check.options or []):
+            raise AppError("Pick one of the options.", status_code=422, code="check_answer")
+        correct = payload.choice == check.answer_index
+        response = str(payload.choice)
+
+    prior = db.scalar(
+        select(func.count()).select_from(CheckAttempt).where(
+            CheckAttempt.user_id == user_id, CheckAttempt.check_id == check.id, CheckAttempt.source == "lesson"
+        )
+    ) or 0
+    attempt = CheckAttempt(
+        user_id=user_id,
+        check_id=check.id,
+        lesson_id=lesson.id,
+        source="lesson",
+        response=response,
+        correct=correct,
+        confidence=payload.confidence,
+        rating=scheduler.NAME_BY_RATING[scheduler.rating_for_answer(correct, payload.confidence)],
+        attempt_number=prior + 1,
+        time_ms=payload.time_ms,
+    )
+    db.add(attempt)
+    row = _touch_progress(db, user_id, lesson.id)
+    db.flush()
+
+    checks = sorted(lesson.checks, key=lambda item: item.display_order)
+    state = _check_state(db, user_id, lesson, checks)
+    just_checked = False
+    if state.checked == state.total and row.status != LearningProgressStatus.COMPLETED.value:
+        now = _now()
+        row.status = LearningProgressStatus.COMPLETED.value
+        row.progress_percent = 100
+        row.completed_at = now
+        row.checked_at = now
+        row.last_accessed_at = now
+        just_checked = True
+        # One review card per question, rated from the first try so the scheduler starts honest.
+        today = local_today(get_or_create_settings(db, user_id), now)
+        firsts = {
+            a.check_id: a
+            for a in db.scalars(
+                select(CheckAttempt)
+                .where(CheckAttempt.user_id == user_id, CheckAttempt.lesson_id == lesson.id, CheckAttempt.source == "lesson")
+                .order_by(CheckAttempt.attempt_number)
+            ).all()
+            if a.attempt_number == 1
+        }
+        existing = {
+            card.ref
+            for card in db.scalars(
+                select(ReviewCard).where(ReviewCard.user_id == user_id, ReviewCard.kind == KIND_CHECK)
+            ).all()
+        }
+        for item in checks:
+            if str(item.id) in existing:
+                continue
+            first = firsts.get(item.id)
+            rating = scheduler.rating_for_answer(bool(first and first.correct), first.confidence if first else "unsure")
+            card = ReviewCard(user_id=user_id, kind=KIND_CHECK, ref=str(item.id), box=1, due_on=today + timedelta(days=1))
+            scheduler.schedule(card, rating, today=today, now=now)
+            card.reviews = 0
+            card.last_reviewed_on = None
+            db.add(card)
+    db.commit()
+    return AnswerCheckOut(
+        check_id=check.id,
+        correct=correct,
+        correct_index=check.answer_index if check.kind != "short_answer" else None,
+        model_answer=check.model_answer if check.kind == "short_answer" else None,
+        explanation=check.explanation,
+        section=check.section,
+        checked=state.checked,
+        total=state.total,
+        just_checked=just_checked,
+        learn_state=learn_state(row),  # type: ignore[arg-type]
     )
 
 
@@ -753,11 +918,25 @@ def _touch_progress(db: Session, user_id: UUID, lesson_id: UUID) -> UserLearning
     return row
 
 
-def _progress_map(db: Session, user_id: UUID | None) -> dict[UUID, str]:
+def _progress_map(db: Session, user_id: UUID | None) -> dict[UUID, UserLearningProgress]:
     if user_id is None:
         return {}
     rows = db.scalars(select(UserLearningProgress).where(UserLearningProgress.user_id == user_id)).all()
-    return {row.lesson_id: row.status for row in rows}
+    return {row.lesson_id: row for row in rows}
+
+
+def _status_of(progress: dict[UUID, UserLearningProgress], lesson_id: UUID, default: str) -> str:
+    row = progress.get(lesson_id)
+    return row.status if row is not None else default
+
+
+def learn_state(row: UserLearningProgress | None) -> str:
+    """The one lesson status every screen shows: not started, learning, checked or mastered."""
+    if row is None or row.status == LearningProgressStatus.NOT_STARTED.value:
+        return "not_started"
+    if row.status == LearningProgressStatus.COMPLETED.value:
+        return "mastered" if row.mastered_at else "checked"
+    return "learning"
 
 
 def _problem_status_map(db: Session, user_id: UUID | None) -> dict[UUID, str]:
@@ -871,7 +1050,7 @@ def _topic_summary(
     lessons: list[LearningLesson],
     progress: dict[UUID, str],
 ) -> LearningTopicSummary:
-    completed = sum(1 for lesson in lessons if progress.get(lesson.id) == LearningProgressStatus.COMPLETED.value)
+    completed = sum(1 for lesson in lessons if _status_of(progress, lesson.id, "") == LearningProgressStatus.COMPLETED.value)
     summaries = [_lesson_summary(category, topic, lesson, progress) for lesson in lessons]
     return LearningTopicSummary(
         id=topic.id,
@@ -900,7 +1079,9 @@ def _lesson_summary(
         title=lesson.title,
         short_description=lesson.short_description,
         estimated_minutes=lesson.estimated_minutes,
-        status=progress.get(lesson.id, LearningProgressStatus.NOT_STARTED.value),
+        status=_status_of(progress, lesson.id, LearningProgressStatus.NOT_STARTED.value),
+        learn_state=learn_state(progress.get(lesson.id)),
+        needs_refresh=bool(progress.get(lesson.id).needs_refresh) if progress.get(lesson.id) else False,
         href=f"/learn/{category.slug}/{topic.slug}/{lesson.slug}",
     )
 

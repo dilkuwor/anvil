@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { AskAiButton, AskAiController, AskAiPanel } from "@/components/learn/ask-ai-panel";
 import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
+import { LessonCheck } from "@/components/learn/lesson-check";
 import { LessonCurriculum } from "@/components/learn/lesson-curriculum";
 import { LessonOverlay } from "@/components/learn/lesson-overlay";
 import { StudyRail, StudyRailEdgeTab, useStudyRailCollapsed } from "@/components/learn/study-rail";
@@ -140,6 +141,8 @@ export function LessonView({ slug }: { slug: string }) {
 
   const data = lesson.data;
   const isCompleted = data.status === "COMPLETED";
+  const hasChecks = (data.checks?.length ?? 0) > 0;
+  const checkedCount = data.check_state?.checked ?? 0;
   const firstProblem = data.related_problems[0];
   const topicLessons = topic.data?.lessons ?? [];
   const lessonIdx = topicLessons.findIndex((item) => item.slug === data.slug);
@@ -219,6 +222,25 @@ export function LessonView({ slug }: { slug: string }) {
               </div>
               {signedIn && !overlayOpen ? <AskAiPanel /> : null}
               <LessonMarkdown content={data.content} />
+              {hasChecks ? (
+                <div className="mt-8">
+                  {signedIn ? (
+                    <LessonCheck lesson={data} />
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-steel-800/90 bg-steel-950/40 p-5">
+                      <div>
+                        <p className="text-[15px] font-semibold text-foreground">Check yourself</p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {data.checks?.length} short questions. Answer them and the lesson marks itself as checked.
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={() => setAuthPrompt("progress")}>
+                        Sign in to start
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -284,7 +306,31 @@ export function LessonView({ slug }: { slug: string }) {
                 <span className="hidden sm:inline">Outline</span>
               </Button>
 
-              {signedIn ? (
+              {hasChecks ? (
+                isCompleted ? (
+                  <span
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 text-xs font-bold text-emerald-400"
+                    title={data.learn_state === "mastered" ? "Mastered" : "Checked"}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>{data.learn_state === "mastered" ? "Mastered" : "Checked"}</span>
+                  </span>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    className="h-9 gap-1.5 rounded-full bg-accent px-4 text-xs font-bold text-white hover:bg-accent-light"
+                  >
+                    <a href="#knowledge-check" onClick={() => (signedIn ? undefined : setAuthPrompt("progress"))}>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>
+                        Check yourself
+                        {signedIn && checkedCount > 0 ? ` · ${checkedCount} of ${data.check_state?.total}` : ""}
+                      </span>
+                    </a>
+                  </Button>
+                )
+              ) : signedIn ? (
                 <Button
                   size="sm"
                   variant={isCompleted ? "secondary" : "default"}

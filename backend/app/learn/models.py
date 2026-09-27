@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -85,6 +86,7 @@ class LearningLesson(Base):
 
     topic = relationship("LearningTopic", back_populates="lessons")
     problems = relationship("LearningLessonProblem", back_populates="lesson", cascade="all, delete-orphan")
+    checks = relationship("LessonCheck", back_populates="lesson", cascade="all, delete-orphan", order_by="LessonCheck.display_order")
     progress = relationship("UserLearningProgress", back_populates="lesson", cascade="all, delete-orphan")
 
 
@@ -123,5 +125,61 @@ class UserLearningProgress(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Knowledge-check outcomes. ``checked_at`` is when every question was answered correctly once;
+    # ``mastered_at`` comes from the mastery policy over the lesson's review cards.
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mastered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    needs_refresh: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     lesson = relationship("LearningLesson", back_populates="progress")
+
+
+class LessonCheck(Base):
+    """One knowledge-check question. Content, shared by every learner; the answer never leaves the server."""
+
+    __tablename__ = "lesson_checks"
+    __table_args__ = (UniqueConstraint("lesson_id", "key", name="uq_lesson_checks_lesson_key"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lesson_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("learning_lessons.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    key: Mapped[str] = mapped_column(String(80), nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)  # choice | spot_mistake | short_answer
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    options: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    answer_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    model_answer: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    section: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    concept: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    mistake: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+    lesson = relationship("LearningLesson", back_populates="checks")
+
+
+class CheckAttempt(Base):
+    """Raw learning events: every answer, with confidence and the rating the scheduler derived."""
+
+    __tablename__ = "check_attempts"
+    __table_args__ = (Index("ix_check_attempts_user_check", "user_id", "check_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    check_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("lesson_checks.id", ondelete="CASCADE"), nullable=False
+    )
+    lesson_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("learning_lessons.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    source: Mapped[str] = mapped_column(String(10), nullable=False)  # lesson | review
+    response: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    confidence: Mapped[str] = mapped_column(String(10), nullable=False)  # sure | unsure
+    rating: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

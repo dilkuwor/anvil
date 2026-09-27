@@ -7,7 +7,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Rating = Literal["forgot", "shaky", "good"]
-CardKind = Literal["PROBLEM", "LESSON", "DESIGN"]
+CardKind = Literal["PROBLEM", "LESSON", "DESIGN", "CHECK"]
+Confidence = Literal["sure", "unsure"]
 
 
 class StudySettingsOut(BaseModel):
@@ -56,6 +57,10 @@ class ReviewCardOut(BaseModel):
     note_source_type: str | None = None
     note_source_id: str | None = None
     wants_text: bool = False
+    # Knowledge-check cards: the question's options; the correct one is only returned after answering.
+    check_kind: str | None = None
+    options: list[str] = []
+    section: str | None = None
 
 
 class ReviewQueueOut(BaseModel):
@@ -63,6 +68,9 @@ class ReviewQueueOut(BaseModel):
     cards: list[ReviewCardOut]
     due_total: int
     boxes: dict[int, int]
+    # A quiz: every question card in a chosen scope, due or not, rather than the day's due cards.
+    practice: bool = False
+    scope_title: str | None = None
 
 
 class RateIn(BaseModel):
@@ -75,6 +83,96 @@ class RateOut(BaseModel):
     next_due_on: date
     recall_rate: float | None = None
     recall_reviews: int = 0
+
+
+class AnswerCardIn(BaseModel):
+    choice: int = Field(ge=0)
+    confidence: Confidence = "unsure"
+    time_ms: int | None = Field(default=None, ge=0, le=3_600_000)
+
+
+class AnswerCardOut(RateOut):
+    correct: bool
+    correct_index: int
+    explanation: str
+    learn_state: str
+    needs_refresh: bool = False
+
+
+class MemoryDay(BaseModel):
+    day: date
+    due: int
+
+
+class MemoryLesson(BaseModel):
+    slug: str
+    title: str
+    category: str
+    href: str
+    learn_state: str
+    needs_refresh: bool
+    cards: int
+    reviews: int
+    next_due_on: date | None
+    last_reviewed_on: date | None
+
+
+class WeakSpot(BaseModel):
+    concept: str
+    misses: int
+    lesson_title: str
+    href: str
+
+
+class ProgressItem(BaseModel):
+    """One thing a learner can know: a lesson today, a coding problem later. Same shape for both."""
+
+    kind: str  # lesson | problem
+    slug: str
+    title: str
+    href: str
+    topic: str
+    topic_slug: str
+    learn_state: str
+    needs_refresh: bool
+    questions: int
+    first_try_correct: int
+    first_try_total: int
+    cards: int
+    reviews: int
+    last_reviewed_on: date | None
+    next_due_on: date | None
+    quiz_scope: str | None
+
+
+class ProgressGroup(BaseModel):
+    category: str
+    slug: str
+    items: list[ProgressItem]
+    checked: int
+    total: int
+    quiz_scope: str | None
+
+
+class SureButWrong(BaseModel):
+    kind: str  # question
+    prompt: str
+    item_title: str
+    href: str
+    when: date
+    times: int
+
+
+class ProgressOut(BaseModel):
+    groups: list[ProgressGroup]
+    sure_but_wrong: list[SureButWrong]
+
+
+class MemoryOut(BaseModel):
+    week: list[MemoryDay]
+    lessons: list[MemoryLesson]
+    weak: list[WeakSpot]
+    due_today: int
 
 
 class TaskOut(BaseModel):

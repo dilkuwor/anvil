@@ -3,7 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { NoteBody } from "@/components/notes/note-body";
 import { Button } from "@/components/ui/button";
@@ -12,19 +13,31 @@ import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/state";
 import { api, ApiError } from "@/lib/api";
 import type { Note } from "@/lib/notes";
 import { queryKeys } from "@/lib/queries";
-import { BOX_LABELS, nextDueLabel, useRateCard, useReviewQueue, type Rating, type ReviewCard } from "@/lib/study";
+import {
+  BOX_LABELS,
+  nextDueLabel,
+  useAnswerCard,
+  useRateCard,
+  useReviewQueue,
+  type Confidence,
+  type Rating,
+  type ReviewCard,
+} from "@/lib/study";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<ReviewCard["kind"], { label: string; dot: string; text: string }> = {
   PROBLEM: { label: "Coding problem", dot: "bg-sky-500", text: "text-sky-600 dark:text-sky-300" },
   LESSON: { label: "Design concept", dot: "bg-violet-500", text: "text-violet-600 dark:text-violet-300" },
   DESIGN: { label: "Design question", dot: "bg-violet-500", text: "text-violet-600 dark:text-violet-300" },
+  CHECK: { label: "Knowledge check", dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-300" },
 };
 
 type Outcome = { cardId: string; rating: Rating; box: number; nextDue: string; recallRate: number | null };
 
 export function ReviewSession() {
-  const queue = useReviewQueue();
+  const params = useSearchParams();
+  const scope = params.get("scope");
+  const queue = useReviewQueue(scope);
   const rate = useRateCard();
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(false);
@@ -49,14 +62,20 @@ export function ReviewSession() {
 
   const cards = queue.data.cards;
   const finished = index >= cards.length;
+  const practice = Boolean(queue.data.practice);
+  const shellProps = { practice, scopeTitle: queue.data.scope_title ?? null };
 
   if (cards.length === 0) {
     return (
-      <Shell>
+      <Shell {...shellProps}>
         <SectionCard>
           <EmptyState
-            title="Nothing to review right now"
-            body="Every card is resting in its box. Solve a problem or finish a lesson and it comes back tomorrow."
+            title={practice ? "Nothing to quiz yet" : "Nothing to review right now"}
+            body={
+              practice
+                ? "Questions join a quiz once you have checked their lesson. Finish a lesson's knowledge check first."
+                : "Every card is resting in its box. Solve a problem or finish a lesson and it comes back tomorrow."
+            }
             action={
               <Button asChild size="sm">
                 <Link href="/today">Back to Today</Link>
@@ -70,14 +89,29 @@ export function ReviewSession() {
 
   if (finished) {
     return (
-      <Shell dots={cards.map((card, i) => dotColor(card, i, index, outcomes))} position="done">
-        <Summary outcomes={outcomes} day={queue.data.day} boxes={queue.data.boxes} waiting={queue.data.due_total - cards.length} />
+      <Shell {...shellProps} dots={cards.map((card, i) => dotColor(card, i, index, outcomes))} position="done">
+        <Summary outcomes={outcomes} day={queue.data.day} boxes={queue.data.boxes} waiting={queue.data.due_total - cards.length} practice={practice} />
       </Shell>
     );
   }
 
   const card = cards[index];
   const kind = KIND_LABEL[card.kind];
+
+  function advance(rating: Rating, box: number, nextDue: string, recallRate: number | null) {
+    setOutcomes((prev) => [...prev, { cardId: card.id, rating, box, nextDue, recallRate }]);
+    setIndex((i) => i + 1);
+    setShown(false);
+    setDraft("");
+  }
+
+  if (card.kind === "CHECK" && !card.wants_text) {
+    return (
+      <Shell {...shellProps} dots={cards.map((c, i) => dotColor(c, i, index, outcomes))} position={`${index + 1} of ${cards.length}`}>
+        <QuestionCard key={card.id} card={card} onDone={advance} />
+      </Shell>
+    );
+  }
 
   function submit(rating: Rating) {
     rate.mutate(
@@ -97,7 +131,7 @@ export function ReviewSession() {
   }
 
   return (
-    <Shell dots={cards.map((c, i) => dotColor(c, i, index, outcomes))} position={`${index + 1} of ${cards.length}`}>
+    <Shell {...shellProps} dots={cards.map((c, i) => dotColor(c, i, index, outcomes))} position={`${index + 1} of ${cards.length}`}>
       <ReviewKeys
         shown={shown}
         canReveal={!card.wants_text}
@@ -175,6 +209,161 @@ export function ReviewSession() {
   );
 }
 
+/** A knowledge-check card: pick an option, say how sure you are, and the answer sets the rating. */
+function QuestionCard({
+  card,
+  onDone,
+}: {
+  card: ReviewCard;
+  onDone: (rating: Rating, box: number, nextDue: string, recallRate: number | null) => void;
+}) {
+  const answerCard = useAnswerCard();
+  const [choice, setChoice] = useState<number | null>(null);
+  const [confidence, setConfidence] = useState<Confidence | null>(null);
+  const startedAt = useRef(0);
+  const kind = KIND_LABEL.CHECK;
+  useEffect(() => {
+    startedAt.current = Date.now();
+  }, [card.id]);
+  const result = answerCard.data;
+  const options = card.options ?? [];
+
+  function check() {
+    if (choice === null || !confidence || answerCard.isPending) return;
+    const timeMs = startedAt.current ? Math.min(Date.now() - startedAt.current, 3_600_000) : undefined;
+    answerCard.mutate({ cardId: card.id, choice, confidence, timeMs });
+  }
+
+  function next() {
+    if (!result) return;
+    const rating: Rating = !result.correct ? "forgot" : confidence === "sure" ? "good" : "shaky";
+    onDone(rating, result.card.box, result.next_due_on, result.recall_rate);
+  }
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (result) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          next();
+        }
+        return;
+      }
+      const number = Number(event.key);
+      if (Number.isInteger(number) && number >= 1 && number <= options.length) {
+        event.preventDefault();
+        setChoice(number - 1);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        check();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, choice, confidence, options.length, answerCard.isPending]);
+
+  return (
+    <SectionCard className="flex flex-col gap-5 p-6 sm:p-8">
+      <div className={cn("flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]", kind.text)}>
+        <span className={cn("h-2.5 w-2.5 rounded-full", kind.dot)} aria-hidden />
+        {kind.label}
+        <span className="font-medium normal-case tracking-normal text-muted-foreground">· {card.label}</span>
+      </div>
+      <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-[22px]">{card.title}</h2>
+      <p className="text-[17px] leading-relaxed text-foreground">{card.prompt}</p>
+
+      <ul className="space-y-2">
+        {options.map((option, i) => {
+          const selected = choice === i;
+          const showRight = result !== undefined && result.correct_index === i;
+          const showWrong = result !== undefined && selected && !result.correct;
+          return (
+            <li key={option}>
+              <button
+                type="button"
+                disabled={result !== undefined || answerCard.isPending}
+                onClick={() => setChoice(i)}
+                aria-pressed={selected}
+                className={cn(
+                  "flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left text-[15px] leading-relaxed transition-colors",
+                  showRight
+                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    : showWrong
+                      ? "border-amber-500/50 bg-amber-500/10"
+                      : selected
+                        ? "border-accent bg-accent/10"
+                        : "border-steel-800 bg-steel-900/60 hover:border-steel-700 hover:bg-steel-800/60",
+                )}
+              >
+                <span className="mt-0.5 w-5 shrink-0 text-[12px] font-semibold tabular-nums text-muted-foreground">{i + 1}</span>
+                <span className="min-w-0 text-foreground">{option}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {result === undefined ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-1.5" role="radiogroup" aria-label="How sure are you?">
+            <span className="mr-1 text-[12px] text-muted-foreground">How sure?</span>
+            {(["unsure", "sure"] as const).map((level) => (
+              <button
+                key={level}
+                type="button"
+                role="radio"
+                aria-checked={confidence === level}
+                onClick={() => setConfidence(level)}
+                className={cn(
+                  "h-8 rounded-full border px-3 text-[12px] font-medium transition-colors",
+                  confidence === level
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-steel-700 text-muted-foreground hover:border-steel-600 hover:text-foreground",
+                )}
+              >
+                {level === "sure" ? "Sure" : "Not sure"}
+              </button>
+            ))}
+          </div>
+          <Button size="sm" className="ml-auto" disabled={choice === null || !confidence || answerCard.isPending} onClick={check}>
+            {answerCard.isPending ? "Checking…" : "Check answer"}
+          </Button>
+          <p className="w-full text-[11.5px] text-muted-foreground/80">Keys 1 to {options.length} pick an option · Enter checks</p>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "space-y-3 rounded-2xl border p-5",
+            result.correct ? "border-emerald-500/30 bg-emerald-500/[0.06]" : "border-amber-500/30 bg-amber-500/[0.06]",
+          )}
+          role="status"
+        >
+          <p className={cn("text-[13px] font-semibold", result.correct ? "text-emerald-400" : "text-amber-500")}>
+            {result.correct ? "Correct" : "Not quite"}
+          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">Why</p>
+          <p className="text-[15px] leading-relaxed text-foreground">{result.explanation}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link href={card.href} className="text-[13px] font-medium text-accent hover:underline">
+              Open the lesson →
+            </Link>
+            <span className="text-[12px] text-muted-foreground">Next: {nextDueLabel(result.next_due_on, new Date().toISOString().slice(0, 10))}</span>
+          </div>
+          <div className="flex justify-center pt-1">
+            <Button size="lg" onClick={next} autoFocus>
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 /** Space reveals the answer; 1, 2 and 3 rate it. Ignored while typing in a text box. */
 function ReviewKeys({
   shown,
@@ -213,14 +402,30 @@ function ReviewKeys({
   return null;
 }
 
-function Shell({ children, dots, position }: { children: React.ReactNode; dots?: string[]; position?: string }) {
+function Shell({
+  children,
+  dots,
+  position,
+  practice = false,
+  scopeTitle = null,
+}: {
+  children: React.ReactNode;
+  dots?: string[];
+  position?: string;
+  practice?: boolean;
+  scopeTitle?: string | null;
+}) {
+  const word = practice ? "Quiz" : "Review";
   return (
-    <main className="ia-content py-6">
+    <div className="w-full">
       <div className="mx-auto max-w-2xl space-y-5">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/today" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground">
+          <Link
+            href={practice ? "/learn/progress" : "/today"}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
-            Back to Today
+            {practice ? "Back to progress" : "Back to Today"}
           </Link>
           {dots ? (
             <div className="flex gap-2" aria-label="Progress">
@@ -229,11 +434,14 @@ function Shell({ children, dots, position }: { children: React.ReactNode; dots?:
               ))}
             </div>
           ) : null}
-          <span className="text-[13px] tabular-nums text-muted-foreground">{position ? `Review · ${position}` : "Review"}</span>
+          <span className="max-w-[50%] truncate text-[13px] tabular-nums text-muted-foreground" title={scopeTitle ?? undefined}>
+            {position ? `${word} · ${position}` : word}
+            {practice && scopeTitle ? ` · ${scopeTitle}` : ""}
+          </span>
         </div>
         {children}
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -299,11 +507,13 @@ function Summary({
   day,
   boxes,
   waiting,
+  practice = false,
 }: {
   outcomes: Outcome[];
   day: string;
   boxes: Record<string, number>;
   waiting: number;
+  practice?: boolean;
 }) {
   const climbed = outcomes.filter((o) => o.rating === "good").length;
   const back = outcomes.filter((o) => o.rating === "forgot").length;
@@ -312,7 +522,7 @@ function Summary({
   const total = Object.values(boxes).reduce((sum, count) => sum + count, 0) || 1;
   return (
     <SectionCard className="flex flex-col items-center gap-5 border-teal/35 bg-teal/5 p-8 text-center">
-      <p className="text-2xl font-bold text-teal">Review done</p>
+      <p className="text-2xl font-bold text-teal">{practice ? "Quiz done" : "Review done"}</p>
       <div className="flex items-end gap-2.5" aria-label="Cards per box">
         {[1, 2, 3, 4, 5].map((box) => {
           const count = boxes[String(box)] ?? 0;

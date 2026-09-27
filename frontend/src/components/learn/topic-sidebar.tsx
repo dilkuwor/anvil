@@ -182,6 +182,7 @@ export function TopicSidebar({
                         {lessons.map((lesson, idx) => {
                           const isLessonActive = lesson.slug === activeLessonSlug;
                           const isCompleted = lesson.status === "COMPLETED";
+                          const isMastered = lesson.learn_state === "mastered";
 
                           return (
                             <Link
@@ -196,7 +197,10 @@ export function TopicSidebar({
                             >
                               <div className="flex min-w-0 items-center gap-2">
                                 {isCompleted ? (
-                                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                                  <CheckCircle2
+                                    className={cn("h-3.5 w-3.5 shrink-0 text-emerald-500", isMastered && "fill-emerald-500/25")}
+                                    aria-label={isMastered ? "Mastered" : "Checked"}
+                                  />
                                 ) : isLessonActive ? (
                                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent animate-pulse" />
                                 ) : (

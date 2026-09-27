@@ -94,12 +94,17 @@ export function LearnIndex() {
               </p>
             </div>
           </div>
-          <Link
-            href={`/learn/${activeCat.slug}`}
-            className="shrink-0 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-accent-light transition-all hover:scale-[1.02]"
-          >
-            Resume Course →
-          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            <Link href="/learn/progress" className="text-xs font-semibold text-accent hover:underline">
+              Your progress
+            </Link>
+            <Link
+              href={`/learn/${activeCat.slug}`}
+              className="shrink-0 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-accent-light transition-all hover:scale-[1.02]"
+            >
+              Resume Course →
+            </Link>
+          </div>
         </div>
       ) : null}
 

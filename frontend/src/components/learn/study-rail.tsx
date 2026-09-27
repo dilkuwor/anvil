@@ -4,6 +4,7 @@ import {
   Circle,
   CircleCheck,
   CircleHelp,
+  Brain,
   Lightbulb,
   ListTree,
   PanelRightClose,
@@ -242,6 +243,42 @@ export function StudyRail({
         </SectionCard>
       ) : null}
 
+      {lesson.review || (lesson.checks?.length ?? 0) > 0 ? (
+        <SectionCard className="p-0">
+          <RailHeader
+            icon={Brain}
+            title="Memory"
+            meta={
+              lesson.learn_state === "mastered"
+                ? lesson.needs_refresh
+                  ? "needs a refresh"
+                  : "mastered"
+                : lesson.learn_state === "checked"
+                  ? "checked"
+                  : `${lesson.check_state?.checked ?? 0} of ${lesson.check_state?.total ?? lesson.checks?.length ?? 0} checked`
+            }
+          />
+          <div className="space-y-1 p-4 text-[13px] leading-relaxed text-foreground/90">
+            {lesson.review ? (
+              <>
+                <p>
+                  {lesson.review.cards} question{lesson.review.cards === 1 ? "" : "s"} in review
+                  {lesson.review.reviews ? ` · reviewed ${lesson.review.reviews} time${lesson.review.reviews === 1 ? "" : "s"}` : ""}
+                </p>
+                <p className="text-muted-foreground">
+                  {lesson.review.next_due_on ? `Next review ${relativeDay(lesson.review.next_due_on)}.` : ""}
+                  {lesson.needs_refresh ? " One question slipped; it is back in the queue." : ""}
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">
+                Answer the {lesson.checks?.length} questions at the end of the lesson. They then return in spaced review.
+              </p>
+            )}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {lesson.takeaways.length || lesson.interview_questions.length ? (
         <SectionCard className="p-0">
           <RailHeader
@@ -437,4 +474,15 @@ export function StudyRailEdgeTab({ onExpand }: { onExpand: () => void }) {
       <PanelRightOpen className="h-4 w-4" />
     </button>
   );
+}
+
+function relativeDay(iso: string): string {
+  const due = new Date(`${iso}T12:00:00`).getTime();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12).getTime();
+  const days = Math.round((due - today) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days < 14) return `in ${days} days`;
+  return `on ${new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }

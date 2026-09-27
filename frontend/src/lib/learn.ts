@@ -1,4 +1,54 @@
 export type LearnStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+/** The one lesson status every screen shows. Checked is earned by the knowledge check; mastered by spaced review. */
+export type LearnState = "not_started" | "learning" | "checked" | "mastered";
+
+export type LessonCheck = {
+  id: string;
+  key: string;
+  kind: "choice" | "spot_mistake" | "short_answer";
+  prompt: string;
+  options: string[];
+  section: string;
+  concept: string;
+  /** Only for short_answer: shown after the learner writes their own answer. */
+  model_answer: string | null;
+};
+
+export type LessonCheckState = {
+  total: number;
+  checked: number;
+  correct_ids: string[];
+  attempted_ids: string[];
+};
+
+export type LessonReview = {
+  cards: number;
+  reviews: number;
+  next_due_on: string | null;
+  last_reviewed_on: string | null;
+  mastered_at: string | null;
+};
+
+export type AnswerCheckInput = {
+  choice?: number;
+  text?: string;
+  correct?: boolean;
+  confidence: "sure" | "unsure";
+  time_ms?: number;
+};
+
+export type AnswerCheckResult = {
+  check_id: string;
+  correct: boolean;
+  correct_index: number | null;
+  model_answer: string | null;
+  explanation: string;
+  section: string;
+  checked: number;
+  total: number;
+  just_checked: boolean;
+  learn_state: LearnState;
+};
 
 export type RelatedProblem = {
   id: string;
@@ -41,6 +91,8 @@ export type LearningLessonSummary = {
   short_description: string;
   estimated_minutes: number;
   status: LearnStatus;
+  learn_state?: LearnState;
+  needs_refresh?: boolean;
   href: string;
 };
 
@@ -91,6 +143,11 @@ export type LearningLessonDetail = {
   previous: LearningLessonSummary | null;
   next: LearningLessonSummary | null;
   related_problems: RelatedProblem[];
+  learn_state?: LearnState;
+  needs_refresh?: boolean;
+  checks?: LessonCheck[];
+  check_state?: LessonCheckState | null;
+  review?: LessonReview | null;
 };
 
 export type LearningSearchHit = {

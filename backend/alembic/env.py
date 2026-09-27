@@ -20,6 +20,7 @@ from app.submissions.models import Submission, SubmissionTestResult  # noqa: F40
 from app.mcp.models import McpAccessLog, McpToken  # noqa: F401
 from app.oauth.models import OAuthAuthorizationCode, OAuthClient, OAuthRefreshToken  # noqa: F401
 from app.users.models import User  # noqa: F401
+from app.common.cron_models import CronJob, CronJobRun  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

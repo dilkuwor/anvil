@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, CircleDot, Clock } from "lucide-react";
 import Link from "next/link";
 
 import { AuthPrompt } from "@/components/auth/auth-prompt";
@@ -17,6 +17,7 @@ import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState, PageLoader } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import { actionLabel, type LearningCategoryDetail, type LearningLessonSummary, type LearningTopicDetail } from "@/lib/learn";
+import { quizHref } from "@/lib/study";
 import { topicUrls } from "@/lib/offline-targets";
 import { queryKeys } from "@/lib/queries";
 import {
@@ -52,6 +53,7 @@ export function TopicView({ slug }: { slug: string }) {
 
   // Find next lesson to study
   const nextLesson = data.lessons.find((l) => l.status !== "COMPLETED") ?? data.lessons[0];
+  const checkedLessons = data.lessons.filter((l) => l.learn_state === "checked" || l.learn_state === "mastered").length;
 
   return (
     <div className="space-y-4">
@@ -100,6 +102,14 @@ export function TopicView({ slug }: { slug: string }) {
                   <Button asChild size="sm" className="h-8 gap-1.5 text-xs font-bold shadow-xs">
                     <Link href={nextLesson.href}>
                       {data.completed_lessons > 0 ? "Continue Topic →" : "Start Topic →"}
+                    </Link>
+                  </Button>
+                ) : null}
+                {checkedLessons > 0 ? (
+                  <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs font-semibold">
+                    <Link href={quizHref(`topic:${data.slug}`)} title={`Quiz on ${checkedLessons} checked lesson${checkedLessons === 1 ? "" : "s"}`}>
+                      <CircleDot className="h-3.5 w-3.5 text-accent" />
+                      Quiz me on this topic
                     </Link>
                   </Button>
                 ) : null}
@@ -177,7 +187,7 @@ export function TopicView({ slug }: { slug: string }) {
                           </div>
                           <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{lesson.short_description}</p>
                           <div className="mt-2.5 flex items-center gap-3 text-xs text-muted-foreground">
-                            <LearnStatus status={lesson.status} />
+                            <LearnStatus status={lesson.status} state={lesson.learn_state} needsRefresh={lesson.needs_refresh} />
                             <span className="inline-flex items-center gap-1 font-medium">
                               <Clock className="h-3 w-3 text-accent" />
                               {lesson.estimated_minutes} min read

@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { InterviewReadiness } from "@/components/dashboard/interview-readiness";
+import { MemoryCard } from "@/components/dashboard/memory-card";
 import { Meter } from "@/components/dashboard/meter";
 import { PracticeOverview } from "@/components/dashboard/practice-overview";
 import { ProfileCard } from "@/components/dashboard/profile-card";
@@ -98,6 +99,8 @@ export function ProgressBoard() {
         currentStreak={data.current_streak}
         longestStreak={data.longest_streak}
       />
+
+      <MemoryCard />
 
       <RecommendedPractice items={data.recommendations ?? []} isNew={isNew} />
 

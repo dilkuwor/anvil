@@ -8,6 +8,8 @@ from app.common.database import get_db
 from app.common.deps import get_current_user, get_optional_user
 from app.learn import service
 from app.learn.schemas import (
+    AnswerCheckIn,
+    AnswerCheckOut,
     CatalogCategory,
     LearningCategoryCard,
     LearningCategoryDetail,
@@ -150,6 +152,17 @@ def start_lesson(
     current_user: User = Depends(get_current_user),
 ) -> LearningLessonDetail:
     return service.start_lesson(db, current_user.id, lesson_id)
+
+
+@router.post("/lessons/{lesson_id}/checks/{check_id}/answer", response_model=AnswerCheckOut)
+def answer_check(
+    lesson_id: UUID,
+    check_id: UUID,
+    payload: AnswerCheckIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AnswerCheckOut:
+    return service.answer_check(db, current_user.id, lesson_id, check_id, payload)
 
 
 @router.post("/lessons/{lesson_id}/complete", response_model=LearningLessonDetail)
