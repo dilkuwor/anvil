@@ -59,7 +59,7 @@ export function CardHeader({
     <div
       className={cn(
         "flex items-center gap-2.5 border-b border-steel-800/80",
-        flush ? "px-4 py-3" : "-mx-4 mb-4 px-4 pb-3 sm:-mx-5 sm:px-5",
+        flush ? "px-4 py-2.5" : "-mx-4 mb-3 px-4 pb-2.5",
         className,
       )}
     >

@@ -16,7 +16,7 @@ export function InterviewReadiness({ data }: { data: Readiness | null }) {
   ) : null;
 
   return (
-    <SectionCard className="flex flex-col justify-between p-4 sm:p-5">
+    <SectionCard className="flex flex-col justify-between p-4">
       <div>
         <CardHeader icon={Sparkles} title="Interview readiness" action={readinessBadge} />
         {!data ? (
@@ -25,16 +25,16 @@ export function InterviewReadiness({ data }: { data: Readiness | null }) {
             problem to generate a baseline.
           </p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">{data.overall}%</span>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Overall score</span>
             </div>
             <p className="text-[12px] leading-5 text-muted-foreground">{data.blurb}</p>
-            <ul className="space-y-3 pt-1">
+            <ul className="space-y-2.5">
               {data.factors.map((factor) => (
                 <li key={factor.key}>
-                  <div className="mb-1.5 flex justify-between text-[13px]">
+                  <div className="mb-1 flex justify-between text-[13px]">
                     <span className="text-foreground/90 font-medium">{factor.label}</span>
                     <span className="tabular-nums font-semibold text-muted-foreground">{factor.percent}%</span>
                   </div>

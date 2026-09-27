@@ -56,19 +56,19 @@ export function ProgressBoard() {
   };
 
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
-      <aside className="space-y-5">
+    <div className="grid items-start gap-4 xl:grid-cols-[18rem_minmax(0,1fr)]">
+      <aside className="space-y-4">
         <ProfileCard user={me.data} />
         <InterviewReadiness data={data.readiness ?? null} />
       </aside>
 
-      <div className="min-w-0 space-y-5">
+      <div className="min-w-0 space-y-4">
         <PracticeOverview data={data} goal={goal} />
 
         <ActivityHeatmap days={data.activity_calendar ?? []} />
 
-        <div className="grid items-start gap-5 lg:grid-cols-2">
-          <div className="space-y-5">
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          <div className="space-y-4">
             <RecommendedPractice items={data.recommendations ?? []} isNew={isNew} />
             <MemoryCard />
           </div>

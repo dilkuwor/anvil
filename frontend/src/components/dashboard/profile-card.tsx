@@ -39,7 +39,7 @@ export function ProfileCard({
   ].filter((item): item is ProfileLink => item !== null);
 
   return (
-    <SectionCard className="relative overflow-hidden">
+    <SectionCard className="relative overflow-hidden p-4">
       <div className="flex flex-col items-center text-center">
         <div className="relative rounded-full ring-2 ring-accent/30 ring-offset-2 ring-offset-steel-900 transition-all hover:ring-accent/50 hover:scale-105">
           <UserAvatar

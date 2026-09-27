@@ -6,7 +6,7 @@ import type { TopicProgress as TopicRow } from "@/lib/api";
 
 export function TopicProgress({ rows, hasSolved }: { rows: TopicRow[]; hasSolved: boolean }) {
   return (
-    <SectionCard className="flex flex-col p-4 sm:p-5">
+    <SectionCard className="flex flex-col p-4">
       <CardHeader
         icon={BarChart3}
         title="Topic progress"
@@ -22,14 +22,14 @@ export function TopicProgress({ rows, hasSolved }: { rows: TopicRow[]; hasSolved
           <p className="text-sm text-muted-foreground">Solve problems to see topic strengths develop.</p>
         </div>
       ) : (
-        <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+        <ul className="grid gap-x-5 gap-y-2 sm:grid-cols-2">
           {rows.map((row) => (
             <li key={row.slug}>
               <Link
                 href={`/problems?tag=${row.slug}`}
-                className="group block rounded-lg p-1.5 -mx-1.5 transition-colors hover:bg-steel-800/50"
+                className="group block rounded-lg p-1 -mx-1 transition-colors hover:bg-steel-800/50"
               >
-                <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[13px]">
+                <div className="mb-1 flex items-baseline justify-between gap-3 text-[13px]">
                   <span className="min-w-0 truncate font-medium text-foreground transition-colors group-hover:text-accent" title={row.name}>
                     {row.name}
                   </span>

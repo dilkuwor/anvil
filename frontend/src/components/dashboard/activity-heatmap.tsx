@@ -46,7 +46,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({ days }: { days: A
 
   if (days.length === 0) {
     return (
-      <SectionCard>
+      <SectionCard className="p-4">
         <CardHeader icon={CalendarDays} title="Practice activity" />
         <p className="mt-4 text-sm text-muted-foreground">
           No activity yet. Solve a problem to start building practice history.
@@ -56,7 +56,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({ days }: { days: A
   }
 
   return (
-    <SectionCard className="p-4 sm:p-5">
+    <SectionCard className="p-4">
       <CardHeader
         icon={CalendarDays}
         title="Practice activity"
@@ -112,7 +112,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({ days }: { days: A
               ))}
             </div>
           </div>
-          <div className="mt-2.5 flex items-center justify-end gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <div className="mt-2 flex items-center justify-end gap-1.5 text-[10px] font-medium text-muted-foreground">
             <span>Less</span>
             {LEVELS.map((tone) => (
               <span key={tone} className={cn("h-2.5 w-2.5 rounded-[2px]", tone)} />

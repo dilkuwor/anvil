@@ -19,7 +19,7 @@ export function MemoryCard() {
   const max = Math.max(1, ...data.week.map((d) => d.due));
 
   return (
-    <SectionCard className="p-4 sm:p-5">
+    <SectionCard className="p-4">
       <CardHeader
         icon={Brain}
         title="Memory"
@@ -38,7 +38,7 @@ export function MemoryCard() {
           const weekday = new Date(`${day.day}T12:00:00`).getDay();
           return (
             <div key={day.day} className="flex flex-col items-center gap-1">
-              <div className="flex h-10 w-full items-end justify-center rounded-md border border-steel-800/80 bg-steel-950/40 pb-1">
+              <div className="flex h-9 w-full items-end justify-center rounded-md border border-steel-800/80 bg-steel-950/40 pb-1">
                 <div
                   className={cn("w-2.5 rounded-xs", i === 0 ? "bg-accent" : "bg-steel-600")}
                   style={{ height: `${Math.max(day.due ? 5 : 2, Math.round((day.due / max) * 28))}px` }}
@@ -55,7 +55,7 @@ export function MemoryCard() {
       </div>
 
       {top.length ? (
-        <div className="mt-3.5 border-t border-steel-800/80 pt-3">
+        <div className="mt-3 border-t border-steel-800/80 pt-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Lessons in review</p>
           <ul className="mt-1.5 divide-y divide-steel-800/70">
             {top.map((lesson) => (
@@ -72,7 +72,7 @@ export function MemoryCard() {
               </li>
             ))}
           </ul>
-          <Link href="/learn/progress" className="mt-1.5 inline-block text-[11.5px] font-medium text-accent hover:underline">
+          <Link href="/learn/progress" className="mt-2 inline-block text-[11.5px] font-medium text-accent hover:underline">
             {data.lessons.length > top.length ? `See all ${data.lessons.length} lessons →` : "Full progress table →"}
           </Link>
         </div>
