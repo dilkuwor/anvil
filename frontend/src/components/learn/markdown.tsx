@@ -185,7 +185,7 @@ function LessonHeading({ title }: { title: string }) {
   }
   return (
     <h2 id={id} className={cn("flex items-start gap-2 pt-2 text-[15px] font-semibold tracking-tight scroll-mt-20", activeClass)}>
-      <span className="mt-0.5 shrink-0">
+      <span className="flex h-[1lh] shrink-0 items-center">
         <HeadingIcon title={title} />
       </span>
       <span className="min-w-0">{title}</span>
@@ -424,7 +424,7 @@ export function LessonMarkdown({
         if (lines[0].startsWith("### ")) {
           return (
             <h3 key={index} className="flex items-start gap-2 text-[13px] font-semibold tracking-tight">
-              <span className="mt-0.5 shrink-0">
+              <span className="flex h-[1lh] shrink-0 items-center">
                 <HeadingIcon title={lines[0].slice(4)} />
               </span>
               <span className="min-w-0">{lines[0].slice(4)}</span>
