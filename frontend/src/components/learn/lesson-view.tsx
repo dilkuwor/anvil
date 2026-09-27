@@ -22,7 +22,7 @@ import { LessonOverlay } from "@/components/learn/lesson-overlay";
 import { headingSlug, LessonMarkdown } from "@/components/learn/markdown";
 import { TopicSidebar, useTopicSidebarCollapsed } from "@/components/learn/topic-sidebar";
 import { NotesPanel } from "@/components/notes/notes-drawer";
-import { ListenButton } from "@/components/tts/listen-button";
+import { LessonReaderBar, LessonReaderButton, LessonReaderProvider } from "@/components/tts/lesson-reader";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Button } from "@/components/ui/button";
 import { SectionCard, SectionTitle } from "@/components/ui/section";
@@ -30,7 +30,7 @@ import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { LearningLessonDetail, LearningTopicDetail } from "@/lib/learn";
 import { queryKeys } from "@/lib/queries";
-import { lessonSpeech } from "@/lib/tts";
+import { buildLessonSpeech } from "@/lib/lesson-speech";
 import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { useSession, type AuthPromptKind } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,8 @@ export function LessonView({ slug }: { slug: string }) {
     queryKey: queryKeys.learnLesson(slug),
     queryFn: () => api.get<LearningLessonDetail>(`/api/v1/learn/lessons/${slug}`),
   });
+
+  const speechSections = useMemo(() => (lesson.data ? buildLessonSpeech(lesson.data) : []), [lesson.data]);
 
   const complete = useMutation({
     mutationFn: () => api.post<LearningLessonDetail>(`/api/v1/learn/lessons/${lesson.data?.id}/complete`),
@@ -312,14 +314,7 @@ export function LessonView({ slug }: { slug: string }) {
                   >
                     <Maximize2 className="h-4 w-4" />
                   </Button>
-                  <ListenButton
-                    text={lessonSpeech({
-                      title: data.title,
-                      short_description: data.short_description,
-                      content: data.content,
-                      takeaways: data.takeaways,
-                    })}
-                  />
+                  <LessonReaderButton />
                   <NotesPanel
                     context={{ sourceType: "LESSON", sourceId: data.id, sourceTitle: data.title }}
                   />
@@ -343,8 +338,17 @@ export function LessonView({ slug }: { slug: string }) {
             {studyRail}
           </div>
 
-          {/* Floating action dock */}
-          <div className="pointer-events-none sticky bottom-4 z-10 flex justify-center">
+          {/* Floating action dock, with the reader controls stacked above it while a lesson is read aloud.
+              Offset by the curriculum rail's width on large screens so it stays centred on the lesson text. */}
+          <div
+            className={cn(
+              "pointer-events-none sticky bottom-4 z-10 flex flex-col items-center gap-2 transition-[padding] duration-300 ease-in-out",
+              sidebarCollapsed ? "lg:pl-13" : "lg:pl-72",
+            )}
+          >
+            {overlayOpen ? null : (
+              <LessonReaderBar className="pointer-events-auto w-full max-w-xl bg-steel-900/95 shadow-xl backdrop-blur-xl" />
+            )}
             <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full border border-steel-800/90 bg-steel-900/95 p-1.5 shadow-xl backdrop-blur-xl">
               <DockLink direction="previous" href={data.previous?.href} title={data.previous?.title} shortcut="[" />
 
@@ -455,12 +459,22 @@ export function LessonView({ slug }: { slug: string }) {
     </div>
   );
 
+  const withReader = (
+    <LessonReaderProvider
+      sections={speechSections}
+      storageKey={data.id}
+      onLocked={signedIn ? undefined : () => setAuthPrompt("listen")}
+    >
+      {page}
+    </LessonReaderProvider>
+  );
+
   return signedIn ? (
     <AskAiController key={data.id} lesson={data}>
-      {page}
+      {withReader}
     </AskAiController>
   ) : (
-    page
+    withReader
   );
 }
 

@@ -35,6 +35,10 @@ const COPY: Record<AuthPromptKind, { title: string; body: string }> = {
     title: "Sign in to save notes",
     body: "Create an account to keep notes on lessons, problems, and system design.",
   },
+  listen: {
+    title: "Sign in to listen",
+    body: "The reader turns lessons into audio you can follow along with. Sign in to listen while you learn.",
+  },
 };
 
 export function AuthPrompt({

@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     tts_base_url: str = "http://100.120.169.81:8091"
     tts_voice: str = "af_heart"
     tts_language: str = "English"
+    # Synthesized audio is cached on disk, keyed by text and voice. Empty uses a
+    # folder under the system temp dir; 0 days disables the cache.
+    tts_cache_dir: str = ""
+    tts_cache_days: int = 30
 
     mcp_rate_limit_per_minute: int = 60
     mcp_max_tokens_per_user: int = 10

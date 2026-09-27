@@ -12,10 +12,13 @@ export function ListenButton({
   text,
   className,
   iconOnly = false,
+  onLocked,
 }: {
   text: string;
   className?: string;
   iconOnly?: boolean;
+  /** When set (signed-out user), clicking asks to sign in instead of fetching audio. */
+  onLocked?: () => void;
 }) {
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,6 +50,10 @@ export function ListenButton({
   }
 
   async function toggle() {
+    if (onLocked) {
+      onLocked();
+      return;
+    }
     if (state !== "idle") {
       stop();
       return;

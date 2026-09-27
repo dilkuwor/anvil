@@ -22,6 +22,7 @@ os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 # The in-app reminder loop is exercised directly in tests, never as a background task.
 os.environ.setdefault("REMINDER_INTERVAL_MINUTES", "0")
+os.environ.setdefault("TTS_CACHE_DAYS", "0")
 # Never let a developer's real RESEND_API_KEY leak into test runs.
 os.environ["RESEND_API_KEY"] = ""
 os.environ["EMAIL_FROM"] = "no-reply@anvilprep.dev"

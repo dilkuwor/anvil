@@ -2,7 +2,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LessonOverlay } from "@/components/learn/lesson-overlay";
+import { LessonReaderProvider } from "@/components/tts/lesson-reader";
 import type { LearningLessonDetail } from "@/lib/learn";
+import { buildLessonSpeech } from "@/lib/lesson-speech";
 
 const lesson: LearningLessonDetail = {
   id: "lesson-1",
@@ -27,14 +29,18 @@ describe("LessonOverlay", () => {
   it("opens fullscreen with icon toolbar, view toggle, and close on the title", async () => {
     const onClose = vi.fn();
     const onAskAiAuth = vi.fn();
-    render(<LessonOverlay lesson={lesson} signedIn={false} onClose={onClose} onAskAiAuth={onAskAiAuth} />);
+    render(
+      <LessonReaderProvider sections={buildLessonSpeech(lesson)} storageKey={lesson.id}>
+        <LessonOverlay lesson={lesson} signedIn={false} onClose={onClose} onAskAiAuth={onAskAiAuth} />
+      </LessonReaderProvider>,
+    );
 
     await waitFor(() => {
       expect(screen.getByRole("dialog", { name: "Back-of-the-Envelope Estimation" })).toBeInTheDocument();
     });
     expect(screen.getByLabelText("Close lesson")).toBeInTheDocument();
     expect(screen.getByLabelText("Exit full width")).toBeInTheDocument();
-    expect(screen.getByLabelText("Listen")).toBeInTheDocument();
+    expect(screen.getByLabelText("Listen to this lesson")).toBeInTheDocument();
     expect(screen.getByLabelText("Ask AI")).toBeInTheDocument();
     expect(screen.getByLabelText("Switch to reading view")).toBeInTheDocument();
     expect(screen.getByText(/Estimate QPS first/)).toBeInTheDocument();

@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { AuthPrompt } from "@/components/auth/auth-prompt";
 import { CheatSheetBlockRenderer } from "@/components/cheatsheets/cheatsheet-blocks";
 import { Breadcrumbs } from "@/components/layout/page-header";
 import { NotesPanel } from "@/components/notes/notes-drawer";
@@ -29,6 +30,7 @@ import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api } from "@/lib/api";
 import type { CheatSheetCard, CheatSheetDetail } from "@/lib/cheatsheets";
 import { queryKeys } from "@/lib/queries";
+import { useSession } from "@/lib/session";
 import { cheatSheetSpeech } from "@/lib/tts";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +61,8 @@ function CheatSheetBody({
   allSheets: CheatSheetCard[];
 }) {
   const router = useRouter();
+  const { signedIn } = useSession();
+  const [listenPrompt, setListenPrompt] = useState(false);
   const [compact, setCompact] = useState(false);
   const [sectionFilter, setSectionFilter] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -180,7 +184,7 @@ function CheatSheetBody({
             <span className="hidden sm:inline">{compact ? "Relaxed" : "Compact"}</span>
           </button>
 
-          <ListenButton text={cheatSheetSpeech(data)} />
+          <ListenButton text={cheatSheetSpeech(data)} onLocked={signedIn ? undefined : () => setListenPrompt(true)} />
 
           <NotesPanel
             context={{
@@ -464,6 +468,7 @@ function CheatSheetBody({
           </aside>
         </div>
       ) : null}
+      {listenPrompt ? <AuthPrompt kind="listen" onClose={() => setListenPrompt(false)} /> : null}
     </div>
   );
 }

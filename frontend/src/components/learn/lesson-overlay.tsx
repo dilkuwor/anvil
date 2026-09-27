@@ -5,9 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { AskAiButton, AskAiPanel } from "@/components/learn/ask-ai-panel";
 import { LessonMarkdown } from "@/components/learn/markdown";
-import { ListenButton } from "@/components/tts/listen-button";
+import { LessonReaderBar, LessonReaderButton } from "@/components/tts/lesson-reader";
 import type { LearningLessonDetail } from "@/lib/learn";
-import { lessonSpeech } from "@/lib/tts";
 import { cn } from "@/lib/utils";
 
 const LESSON_READER_KEY = "anvil-lesson-reader";
@@ -85,13 +84,6 @@ export function LessonOverlay({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const speech = lessonSpeech({
-    title: lesson.title,
-    short_description: lesson.short_description,
-    content: lesson.content,
-    takeaways: lesson.takeaways,
-  });
-
   return (
     <div className={cn("fixed inset-0 z-[55] flex items-center justify-center", expanded ? "p-0" : "p-3 sm:p-6")}>
       <button type="button" className="absolute inset-0 bg-background/70" aria-label="Dismiss lesson overlay" onClick={onClose} />
@@ -160,7 +152,7 @@ export function LessonOverlay({
             >
               {reader ? <BookOpen className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
             </button>
-            <ListenButton iconOnly text={speech} />
+            <LessonReaderButton iconOnly />
             {signedIn ? (
               <AskAiButton iconOnly />
             ) : (
@@ -181,6 +173,7 @@ export function LessonOverlay({
           </div>
         </header>
         <div className="flex min-h-0 flex-1 flex-col">
+          <LessonReaderBar className="mx-5 mt-4 sm:mx-6" />
           {signedIn ? <AskAiPanel className="px-5 pt-4 sm:px-6" /> : null}
           <div
             className={

@@ -1,5 +1,6 @@
 import type { CheatSheetDetail } from "@/lib/cheatsheets";
 import { asStringList, asTable } from "@/lib/cheatsheets";
+import { lessonScript, type SpeechLesson } from "@/lib/lesson-speech";
 
 export function speakableText(raw: string): string {
   return raw
@@ -12,17 +13,9 @@ export function speakableText(raw: string): string {
     .trim();
 }
 
-export function lessonSpeech(input: {
-  title: string;
-  short_description?: string;
-  content: string;
-  takeaways?: string[];
-}): string {
-  const parts = [input.title, input.short_description ?? "", speakableText(input.content)];
-  if (input.takeaways?.length) {
-    parts.push("Key takeaways.", ...input.takeaways);
-  }
-  return speakableText(parts.filter(Boolean).join(". "));
+/** The whole lesson as one spoken script. The lesson page reads section by section instead. */
+export function lessonSpeech(input: SpeechLesson): string {
+  return lessonScript(input);
 }
 
 export function cheatSheetSpeech(sheet: CheatSheetDetail): string {

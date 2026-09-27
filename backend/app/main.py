@@ -16,6 +16,7 @@ from app.learn.router import router as learn_router
 from app.lists.router import router as lists_router
 from app.notes.router import router as notes_router
 from app.study import reminders
+from app.tts.service import prune_cache
 from app.study.router import router as study_router
 from app.problems.router import router as problems_router
 from app.progress.router import router as progress_router
@@ -34,6 +35,10 @@ configure_logging(settings)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     task: asyncio.Task[None] | None = None
+    try:
+        await asyncio.to_thread(prune_cache)
+    except Exception:  # noqa: BLE001 - a cache problem must never block startup
+        pass
     if settings.reminder_interval_minutes > 0:
         task = asyncio.create_task(reminders.run_scheduler(settings.reminder_interval_minutes))
     try:

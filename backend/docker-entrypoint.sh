@@ -20,4 +20,10 @@ if [ -n "${CODE_RUNNER_JOB_DIR:-}" ]; then
   chmod 1777 "$CODE_RUNNER_JOB_DIR" || true
 fi
 
+# Cached lesson audio lives on a named volume that Docker creates as root.
+if [ -n "${TTS_CACHE_DIR:-}" ]; then
+  mkdir -p "$TTS_CACHE_DIR"
+  chown appuser:appuser "$TTS_CACHE_DIR" || true
+fi
+
 exec gosu appuser "$@"

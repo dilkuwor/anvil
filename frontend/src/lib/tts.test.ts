@@ -15,7 +15,7 @@ describe("tts text prep", () => {
       takeaways: ["State the key."],
     });
     expect(spoken).toContain("Hash maps");
-    expect(spoken).toContain("HashMap");
+    expect(spoken).toContain("Hash Map");
     expect(spoken).toContain("Key takeaways");
   });
 });

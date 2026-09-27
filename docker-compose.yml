@@ -68,9 +68,12 @@ services:
       TTS_BASE_URL: ${TTS_BASE_URL:-http://100.120.169.81:8091}
       TTS_VOICE: ${TTS_VOICE:-af_heart}
       TTS_LANGUAGE: ${TTS_LANGUAGE:-English}
+      TTS_CACHE_DIR: /var/cache/anvil-tts
+      TTS_CACHE_DAYS: ${TTS_CACHE_DAYS:-30}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/tmp/interview-anvil-jobs:/var/tmp/interview-anvil-jobs
+      - tts-cache:/var/cache/anvil-tts
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -111,3 +114,6 @@ services:
     pull_policy: always
     entrypoint: ["true"]
     restart: "no"
+
+volumes:
+  tts-cache:

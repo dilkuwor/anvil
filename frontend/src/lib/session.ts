@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchCurrentUser } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 
-export type AuthPromptKind = "run" | "submit" | "mock" | "ask-ai" | "progress" | "lists" | "notes";
+export type AuthPromptKind = "run" | "submit" | "mock" | "ask-ai" | "progress" | "lists" | "notes" | "listen";
 
 function currentPath(): string {
   if (typeof window === "undefined") return "/";
