@@ -11,7 +11,7 @@ import { api, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/interview";
 import { loginHref, registerHref, useSession } from "@/lib/session";
 
-const WORKFLOW = ["Practice", "Learn", "Interview", "Improve"] as const;
+const WORKFLOW = ["Learn", "Check", "Remember", "Practice", "Interview"] as const;
 
 const INITIAL_CODE = `class Solution {
     public int[] twoSum(int[] nums, int target) {
