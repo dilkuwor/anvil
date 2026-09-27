@@ -15,11 +15,12 @@ export function ScenarioPicker() {
     return <ErrorState message="Unable to load system design scenarios." onRetry={() => catalog.refetch()} />;
   }
 
+  // The shell locks the viewport for the interview workspace, so the picker scrolls on its own.
   return (
-    <div className="space-y-6">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pb-6">
       <PageHeader
         title="System Design Interview"
-        description="Same problems as Learn and the simulator. Pick one and walk requirements, capacity, and architecture."
+        description="Same problems as Lessons and the simulator. Pick one and walk requirements, capacity, and architecture."
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {(catalog.data ?? []).map((item) => (
