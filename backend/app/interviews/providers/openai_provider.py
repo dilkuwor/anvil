@@ -11,6 +11,7 @@ from app.common.logging import get_logger
 from app.interviews.providers.base import LLMProvider, parse_json_object
 from app.interviews.providers.errors import raise_if_provider_error
 from app.interviews.providers.openai_stream import stream_chat_completions
+from app.interviews.providers.thinking import strip_think_blocks
 
 logger = get_logger(__name__)
 
@@ -88,7 +89,7 @@ class OpenAIProvider(LLMProvider):
         except (KeyError, IndexError, TypeError) as exc:
             logger.warning("openai_bad_payload", error=str(exc))
             raise ValueError("OpenAI response missing message content.") from exc
-        text = (content or "").strip()
+        text = strip_think_blocks(content or "").strip()
         if not text:
             raise ValueError("Empty OpenAI response.")
         return text

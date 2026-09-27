@@ -1,7 +1,24 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, KeyRound, Loader2, PlugZap, Plus, Save, Trash2, Upload } from "lucide-react";
+import {
+  Bell,
+  Check,
+  Copy,
+  ExternalLink,
+  HardDrive,
+  KeyRound,
+  Loader2,
+  PlugZap,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+  Upload,
+  User as UserIcon,
+  type LucideIcon,
+} from "lucide-react";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -96,139 +113,249 @@ function ProfileEditor({ user }: { user: User }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
-      <PageHeader title="Settings" description="How you appear across InterviewAnvil." />
+    <div className="space-y-6">
+      <PageHeader title="Settings" description="How you appear and customize your experience across InterviewAnvil." />
 
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          save.mutate();
-        }}
-      >
-        <SectionCard className="p-0">
-          <PanelHeader title="Profile" body="Name, photo, and public profile details." />
-          <div className="space-y-8 px-5 py-5">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-              <div className="flex shrink-0 flex-col items-center gap-3 sm:w-48">
-                <UserAvatar user={current} size="lg" version={avatarVersion} />
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="sr-only"
-                  onChange={(event) => {
-                    onPickFile(event.target.files?.[0]);
-                    event.target.value = "";
-                  }}
-                />
-                <div className="flex flex-nowrap items-center justify-center gap-1.5">
-                  <IconAction
-                    text="Upload"
-                    label="Upload photo"
-                    pending={upload.isPending}
-                    variant="secondary"
-                    onClick={() => fileInput.current?.click()}
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                  </IconAction>
-                  {current.has_avatar ? (
-                    <IconAction
-                      text="Delete"
-                      label="Remove photo"
-                      pending={removeAvatar.isPending}
-                      variant="ghost"
-                      onClick={() => removeAvatar.mutate()}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </IconAction>
-                  ) : null}
+      <div className="grid items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[18rem_minmax(0,1fr)]">
+        <SettingsSidebar user={current} avatarVersion={avatarVersion} />
+
+        <div className="min-w-0 space-y-6">
+          <div id="profile" className="scroll-mt-20">
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                save.mutate();
+              }}
+            >
+              <SectionCard className="p-0">
+                <PanelHeader title="Profile" body="Name, photo, and public profile details." />
+                <div className="space-y-8 px-5 py-5">
+                  <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+                    <div className="flex shrink-0 flex-col items-center gap-3 sm:w-48">
+                      <UserAvatar user={current} size="lg" version={avatarVersion} />
+                      <input
+                        ref={fileInput}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="sr-only"
+                        onChange={(event) => {
+                          onPickFile(event.target.files?.[0]);
+                          event.target.value = "";
+                        }}
+                      />
+                      <div className="flex flex-nowrap items-center justify-center gap-1.5">
+                        <IconAction
+                          text="Upload"
+                          label="Upload photo"
+                          pending={upload.isPending}
+                          variant="secondary"
+                          onClick={() => fileInput.current?.click()}
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                        </IconAction>
+                        {current.has_avatar ? (
+                          <IconAction
+                            text="Delete"
+                            label="Remove photo"
+                            pending={removeAvatar.isPending}
+                            variant="ghost"
+                            onClick={() => removeAvatar.mutate()}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </IconAction>
+                        ) : null}
+                      </div>
+                      <p className="text-center text-[11px] leading-4 text-muted-foreground">JPEG, PNG, or WebP. 1 MB max.</p>
+                    </div>
+
+                    <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
+                      <Field label="Display name" hint="Shown in the header and on your profile." className="sm:col-span-2">
+                        <Input
+                          value={form.display_name}
+                          onChange={(event) => setForm({ ...form, display_name: event.target.value })}
+                          maxLength={80}
+                          placeholder={user.username}
+                        />
+                      </Field>
+                      <Field label="Username" hint="Unique handle. Letters, numbers, and underscores.">
+                        <Input
+                          value={form.username}
+                          onChange={(event) => setForm({ ...form, username: event.target.value })}
+                          minLength={3}
+                          maxLength={50}
+                          pattern="^[a-zA-Z0-9_]+$"
+                          required
+                        />
+                      </Field>
+                      <Field label="Email">
+                        <Input value={user.email} disabled />
+                        <EmailVerificationStatus user={current} />
+                      </Field>
+                      <Field label="Country" className="sm:col-span-2">
+                        <select
+                          className="select-field"
+                          value={form.country}
+                          onChange={(event) => setForm({ ...form, country: event.target.value })}
+                        >
+                          <option value="">Select a country</option>
+                          {COUNTRIES.map((country) => (
+                            <option key={country} value={country}>
+                              {country}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-steel-800 pt-6">
+                    <p className="text-[13px] font-medium">Profile links</p>
+                    <p className="mt-0.5 text-[12px] text-muted-foreground">Optional. Shown if you share your public profile.</p>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <Field label="LinkedIn" className="sm:col-span-2">
+                        <Input
+                          type="url"
+                          placeholder="https://www.linkedin.com/in/you"
+                          value={form.linkedin_url}
+                          onChange={(event) => setForm({ ...form, linkedin_url: event.target.value })}
+                        />
+                      </Field>
+                      <Field label="GitHub">
+                        <Input
+                          type="url"
+                          placeholder="https://github.com/you"
+                          value={form.github_url}
+                          onChange={(event) => setForm({ ...form, github_url: event.target.value })}
+                        />
+                      </Field>
+                      <Field label="Website">
+                        <Input
+                          type="url"
+                          placeholder="https://your-site.com"
+                          value={form.website_url}
+                          onChange={(event) => setForm({ ...form, website_url: event.target.value })}
+                        />
+                      </Field>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-center text-[11px] leading-4 text-muted-foreground">JPEG, PNG, or WebP. 1 MB max.</p>
-              </div>
-
-              <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
-                <Field label="Display name" hint="Shown in the header and on your profile." className="sm:col-span-2">
-                  <Input
-                    value={form.display_name}
-                    onChange={(event) => setForm({ ...form, display_name: event.target.value })}
-                    maxLength={80}
-                    placeholder={user.username}
-                  />
-                </Field>
-                <Field label="Username" hint="Unique handle. Letters, numbers, and underscores.">
-                  <Input
-                    value={form.username}
-                    onChange={(event) => setForm({ ...form, username: event.target.value })}
-                    minLength={3}
-                    maxLength={50}
-                    pattern="^[a-zA-Z0-9_]+$"
-                    required
-                  />
-                </Field>
-                <Field label="Email">
-                  <Input value={user.email} disabled />
-                  <EmailVerificationStatus user={current} />
-                </Field>
-                <Field label="Country" className="sm:col-span-2">
-                  <select
-                    className="select-field"
-                    value={form.country}
-                    onChange={(event) => setForm({ ...form, country: event.target.value })}
-                  >
-                    <option value="">Select a country</option>
-                    {COUNTRIES.map((country) => (
-                      <option key={country} value={country}>
-                        {country}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </div>
-
-            <div className="border-t border-steel-800 pt-6">
-              <p className="text-[13px] font-medium">Profile links</p>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">Optional. Shown if you share your public profile.</p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field label="LinkedIn" className="sm:col-span-2">
-                  <Input
-                    type="url"
-                    placeholder="https://www.linkedin.com/in/you"
-                    value={form.linkedin_url}
-                    onChange={(event) => setForm({ ...form, linkedin_url: event.target.value })}
-                  />
-                </Field>
-                <Field label="GitHub">
-                  <Input
-                    type="url"
-                    placeholder="https://github.com/you"
-                    value={form.github_url}
-                    onChange={(event) => setForm({ ...form, github_url: event.target.value })}
-                  />
-                </Field>
-                <Field label="Website">
-                  <Input
-                    type="url"
-                    placeholder="https://your-site.com"
-                    value={form.website_url}
-                    onChange={(event) => setForm({ ...form, website_url: event.target.value })}
-                  />
-                </Field>
-              </div>
-            </div>
+                <PanelFooter>
+                  <IconAction text="Save" label="Save profile" pending={save.isPending} type="submit">
+                    <Save className="h-3.5 w-3.5" />
+                  </IconAction>
+                </PanelFooter>
+              </SectionCard>
+            </form>
           </div>
-          <PanelFooter>
-            <IconAction text="Save" label="Save profile" pending={save.isPending} type="submit">
-              <Save className="h-3.5 w-3.5" />
-            </IconAction>
-          </PanelFooter>
-        </SectionCard>
-      </form>
 
-      <LlmSettings user={current} />
-      <OfflineSettings />
-      <McpSettings />
+          <div id="llm" className="scroll-mt-20">
+            <LlmSettings user={current} />
+          </div>
+
+          <div id="offline" className="scroll-mt-20">
+            <OfflineSettings />
+          </div>
+
+          <div id="mcp" className="scroll-mt-20">
+            <McpSettings />
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function SettingsSidebar({ user, avatarVersion }: { user: User; avatarVersion: number }) {
+  const name = user.display_name?.trim() || user.username;
+  return (
+    <aside className="space-y-4 lg:sticky lg:top-20">
+      <SectionCard className="p-4 sm:p-5">
+        <div className="flex flex-col items-center text-center">
+          <div className="relative rounded-full ring-2 ring-accent/30 ring-offset-2 ring-offset-steel-900 transition-all hover:scale-105">
+            <UserAvatar user={user} size="lg" version={avatarVersion} />
+          </div>
+          <h2 className="mt-3 text-sm font-bold tracking-tight text-foreground truncate max-w-full">{name}</h2>
+          <span className="mt-0.5 inline-flex rounded-md bg-steel-800/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+            @{user.username}
+          </span>
+          <div className="mt-3 w-full border-t border-steel-800/80 pt-3">
+            <Button asChild variant="outline" size="sm" className="w-full justify-center gap-1.5 text-xs h-7.5">
+              <Link href={`/u/${user.username}`}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                View public profile
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard className="p-2 sm:p-2.5">
+        <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          Navigation
+        </p>
+        <nav className="space-y-0.5" aria-label="Settings sections">
+          <SidebarNavLink href="#profile" icon={UserIcon} label="Profile" />
+          <SidebarNavLink href="#llm" icon={Sparkles} label="Interview AI" />
+          <SidebarNavLink href="#offline" icon={HardDrive} label="Offline & Storage" />
+          <SidebarNavLink href="#mcp" icon={PlugZap} label="MCP Access" />
+          <div className="my-1.5 h-px bg-steel-800/80" />
+          <SidebarNavLink href="/today/settings" icon={Bell} label="Study Reminders" external />
+        </nav>
+      </SectionCard>
+    </aside>
+  );
+}
+
+function SidebarNavLink({
+  href,
+  icon: Icon,
+  label,
+  external,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  external?: boolean;
+}) {
+  const isAnchor = href.startsWith("#");
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isAnchor) {
+      e.preventDefault();
+      const el = document.querySelector(href);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+        history.replaceState(null, "", href);
+      }
+    }
+  };
+
+  if (external) {
+    return (
+      <Link
+        href={href}
+        className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-steel-800/60 hover:text-foreground"
+      >
+        <span className="flex items-center gap-2.5">
+          <Icon className="h-4 w-4 text-accent shrink-0" />
+          <span>{label}</span>
+        </span>
+        <span className="text-[10px] text-muted-foreground">↗</span>
+      </Link>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      onClick={handleClick}
+      className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-steel-800/60 hover:text-foreground"
+    >
+      <span className="flex items-center gap-2.5">
+        <Icon className="h-4 w-4 text-accent shrink-0" />
+        <span>{label}</span>
+      </span>
+    </a>
   );
 }
 
