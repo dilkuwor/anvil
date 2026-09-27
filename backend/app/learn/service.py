@@ -22,6 +22,8 @@ from app.learn.models import (
     UserLearningProgress,
 )
 from app.learn.schemas import (
+    RecallItem,
+    RecallResponse,
     AnswerCheckIn,
     AnswerCheckOut,
     LessonCheckOut,
@@ -765,6 +767,84 @@ def _prepare_lesson_tutor(
             "Keep it concise. Use short headings. Do not greet the candidate."
         )
     return _PreparedTutor(lesson_slug=lesson.slug, system=system, user_turn=user_turn, history=history)
+
+
+_RECALL_SYSTEM = """You grade a learner's free recall of a lesson. You get the lesson's numbered key takeaways and what \
+the learner wrote from memory. Decide which takeaways the learner's text covers in substance, in any wording. \
+Partial but correct coverage counts; wrong or missing does not.
+Reply with JSON only, exactly this shape:
+{"covered": [list of takeaway numbers the learner covered], "missed": [list of takeaway numbers not covered], \
+"notes": {"<number>": "short note, 12 words max, for any takeaway"}, "feedback": "two plain sentences: what was \
+strong, then the single most important thing to review"}
+Every takeaway number must appear in exactly one of covered or missed."""
+
+
+def recall_lesson(db: Session, user, lesson_id: UUID, text: str) -> RecallResponse:
+    """Free recall: the learner writes what they remember; the model ticks the takeaways they covered."""
+    from app.interviews.providers import get_llm_provider_for_user
+
+    lesson = _lesson_by_id(db, lesson_id)
+    takeaways = [str(item).strip() for item in (lesson.takeaways or []) if str(item).strip()]
+    if not takeaways:
+        raise NotFoundError("This lesson has no takeaways to recall against.")
+    numbered = "\n".join(f"{index}. {item}" for index, item in enumerate(takeaways))
+    user_turn = (
+        f"Lesson: {lesson.title}\n\nTakeaways:\n{numbered}\n\n"
+        f"What the learner wrote from memory:\n\"\"\"\n{text.strip()[:6000]}\n\"\"\""
+    )
+    provider = get_llm_provider_for_user(user)
+    try:
+        data = provider.complete_json(_RECALL_SYSTEM, user_turn)
+    except Exception as exc:
+        raise ServiceUnavailableError("Buddy could not grade the recall right now. Please try again.") from exc
+    covered_set, notes = _parse_recall(data, len(takeaways))
+    items = [
+        RecallItem(takeaway=takeaway, covered=index in covered_set, note=notes.get(index, ""))
+        for index, takeaway in enumerate(takeaways)
+    ]
+    covered = sum(1 for item in items if item.covered)
+    feedback = str(data.get("feedback") or "").strip()[:600]
+    if not feedback:
+        feedback = "Good recall." if covered == len(items) else "Reread the takeaways you missed, then try again tomorrow."
+    return RecallResponse(items=items, covered=covered, total=len(items), feedback=feedback)
+
+
+def _parse_recall(data: dict, total: int) -> tuple[set[int], dict[int, str]]:
+    """Accept the flat shape we ask for, plus the object list smaller models sometimes produce."""
+
+    def as_index(value) -> int | None:
+        try:
+            index = int(str(value).strip().rstrip("."))
+        except (TypeError, ValueError):
+            return None
+        return index if 0 <= index < total else None
+
+    covered: set[int] = set()
+    notes: dict[int, str] = {}
+    raw_covered = data.get("covered")
+    if isinstance(raw_covered, list):
+        covered.update(index for index in map(as_index, raw_covered) if index is not None)
+    raw_notes = data.get("notes")
+    if isinstance(raw_notes, dict):
+        for key, value in raw_notes.items():
+            index = as_index(key)
+            if index is not None and str(value).strip():
+                notes[index] = str(value).strip()[:160]
+    for item in data.get("items") or []:
+        if isinstance(item, dict):
+            index = as_index(item.get("index"))
+            if index is None:
+                continue
+            flag = item.get("covered")
+            if flag is True or str(flag).strip().lower() == "true":
+                covered.add(index)
+            if str(item.get("note") or "").strip():
+                notes[index] = str(item["note"]).strip()[:160]
+        else:
+            index = as_index(item)
+            if index is not None:
+                covered.add(index)
+    return covered, notes
 
 
 def lesson_context_for_slug(db: Session, slug: str) -> str:

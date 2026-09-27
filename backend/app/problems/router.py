@@ -7,8 +7,11 @@ from app.common.database import get_db
 from app.common.deps import get_current_user, get_optional_user
 from app.common.enums import ProgressStatus
 from app.execution.service import run_code, submit_code
-from app.problems import service
+from app.problems import service, worked
 from app.problems.schemas import (
+    WorkedCheckIn,
+    WorkedCheckOut,
+    WorkedExampleOut,
     ProblemDetail,
     ProblemListItem,
     ProblemListResponse,
@@ -159,3 +162,24 @@ def submit_problem(
     current_user: User = Depends(get_current_user),
 ) -> ExecutionResult:
     return submit_code(db, current_user, problem_id, payload.source_code)
+
+
+@router.get("/problems/{slug}/worked-example", response_model=WorkedExampleOut)
+def get_worked_example(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WorkedExampleOut:
+    """The reference solution cut into blocks, plus how many fading levels this user has passed."""
+    return worked.worked_example(db, current_user, slug)
+
+
+@router.post("/problems/{slug}/worked-example/check", response_model=WorkedCheckOut)
+def check_worked_example(
+    slug: str,
+    payload: WorkedCheckIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WorkedCheckOut:
+    """Run the sample tests with the learner's blocks filled in; passing unlocks the next level."""
+    return worked.check_level(db, current_user, slug, payload.level, payload.filled)

@@ -22,6 +22,7 @@ import { SaveOfflineButton } from "@/components/offline/save-offline-button";
 import { problemUrls } from "@/lib/offline-targets";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { SolutionPanel } from "@/components/problems/solution-panel";
+import { WorkedExamplePanel } from "@/components/problems/worked-example-panel";
 import { StatusPip } from "@/components/problems/status-pip";
 import { SubmissionHistory } from "@/components/submissions/submission-history";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ function storageKey(slug: string) {
   return `ia:code:${slug}`;
 }
 
-type ProblemTab = "problem" | "story" | "examples" | "constraints" | "hints" | "solution" | "history";
+type ProblemTab = "problem" | "story" | "examples" | "constraints" | "hints" | "solution" | "worked" | "history";
 
 function interviewStorageKey(slug: string) {
   return `ia:interview:${slug}`;
@@ -297,7 +298,12 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
     { id: "constraints", label: "Constraints" },
     { id: "hints", label: "Hints" },
     // Like the story, the written solution has no place in a live interview. The API refuses it too.
-    ...(problem.has_solution && !interviewLive ? [{ id: "solution" as const, label: "Solution" }] : []),
+    ...(problem.has_solution && !interviewLive
+      ? [
+          { id: "solution" as const, label: "Solution" },
+          { id: "worked" as const, label: "Worked example" },
+        ]
+      : []),
     { id: "history", label: "History" },
   ];
 
@@ -364,6 +370,7 @@ function LoadedWorkspace({ problem }: { problem: ProblemDetail }) {
         {tab === "examples" ? <ExamplesBody problem={problem} /> : null}
         {tab === "constraints" ? <ConstraintsBody problem={problem} /> : null}
         {tab === "hints" ? <HintsBody problem={problem} /> : null}
+        {tab === "worked" && problem.has_solution && !interviewLive ? <WorkedExamplePanel slug={problem.slug} /> : null}
         {tab === "solution" && problem.has_solution && !interviewLive ? (
           <SolutionPanel
             problem={problem}

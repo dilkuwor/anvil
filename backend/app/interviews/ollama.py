@@ -24,15 +24,19 @@ def chat(
     num_predict: int = 220,
     max_chars: int = 900,
     attempts: int = 3,
+    json_mode: bool = False,
 ) -> str:
     settings = get_settings()
     url = f"{settings.ollama_base_url.rstrip('/')}/api/chat"
-    payload = {
+    payload: dict[str, Any] = {
         "model": settings.ollama_model,
         "messages": messages,
         "stream": False,
         "options": {"temperature": 0.45, "num_predict": num_predict},
     }
+    if json_mode:
+        # Ollama constrains the output to valid JSON; the reply is not clipped, so it stays parseable.
+        payload["format"] = "json"
     last_error: Exception | None = None
     tries = max(1, attempts)
     with httpx.Client(timeout=timeout) as client:
@@ -158,7 +162,8 @@ def evaluate_interview(system: str, user_turn: str) -> dict[str, Any]:
         {"role": "user", "content": user_turn},
     ]
     try:
-        raw = chat(messages, timeout=60.0)
+        # Structured replies (interview feedback, recall grading) need room: the default budget clipped them mid-object.
+        raw = chat(messages, timeout=90.0, num_predict=1200, max_chars=0, json_mode=True)
         return parse_feedback_json(raw)
     except Exception as exc:
         logger.warning("ollama_feedback_failed", error=str(exc))

@@ -21,6 +21,11 @@ const KIND_STYLE: Record<string, { label: string; chip: string; text: string }> 
     chip: "bg-violet-500/12 text-violet-600 dark:text-violet-300",
     text: "text-violet-600 dark:text-violet-300",
   },
+  drill: {
+    label: "Pattern drill",
+    chip: "bg-amber-500/12 text-amber-600 dark:text-amber-300",
+    text: "text-amber-600 dark:text-amber-300",
+  },
   optional: { label: "Optional", chip: "bg-steel-800 text-muted-foreground", text: "text-muted-foreground" },
 };
 

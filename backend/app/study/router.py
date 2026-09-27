@@ -10,6 +10,9 @@ from app.common.deps import get_current_user
 from app.common.errors import ServiceUnavailableError
 from app.study import reminders, service
 from app.study.schemas import (
+    DrillAnswerIn,
+    DrillAnswerOut,
+    DrillOut,
     AnswerCardIn,
     AnswerCardOut,
     DesignOutlineIn,
@@ -61,6 +64,30 @@ def reviews(
     current_user: User = Depends(get_current_user),
 ) -> ReviewQueueOut:
     return service.review_queue(db, current_user.id, _today(db, current_user, None), scope)
+
+
+@router.get("/drill/patterns", response_model=DrillOut)
+def pattern_drill(
+    tz: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DrillOut:
+    settings = service.get_or_create_settings(db, current_user.id, tz)
+    return service.pattern_drill(db, current_user.id, service.local_today(settings))
+
+
+@router.post("/drill/patterns/{problem_id}/answer", response_model=DrillAnswerOut)
+def answer_pattern_drill(
+    problem_id: UUID,
+    payload: DrillAnswerIn,
+    tz: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DrillAnswerOut:
+    settings = service.get_or_create_settings(db, current_user.id, tz)
+    return service.answer_pattern(
+        db, current_user.id, service.local_today(settings), problem_id, payload.choice, payload.confidence, payload.time_ms
+    )
 
 
 @router.get("/progress", response_model=ProgressOut)

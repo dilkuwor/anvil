@@ -222,6 +222,23 @@ class LessonAskRequest(BaseModel):
     conversation: list[LessonAskMessage] = Field(default_factory=list, max_length=24)
 
 
+class RecallRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=6000)
+
+
+class RecallItem(BaseModel):
+    takeaway: str
+    covered: bool
+    note: str = ""
+
+
+class RecallResponse(BaseModel):
+    items: list[RecallItem]
+    covered: int
+    total: int
+    feedback: str
+
+
 class LessonTutorRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     conversation: list[LessonAskMessage] = Field(default_factory=list, max_length=24)
