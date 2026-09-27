@@ -28,6 +28,7 @@ logger = get_logger(__name__)
 
 HISTORY_TURNS = 12
 MAX_REPLY_TOKENS = 900
+VOICE_REPLY_TOKENS = 260
 UNAVAILABLE = "Buddy is temporarily unavailable. Please try again."
 
 _SYSTEM = """You are Buddy, the study companion inside Anvil, an app where a software engineer prepares for \
@@ -154,12 +155,16 @@ def voice(db: Session, user: User, payload: BuddyVoiceIn) -> Iterator[str]:
     system = _system_prompt(
         db, payload.mode, payload.context.kind, payload.context.id.strip(), payload.context, voice=True
     )
-    user_turn = _user_turn(content, payload.mode)
+    # Small models follow the last instruction best, so the spoken-style rule rides along with the question.
+    user_turn = (
+        _user_turn(content, payload.mode)
+        + "\n\n(Answer in plain spoken sentences, under 120 words, no lists, headings, bold or code.)"
+    )
 
     def events() -> Iterator[str]:
         assembled: list[str] = []
         try:
-            for delta in provider.stream(system, history, user_turn, max_tokens=400):
+            for delta in provider.stream(system, history, user_turn, max_tokens=VOICE_REPLY_TOKENS):
                 if delta:
                     assembled.append(delta)
                     yield _event({"delta": delta})

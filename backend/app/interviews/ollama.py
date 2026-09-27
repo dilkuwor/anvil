@@ -112,7 +112,7 @@ def chat_stream(
         with client.stream("POST", url, json=payload) as response:
             if response.status_code >= 400:
                 response.read()
-                response.raise_for_status()
+                raise RuntimeError(_ollama_error(response))
             for line in response.iter_lines():
                 if not line:
                     continue
@@ -125,6 +125,15 @@ def chat_stream(
                     yield delta
                 if data.get("done"):
                     break
+
+
+def _ollama_error(response: httpx.Response) -> str:
+    """Ollama's own reason ("model failed to load…") beats a bare status code in the logs."""
+    try:
+        detail = str((response.json() or {}).get("error") or "").strip()
+    except ValueError:
+        detail = ""
+    return f"Ollama returned HTTP {response.status_code}" + (f": {detail[:300]}" if detail else "")
 
 
 def _tutor_messages(
