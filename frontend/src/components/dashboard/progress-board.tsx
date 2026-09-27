@@ -1,22 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { InterviewReadiness } from "@/components/dashboard/interview-readiness";
 import { MemoryCard } from "@/components/dashboard/memory-card";
-import { Meter } from "@/components/dashboard/meter";
 import { PracticeOverview } from "@/components/dashboard/practice-overview";
 import { ProfileCard } from "@/components/dashboard/profile-card";
 import { RecommendedPractice } from "@/components/dashboard/recommended-practice";
 import { TopicProgress } from "@/components/dashboard/topic-progress";
-import { Button } from "@/components/ui/button";
-import { SectionCard, SectionTitle } from "@/components/ui/section";
 import { CardSkeleton, ErrorState } from "@/components/ui/state";
 import { api, fetchCurrentUser, type ProgressSummary } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
-import { cn, DEFAULT_DAILY_GOAL } from "@/lib/utils";
+import { DEFAULT_DAILY_GOAL } from "@/lib/utils";
 
 export function ProgressBoard() {
   const me = useQuery({
@@ -50,64 +46,38 @@ export function ProgressBoard() {
   const remaining = Math.max(goalTarget - goalDone, 0);
   const goalPct = Math.round((goalDone / goalTarget) * 100);
 
+  const goal = {
+    done: goalDone,
+    target: goalTarget,
+    remaining,
+    percent: goalPct,
+    practiceHref,
+    cta,
+  };
+
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
-      <aside className="space-y-5 xl:sticky xl:top-16">
+      <aside className="space-y-5">
         <ProfileCard user={me.data} />
+        <InterviewReadiness data={data.readiness ?? null} />
       </aside>
 
       <div className="min-w-0 space-y-5">
-      <PracticeOverview data={data} />
+        <PracticeOverview data={data} goal={goal} />
 
-      <SectionCard className={cn(remaining === 0 && "border-accent/30 bg-accent/5")}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <SectionTitle>Today’s Goal</SectionTitle>
-              {remaining === 0 ? (
-                <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
-                  Completed 🔥
-                </span>
-              ) : null}
-            </div>
-            <p className="mt-1.5 text-sm text-foreground">
-              Solve {goalTarget} problems
-              <span className="text-muted-foreground">
-                {remaining === 0 ? " · all done for today!" : ` · ${remaining} remaining`}
-              </span>
-            </p>
-            <div className="mt-3 max-w-md">
-              <Meter value={goalPct} label="Today's goal" tone={remaining === 0 ? "bg-accent" : "bg-accent"} />
-            </div>
+        <ActivityHeatmap
+          days={data.activity_calendar ?? []}
+          currentStreak={data.current_streak}
+          longestStreak={data.longest_streak}
+        />
+
+        <div className="grid items-start gap-5 lg:grid-cols-2">
+          <div className="space-y-5">
+            <RecommendedPractice items={data.recommendations ?? []} isNew={isNew} />
+            <MemoryCard />
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-xl font-bold tabular-nums tracking-tight text-foreground">
-                {goalDone}/{goalTarget}
-              </div>
-              <div className="text-xs font-medium text-muted-foreground">{goalPct}%</div>
-            </div>
-            <Button asChild size="sm" className="gap-1.5 shadow-xs">
-              <Link href={practiceHref}>{cta}</Link>
-            </Button>
-          </div>
+          <TopicProgress rows={data.topic_progress ?? []} hasSolved={data.total_solved > 0} />
         </div>
-      </SectionCard>
-
-      <ActivityHeatmap
-        days={data.activity_calendar ?? []}
-        currentStreak={data.current_streak}
-        longestStreak={data.longest_streak}
-      />
-
-      <MemoryCard />
-
-      <RecommendedPractice items={data.recommendations ?? []} isNew={isNew} />
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <TopicProgress rows={data.topic_progress ?? []} hasSolved={data.total_solved > 0} />
-        <InterviewReadiness data={data.readiness ?? null} />
-      </div>
       </div>
     </div>
   );

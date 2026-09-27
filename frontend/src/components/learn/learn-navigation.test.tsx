@@ -59,7 +59,7 @@ describe("LearnHierarchyBar", () => {
       />,
     );
 
-    expect(screen.getByText("Learn")).toBeInTheDocument();
+    expect(screen.getByText("Lessons")).toBeInTheDocument();
     expect(screen.getByText("Data Structures & Algorithms")).toBeInTheDocument();
     expect(screen.getByText("Arrays & Strings")).toBeInTheDocument();
     expect(screen.getByText("Array Basics")).toBeInTheDocument();

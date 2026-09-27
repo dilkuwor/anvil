@@ -3,7 +3,7 @@
 import { Brain, CheckCircle2, Circle } from "lucide-react";
 import Link from "next/link";
 
-import { SectionCard, SectionTitle } from "@/components/ui/section";
+import { CardHeader, SectionCard } from "@/components/ui/section";
 import { nextDueLabel, useMemory, type MemoryLesson } from "@/lib/study";
 import { cn } from "@/lib/utils";
 
@@ -19,79 +19,76 @@ export function MemoryCard() {
   const max = Math.max(1, ...data.week.map((d) => d.due));
 
   return (
-    <SectionCard>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Brain className="h-4 w-4 text-accent" aria-hidden />
-          <SectionTitle>Memory</SectionTitle>
-        </div>
-        <p className="text-[12px] text-muted-foreground">
-          {data.due_today ? (
-            <Link href="/today/review" className="font-medium text-accent hover:underline">
-              {data.due_today} due today →
+    <SectionCard className="p-4 sm:p-5">
+      <CardHeader
+        icon={Brain}
+        title="Memory"
+        meta={data.due_today ? `${data.due_today} due today` : "nothing due today"}
+        action={
+          data.due_today ? (
+            <Link href="/today/review" className="text-xs font-medium text-accent hover:underline">
+              Review →
             </Link>
-          ) : (
-            "Nothing due today"
-          )}
-        </p>
-      </div>
+          ) : undefined
+        }
+      />
 
-      <div className="mt-4 grid grid-cols-7 gap-1.5" aria-label="Reviews due this week">
+      <div className="grid grid-cols-7 gap-1" aria-label="Reviews due this week">
         {data.week.map((day, i) => {
           const weekday = new Date(`${day.day}T12:00:00`).getDay();
           return (
             <div key={day.day} className="flex flex-col items-center gap-1">
-              <div className="flex h-12 w-full items-end justify-center rounded-md border border-steel-800 bg-steel-950/40 pb-1">
+              <div className="flex h-10 w-full items-end justify-center rounded-md border border-steel-800/80 bg-steel-950/40 pb-1">
                 <div
-                  className={cn("w-3 rounded-sm", i === 0 ? "bg-accent" : "bg-steel-600")}
-                  style={{ height: `${Math.max(day.due ? 6 : 2, Math.round((day.due / max) * 32))}px` }}
+                  className={cn("w-2.5 rounded-xs", i === 0 ? "bg-accent" : "bg-steel-600")}
+                  style={{ height: `${Math.max(day.due ? 5 : 2, Math.round((day.due / max) * 28))}px` }}
                   title={`${day.due} due`}
                 />
               </div>
-              <span className={cn("text-[10px] tabular-nums", i === 0 ? "font-semibold text-foreground" : "text-muted-foreground")}>
+              <span className={cn("text-[9.5px] tabular-nums", i === 0 ? "font-semibold text-foreground" : "text-muted-foreground")}>
                 {i === 0 ? "Today" : DAY_LETTERS[weekday]}
               </span>
-              <span className="text-[10px] tabular-nums text-muted-foreground">{day.due || ""}</span>
+              <span className="text-[9.5px] tabular-nums text-muted-foreground">{day.due || ""}</span>
             </div>
           );
         })}
       </div>
 
       {top.length ? (
-        <div className="mt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Lessons in review</p>
-          <ul className="mt-2 divide-y divide-steel-800/80">
+        <div className="mt-3.5 border-t border-steel-800/80 pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Lessons in review</p>
+          <ul className="mt-1.5 divide-y divide-steel-800/70">
             {top.map((lesson) => (
               <li key={lesson.slug}>
-                <Link href={lesson.href} className="flex items-center justify-between gap-3 py-2 text-[13px] hover:text-accent">
-                  <span className="flex min-w-0 items-center gap-2">
+                <Link href={lesson.href} className="flex items-center justify-between gap-2.5 py-1.5 text-[12.5px] hover:text-accent transition-colors">
+                  <span className="flex min-w-0 items-center gap-1.5">
                     <StateMark lesson={lesson} />
                     <span className="truncate font-medium text-foreground">{lesson.title}</span>
                   </span>
-                  <span className="shrink-0 text-[12px] text-muted-foreground">
-                    {lesson.needs_refresh ? "needs a refresh" : lesson.next_due_on ? nextDueLabel(lesson.next_due_on, today) : ""}
+                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                    {lesson.needs_refresh ? "needs refresh" : lesson.next_due_on ? nextDueLabel(lesson.next_due_on, today) : ""}
                   </span>
                 </Link>
               </li>
             ))}
           </ul>
-          <Link href="/learn/progress" className="mt-2 inline-block text-[12px] font-medium text-accent hover:underline">
+          <Link href="/learn/progress" className="mt-1.5 inline-block text-[11.5px] font-medium text-accent hover:underline">
             {data.lessons.length > top.length ? `See all ${data.lessons.length} lessons →` : "Full progress table →"}
           </Link>
         </div>
       ) : null}
 
       {data.weak.length ? (
-        <div className="mt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Weak spots</p>
-          <ul className="mt-2 space-y-1.5">
+        <div className="mt-3 border-t border-steel-800/80 pt-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Weak spots</p>
+          <ul className="mt-1.5 space-y-1">
             {data.weak.map((spot) => (
-              <li key={spot.concept} className="flex items-center justify-between gap-3 text-[13px]">
-                <Link href={spot.href} className="min-w-0 truncate font-medium text-foreground hover:text-accent">
+              <li key={spot.concept} className="flex items-center justify-between gap-2.5 text-[12px]">
+                <Link href={spot.href} className="min-w-0 truncate font-medium text-foreground hover:text-accent transition-colors">
                   {spot.lesson_title}
-                  <span className="ml-1.5 font-normal text-muted-foreground">· {spot.concept.split(".").pop()?.replace(/-/g, " ")}</span>
+                  <span className="ml-1 text-[11px] font-normal text-muted-foreground">· {spot.concept.split(".").pop()?.replace(/-/g, " ")}</span>
                 </Link>
-                <span className="shrink-0 text-[12px] text-muted-foreground">
+                <span className="shrink-0 text-[11px] text-muted-foreground">
                   missed {spot.misses}×
                 </span>
               </li>

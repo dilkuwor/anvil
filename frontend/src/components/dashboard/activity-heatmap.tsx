@@ -2,7 +2,9 @@
 
 import { memo, useMemo, useState } from "react";
 
-import { SectionCard, SectionTitle } from "@/components/ui/section";
+import { CalendarDays } from "lucide-react";
+
+import { CardHeader, SectionCard } from "@/components/ui/section";
 import type { ActivityDay } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +55,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
   if (days.length === 0) {
     return (
       <SectionCard>
-        <SectionTitle>Practice Activity</SectionTitle>
+        <CardHeader icon={CalendarDays} title="Practice activity" />
         <p className="mt-4 text-sm text-muted-foreground">
           No activity yet. Solve a problem to start building practice history.
         </p>
@@ -62,26 +64,30 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
   }
 
   return (
-    <SectionCard>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <SectionTitle>Practice Activity</SectionTitle>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="sr-only">Year</span>
-          <select
-            className="select-field w-auto"
-            value={year}
-            onChange={(event) => setYear(Number(event.target.value))}
-          >
-            {years.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+    <SectionCard className="p-4 sm:p-5">
+      <CardHeader
+        icon={CalendarDays}
+        title="Practice activity"
+        meta={`${activeDays} active day${activeDays === 1 ? "" : "s"}`}
+        action={
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="sr-only">Year</span>
+            <select
+              className="select-field h-7 text-xs py-0.5 px-2 w-auto"
+              value={year}
+              onChange={(event) => setYear(Number(event.target.value))}
+            >
+              {years.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+        }
+      />
 
-      <div className="mt-4 overflow-x-auto">
+      <div className="overflow-x-auto">
         <div className="min-w-[680px]">
           <div className="mb-1 ml-8 grid grid-cols-[repeat(53,minmax(0,1fr))] text-[10px] text-muted-foreground">
             {grid.monthMarks.map((mark) => (
@@ -98,13 +104,13 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
                 </span>
               ))}
             </div>
-            <div className="grid auto-cols-max grid-flow-col grid-rows-7 gap-[3.5px]">
+            <div className="grid auto-cols-max grid-flow-col grid-rows-7 gap-[3px]">
               {grid.cells.map((cell) => (
                 <div
                   key={cell.key}
                   title={cell.title}
                   className={cn(
-                    "h-[11px] w-[11px] rounded-[3px] transition-all duration-150",
+                    "h-[10.5px] w-[10.5px] rounded-[2.5px] transition-all duration-150",
                     LEVELS[cell.level],
                     !cell.inYear && "opacity-0",
                     cell.inYear && "hover:scale-135 hover:z-10 hover:shadow-md cursor-pointer",
@@ -114,7 +120,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
               ))}
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <div className="mt-2.5 flex items-center justify-end gap-1.5 text-[10px] font-medium text-muted-foreground">
             <span>Less</span>
             {LEVELS.map((tone) => (
               <span key={tone} className={cn("h-2.5 w-2.5 rounded-[2px]", tone)} />
@@ -124,7 +130,7 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
         </div>
       </div>
 
-      <dl className="mt-5 grid grid-cols-3 gap-3.5 text-sm">
+      <dl className="mt-3.5 grid grid-cols-3 gap-2.5 text-sm">
         <Stat label="Active days" value={String(activeDays)} />
         <Stat label="Current streak" value={`${currentStreak} days`} />
         <Stat label="Best streak" value={`${longestStreak} days`} />
@@ -135,9 +141,9 @@ export const ActivityHeatmap = memo(function ActivityHeatmap({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-steel-800/90 bg-steel-950/40 px-4 py-3 shadow-2xs">
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-lg font-bold tabular-nums tracking-tight text-foreground">{value}</dd>
+    <div className="rounded-lg border border-steel-800/80 bg-steel-950/40 px-3 py-2 shadow-2xs">
+      <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-base font-bold tabular-nums tracking-tight text-foreground">{value}</dd>
     </div>
   );
 }

@@ -11,14 +11,14 @@ import { useToday } from "@/lib/study";
 import { cn } from "@/lib/utils";
 
 export const SITE_NAV = [
+  { href: "/learn", label: "Lessons" },
   { href: "/problems", label: "Problems" },
   { href: "/system-design", label: "System Design" },
   { href: "/behavioral", label: "Behavioral" },
   { href: "/roadmap", label: "Roadmap" },
-  { href: "/learn", label: "Learn" },
   { href: "/visualizations", label: "Visualizations" },
-  { href: "/notes", label: "Notes" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
+  { href: "/notes", label: "Notes" },
 ];
 
 export type SiteNavUser = {

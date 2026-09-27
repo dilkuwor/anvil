@@ -72,7 +72,7 @@ export function LearnIndex() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Learn"
+        title="Lessons"
         description="Interview-focused lessons that lead into practice and mock interviews."
         meta={`${completed}/${totalLessons} lessons`}
       />

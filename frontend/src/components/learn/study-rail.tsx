@@ -10,15 +10,14 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Target,
-  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { useLessonReader } from "@/components/tts/lesson-reader-context";
 import { Button } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/section";
+import { CardHeader, SectionCard } from "@/components/ui/section";
 import type { LearningLessonDetail } from "@/lib/learn";
 import { cn } from "@/lib/utils";
 
@@ -132,43 +131,6 @@ function useSelfCheck(
   return [done, toggle];
 }
 
-/** One header style for every card: icon tile, sentence-case title, quiet meta on the right. */
-function RailHeader({
-  icon: Icon,
-  title,
-  meta,
-  action,
-  className,
-}: {
-  icon: LucideIcon;
-  title: string;
-  meta?: ReactNode;
-  action?: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2.5 border-b border-steel-800/80 px-4 py-3",
-        className,
-      )}
-    >
-      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-accent/20 bg-accent/10 text-accent">
-        <Icon className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-      </span>
-      <h2 className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground">
-        {title}
-      </h2>
-      {meta ? (
-        <span className="shrink-0 rounded-full border border-steel-800 bg-steel-950/60 px-2 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
-          {meta}
-        </span>
-      ) : null}
-      {action}
-    </div>
-  );
-}
-
 export function StudyRail({
   lesson,
   headings,
@@ -198,7 +160,7 @@ export function StudyRail({
     <>
       {headings.length > 1 ? (
         <SectionCard className="p-0">
-          <RailHeader
+          <CardHeader flush
             icon={ListTree}
             title="On this page"
             meta={
@@ -245,7 +207,7 @@ export function StudyRail({
 
       {lesson.review || (lesson.checks?.length ?? 0) > 0 ? (
         <SectionCard className="p-0">
-          <RailHeader
+          <CardHeader flush
             icon={Brain}
             title="Memory"
             meta={
@@ -281,7 +243,7 @@ export function StudyRail({
 
       {lesson.takeaways.length || lesson.interview_questions.length ? (
         <SectionCard className="p-0">
-          <RailHeader
+          <CardHeader flush
             icon={Lightbulb}
             title="Remember"
             meta={
@@ -323,7 +285,7 @@ export function StudyRail({
 
       {hasPractice ? (
         <SectionCard className="p-0">
-          <RailHeader
+          <CardHeader flush
             icon={Target}
             title="Practice"
             meta={

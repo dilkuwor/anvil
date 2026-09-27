@@ -5,14 +5,14 @@ import { BrandMark } from "@/components/ui/section";
 
 const FOOTER_NAV = [
   { href: "/about", label: "About" },
+  { href: "/learn", label: "Lessons" },
   { href: "/problems", label: "Problems" },
   { href: "/system-design", label: "System Design" },
   { href: "/behavioral", label: "Behavioral" },
   { href: "/roadmap", label: "Roadmap" },
-  { href: "/learn", label: "Learn" },
   { href: "/visualizations", label: "Visualizations" },
-  { href: "/notes", label: "Notes" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
+  { href: "/notes", label: "Notes" },
 ];
 
 export function SiteFooter() {

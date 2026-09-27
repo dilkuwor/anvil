@@ -14,7 +14,7 @@ export async function generateMetadata({
   const category = await fetchPublicJson<LearningCategoryDetail>(`/api/v1/learn/categories/${categorySlug}`);
   if (!category) {
     return pageMeta({
-      title: "Learn",
+      title: "Lessons",
       description: "Interview preparation lessons on Anvil.",
       path: `/learn/${categorySlug}`,
     });
