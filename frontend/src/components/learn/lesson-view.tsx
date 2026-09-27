@@ -282,9 +282,9 @@ export function LessonView({ slug }: { slug: string }) {
         onOpenCurriculum={() => setCurriculumOpen(true)}
       />
 
-      <div className="flex flex-col lg:flex-row items-start gap-5">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         {/* Center Column: Main Learning Workspace & Bottom Controls */}
-        <div className="flex-1 min-w-0 space-y-4">
+        <div className="w-full min-w-0 flex-1 space-y-4">
           {/* Main Connected Reading Workspace Card */}
           <div className="flex flex-col lg:flex-row items-stretch rounded-2xl border border-steel-800/90 bg-steel-900/90 shadow-2xs overflow-hidden">
             {/* Attached Left Rail / Sidebar */}
