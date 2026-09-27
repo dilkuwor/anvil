@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { useBuddyPageContext } from "@/components/buddy/buddy-provider";
 import { EndInterviewDialog } from "@/components/interview/interview-banner";
 import { InterviewFeedback } from "@/components/interview/interview-feedback";
 import { InterviewerPanel } from "@/components/interview/interviewer-panel";
@@ -101,6 +102,9 @@ function LoadedDesignWorkspace({
   }, [sessionId, scenarioSlug, start]);
 
   const session = sessionQuery.data;
+  const sessionScenario = (session?.scenario ?? null) as SystemDesignScenario | null;
+  const buddySlug = sessionScenario?.slug ?? scenarioSlug ?? "";
+  useBuddyPageContext(buddySlug ? { kind: "design", id: buddySlug, title: sessionScenario?.title ?? "" } : null);
 
   useEffect(() => {
     if (!session?.architecture) return;

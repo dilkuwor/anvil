@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
+import { BuddyButton, BuddyDrawer } from "@/components/buddy/buddy-drawer";
 import { LegalLinks } from "@/components/layout/legal-links";
 import { DesktopNav, MobileNavSheet, MobileNavTrigger, useMobileMenu } from "@/components/layout/site-nav";
 import { UserAvatar } from "@/components/settings/user-avatar";
@@ -90,6 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <DesktopNav pathname={pathname} signedIn={signedIn} />
             </div>
             <div className="flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground">
+              {signedIn ? <BuddyButton /> : null}
               <ThemeToggle />
               {signedIn && me.data ? (
                 <div className="hidden items-center gap-2 md:flex">
@@ -153,6 +155,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </footer>
       )}
+      {signedIn ? <BuddyDrawer /> : null}
     </div>
   );
 }

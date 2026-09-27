@@ -68,6 +68,7 @@ services:
       TTS_BASE_URL: ${TTS_BASE_URL:-http://100.120.169.81:8091}
       TTS_VOICE: ${TTS_VOICE:-af_heart}
       TTS_LANGUAGE: ${TTS_LANGUAGE:-English}
+      STT_BASE_URL: ${STT_BASE_URL:-http://100.120.169.81:8092}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/tmp/interview-anvil-jobs:/var/tmp/interview-anvil-jobs

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from app.common.config import get_settings
 from app.interviews import ollama
 from app.interviews.providers.base import LLMProvider
@@ -34,3 +36,14 @@ class OllamaProvider(LLMProvider):
 
     def complete_json(self, system: str, user_turn: str) -> dict:
         return ollama.evaluate_interview(system, user_turn)
+
+    def stream(
+        self,
+        system: str,
+        transcript: list[dict[str, str]],
+        user_turn: str,
+        *,
+        max_tokens: int = 900,
+    ) -> Iterator[str]:
+        messages = [{"role": "system", "content": system}, *transcript, {"role": "user", "content": user_turn}]
+        yield from ollama.chat_stream(messages, timeout=120.0, num_predict=max_tokens)

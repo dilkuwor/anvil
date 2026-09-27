@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     # folder under the system temp dir; 0 days disables the cache.
     tts_cache_dir: str = ""
     tts_cache_days: int = 30
+    # Speech-to-text service used by Buddy's microphone. Empty disables voice input.
+    stt_base_url: str = "http://100.120.169.81:8092"
 
     mcp_rate_limit_per_minute: int = 60
     mcp_max_tokens_per_user: int = 10

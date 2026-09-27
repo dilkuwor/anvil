@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useBuddyPageContext } from "@/components/buddy/buddy-provider";
 import { AskAiButton, AskAiController, AskAiPanel } from "@/components/learn/ask-ai-panel";
 import { LearnHierarchyBar } from "@/components/learn/learn-hierarchy-bar";
 import { LessonCheck } from "@/components/learn/lesson-check";
@@ -42,6 +43,9 @@ export function LessonView({ slug }: { slug: string }) {
   });
 
   const speechSections = useMemo(() => (lesson.data ? buildLessonSpeech(lesson.data) : []), [lesson.data]);
+  useBuddyPageContext(
+    lesson.data ? { kind: "lesson", id: lesson.data.slug, title: lesson.data.title, noteSourceId: lesson.data.id } : null,
+  );
 
   const complete = useMutation({
     mutationFn: () => api.post<LearningLessonDetail>(`/api/v1/learn/lessons/${lesson.data?.id}/complete`),

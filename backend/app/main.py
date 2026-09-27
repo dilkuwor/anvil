@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.router import router as auth_router
+from app.buddy.router import router as buddy_router
 from app.common import models as _models  # noqa: F401
 from app.common.config import get_settings
 from app.common.errors import register_exception_handlers
@@ -21,6 +22,7 @@ from app.study.router import router as study_router
 from app.problems.router import router as problems_router
 from app.progress.router import router as progress_router
 from app.submissions.router import router as submissions_router
+from app.stt.router import router as stt_router
 from app.tts.router import router as tts_router
 from app.mcp.http import router as mcp_http_router
 from app.mcp.router import router as mcp_router
@@ -73,6 +75,8 @@ app.include_router(study_router)
 app.include_router(cheatsheets_router)
 app.include_router(users_router)
 app.include_router(tts_router)
+app.include_router(stt_router)
+app.include_router(buddy_router)
 app.include_router(mcp_router)
 app.include_router(mcp_http_router)
 app.include_router(oauth_router)

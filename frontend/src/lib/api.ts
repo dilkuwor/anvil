@@ -61,11 +61,14 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
+export type SseEvent = { delta?: string; done?: boolean; error?: string } & Record<string, unknown>;
+
 export async function streamSsePost(
   path: string,
   body: unknown,
   onDelta: (delta: string) => void,
   signal?: AbortSignal,
+  onEvent?: (event: SseEvent) => void,
 ): Promise<string> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
@@ -106,12 +109,13 @@ export async function streamSsePost(
         .join("")
         .trim();
       if (!line) continue;
-      let event: { delta?: string; done?: boolean; error?: string };
+      let event: SseEvent;
       try {
-        event = JSON.parse(line) as { delta?: string; done?: boolean; error?: string };
+        event = JSON.parse(line) as SseEvent;
       } catch {
         continue;
       }
+      onEvent?.(event);
       if (event.error) {
         throw new ApiError(503, event.error, "service_unavailable");
       }
