@@ -167,3 +167,29 @@ def test_delete_thread(auth_client, provider):
     assert auth_client.delete(f"/api/v1/buddy/threads/{thread_id}").status_code == 204
     assert auth_client.get(f"/api/v1/buddy/threads/{thread_id}").status_code == 404
     assert auth_client.post("/api/v1/buddy/messages", json={"thread_id": thread_id, "content": "x"}).status_code == 404
+
+
+def test_voice_turn_streams_without_saving(auth_client, provider, db):
+    _seed_catalog(db)
+    payload = {
+        "content": "What is a quorum?",
+        "history": [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "Hello."}],
+        "context": {"kind": "lesson", "id": "capacity-estimation", "title": "Capacity Estimation"},
+    }
+    response = auth_client.post("/api/v1/buddy/voice", json=payload)
+    assert response.status_code == 200
+    got = events(response)
+    assert [item["delta"] for item in got if "delta" in item] == ["Hello ", "there."]
+    assert got[-1] == {"done": True}
+    call = provider.calls[0]
+    assert "read aloud" in call["system"]
+    assert "Lesson context:" in call["system"]
+    assert call["transcript"] == [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "Hello."}]
+    assert auth_client.get("/api/v1/buddy/threads").json() == []
+
+
+def test_voice_turn_reports_provider_failure(auth_client, monkeypatch):
+    fake = FakeProvider(fail=True)
+    monkeypatch.setattr(service, "get_llm_provider_for_user", lambda user: fake)
+    response = auth_client.post("/api/v1/buddy/voice", json={"content": "hi"})
+    assert events(response)[-1]["error"] == "An OpenAI API key is required. Add one in Settings."

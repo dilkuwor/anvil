@@ -11,7 +11,14 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.buddy.models import BuddyMessage, BuddyThread
-from app.buddy.schemas import BuddyContextIn, BuddyMessageOut, BuddySendIn, BuddyThreadDetail, BuddyThreadOut
+from app.buddy.schemas import (
+    BuddyContextIn,
+    BuddyMessageOut,
+    BuddySendIn,
+    BuddyThreadDetail,
+    BuddyThreadOut,
+    BuddyVoiceIn,
+)
 from app.common.errors import NotFoundError
 from app.common.logging import get_logger
 from app.interviews.providers import get_llm_provider_for_user
@@ -42,6 +49,12 @@ _TEACH_ADDENDUM = """
 Mode: explain it back. The learner is teaching the idea to you in their own words to test their memory. Do not \
 explain it yourself first. Respond in this order: what they got right in one or two lines; what is missing or wrong, \
 named precisely; one question that would make them fill the biggest gap. Keep the whole reply short.
+"""
+
+_VOICE_ADDENDUM = """
+Delivery: your reply will be read aloud by a text-to-speech voice, so write for the ear. Plain sentences only, \
+about 80 to 120 words. No headings, bullet lists, tables, code blocks, or symbols. Say code in words, for example \
+"a for loop from zero to n". Say numbers and units in full. Start with the answer.
 """
 
 _CONTEXT_INTRO = {
@@ -133,6 +146,33 @@ def send(db: Session, user: User, payload: BuddySendIn) -> Iterator[str]:
     return events()
 
 
+def voice(db: Session, user: User, payload: BuddyVoiceIn) -> Iterator[str]:
+    """Stream a spoken-style reply. Nothing is saved: voice turns live only in the drawer."""
+    provider = get_llm_provider_for_user(user)
+    history = [{"role": item.role, "content": item.content.strip()} for item in payload.history[-HISTORY_TURNS:]]
+    content = payload.content.strip()
+    system = _system_prompt(
+        db, payload.mode, payload.context.kind, payload.context.id.strip(), payload.context, voice=True
+    )
+    user_turn = _user_turn(content, payload.mode)
+
+    def events() -> Iterator[str]:
+        assembled: list[str] = []
+        try:
+            for delta in provider.stream(system, history, user_turn, max_tokens=400):
+                if delta:
+                    assembled.append(delta)
+                    yield _event({"delta": delta})
+        except Exception as exc:  # noqa: BLE001 - any provider failure ends the stream cleanly
+            logger.warning("buddy_voice_failed", error=str(exc), provider=provider.name)
+            if not assembled:
+                yield _event({"error": _friendly_error(exc)})
+                return
+        yield _event({"done": True})
+
+    return events()
+
+
 def _resolve_thread(db: Session, user_id: UUID, payload: BuddySendIn) -> BuddyThread:
     if payload.thread_id is not None:
         return _thread(db, user_id, payload.thread_id)
@@ -176,10 +216,14 @@ def _thread_out(row: BuddyThread) -> BuddyThreadOut:
     )
 
 
-def _system_prompt(db: Session, mode: str, kind: str, context_id: str, live: BuddyContextIn) -> str:
+def _system_prompt(
+    db: Session, mode: str, kind: str, context_id: str, live: BuddyContextIn, *, voice: bool = False
+) -> str:
     parts = [_SYSTEM]
     if mode == "teach":
         parts.append(_TEACH_ADDENDUM)
+    if voice:
+        parts.append(_VOICE_ADDENDUM)
     parts.append(f"\nWhere the learner is: {_CONTEXT_INTRO.get(kind, _CONTEXT_INTRO['general'])}")
     context = _page_context(db, kind, context_id)
     if context:
