@@ -21,6 +21,7 @@ type Confidence = "sure" | "unsure";
  * correctly once, the lesson marks itself Checked. No score, no gate, no red "failed".
  */
 export function LessonCheck({ lesson }: { lesson: LearningLessonDetail }) {
+  const queryClient = useQueryClient();
   const checks = useMemo(() => lesson.checks ?? [], [lesson.checks]);
   const state = lesson.check_state ?? { total: checks.length, checked: 0, correct_ids: [], attempted_ids: [] };
   const alreadyChecked = checks.length > 0 && state.checked >= state.total;
@@ -29,6 +30,7 @@ export function LessonCheck({ lesson }: { lesson: LearningLessonDetail }) {
   // lesson refetches as checked. The next visit opens on the checked panel.
   const [mode, setMode] = useState<"panel" | "round">(alreadyChecked ? "panel" : "round");
   const [round, setRound] = useState(0);
+  const [reloading, setReloading] = useState(false);
   if (!checks.length) return null;
 
   return (
@@ -36,19 +38,41 @@ export function LessonCheck({ lesson }: { lesson: LearningLessonDetail }) {
       {mode === "panel" ? (
         <CheckedPanel
           lesson={lesson}
-          onAgain={() => {
+          pending={reloading}
+          onAgain={async () => {
+            // A fresh fetch draws a new set of questions from the lesson's pool.
+            setReloading(true);
+            try {
+              await queryClient.refetchQueries({ queryKey: queryKeys.learnLesson(lesson.slug) });
+            } finally {
+              setReloading(false);
+            }
             setRound((n) => n + 1);
             setMode("round");
           }}
         />
       ) : (
-        <Round key={round} lesson={lesson} checks={checks} initialCorrect={round === 0 ? state.correct_ids : []} />
+        <Round
+          key={round}
+          lesson={lesson}
+          checks={checks}
+          pool={state.pool ?? checks.length}
+          initialCorrect={round === 0 ? state.correct_ids : []}
+        />
       )}
     </section>
   );
 }
 
-function CheckedPanel({ lesson, onAgain }: { lesson: LearningLessonDetail; onAgain: () => void }) {
+function CheckedPanel({
+  lesson,
+  pending,
+  onAgain,
+}: {
+  lesson: LearningLessonDetail;
+  pending: boolean;
+  onAgain: () => void;
+}) {
   const mastered = lesson.learn_state === "mastered";
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
@@ -69,9 +93,9 @@ function CheckedPanel({ lesson, onAgain }: { lesson: LearningLessonDetail; onAga
         <Link href={quizHref(`topic:${lesson.topic_slug}`)} className="text-[12px] font-medium text-accent hover:underline">
           Quiz the whole topic
         </Link>
-        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={onAgain}>
+        <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={pending} onClick={onAgain}>
           <RotateCcw className="h-3.5 w-3.5" />
-          Practice again
+          {pending ? "Drawing questions…" : "Practice again"}
         </Button>
       </div>
     </div>
@@ -81,10 +105,12 @@ function CheckedPanel({ lesson, onAgain }: { lesson: LearningLessonDetail; onAga
 function Round({
   lesson,
   checks,
+  pool,
   initialCorrect,
 }: {
   lesson: LearningLessonDetail;
   checks: Check[];
+  pool: number;
   initialCorrect: string[];
 }) {
   const queryClient = useQueryClient();
@@ -202,6 +228,7 @@ function Round({
           ))}
           <span className="ml-1.5 text-[11px] tabular-nums text-muted-foreground">
             {correctIds.size} of {total} checked
+            {pool > total ? ` · from a pool of ${pool}` : ""}
           </span>
         </div>
       </header>

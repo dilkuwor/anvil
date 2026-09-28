@@ -395,10 +395,40 @@ def get_lesson(
         related_problems=related,
         learn_state=learn_state(row) if user_id is not None else "not_started",
         needs_refresh=bool(row.needs_refresh) if row is not None else False,
-        checks=[_check_out(item) for item in checks],
+        checks=[_check_out(item) for item in _round_checks(db, user_id, lesson, checks)],
         check_state=_check_state(db, user_id, lesson, checks) if user_id is not None else None,
         review=_lesson_review(db, user_id, row, checks) if user_id is not None else None,
     )
+
+
+ROUND_SIZE = 8
+
+
+def _lesson_attempts(db: Session, user_id: UUID, lesson_id: UUID) -> tuple[set[UUID], set[UUID]]:
+    """(attempted check ids, correctly answered check ids) from lesson rounds."""
+    rows = db.execute(
+        select(CheckAttempt.check_id, CheckAttempt.correct).where(
+            CheckAttempt.user_id == user_id, CheckAttempt.lesson_id == lesson_id, CheckAttempt.source == "lesson"
+        )
+    ).all()
+    return {check_id for check_id, _ in rows}, {check_id for check_id, ok in rows if ok}
+
+
+def _round_checks(db: Session, user_id: UUID | None, lesson: LearningLesson, pool: list[LessonCheck]) -> list[LessonCheck]:
+    """The questions for one round: up to ROUND_SIZE, drawn at random, never-right ones first."""
+    import random
+
+    if len(pool) <= ROUND_SIZE:
+        return pool
+    correct: set[UUID] = set()
+    if user_id is not None:
+        _, correct = _lesson_attempts(db, user_id, lesson.id)
+    fresh = [item for item in pool if item.id not in correct]
+    known = [item for item in pool if item.id in correct]
+    random.shuffle(fresh)
+    random.shuffle(known)
+    chosen = (fresh + known)[:ROUND_SIZE]
+    return sorted(chosen, key=lambda item: item.display_order)
 
 
 def _check_out(item: LessonCheck) -> LessonCheckOut:
@@ -415,17 +445,14 @@ def _check_out(item: LessonCheck) -> LessonCheckOut:
 
 
 def _check_state(db: Session, user_id: UUID, lesson: LearningLesson, checks: list[LessonCheck]) -> LessonCheckStateOut:
-    rows = db.execute(
-        select(CheckAttempt.check_id, CheckAttempt.correct).where(
-            CheckAttempt.user_id == user_id, CheckAttempt.lesson_id == lesson.id, CheckAttempt.source == "lesson"
-        )
-    ).all()
-    attempted = {check_id for check_id, _ in rows}
-    correct = {check_id for check_id, ok in rows if ok}
+    """Progress against the whole pool: a round is ROUND_SIZE questions, Checked needs that many distinct right."""
+    attempted, correct = _lesson_attempts(db, user_id, lesson.id)
     ids = [item.id for item in checks]
+    total = min(ROUND_SIZE, len(ids))
     return LessonCheckStateOut(
-        total=len(checks),
-        checked=sum(1 for item in ids if item in correct),
+        total=total,
+        checked=min(sum(1 for item in ids if item in correct), total),
+        pool=len(ids),
         correct_ids=[item for item in ids if item in correct],
         attempted_ids=[item for item in ids if item in attempted],
     )
@@ -501,7 +528,21 @@ def answer_check(db: Session, user_id: UUID, lesson_id: UUID, check_id: UUID, pa
     checks = sorted(lesson.checks, key=lambda item: item.display_order)
     state = _check_state(db, user_id, lesson, checks)
     just_checked = False
-    if state.checked == state.total and row.status != LearningProgressStatus.COMPLETED.value:
+    if row.status == LearningProgressStatus.COMPLETED.value:
+        # After Checked, a question met for the first time joins review straight away, rated from this try.
+        today = local_today(get_or_create_settings(db, user_id), _now())
+        has_card = db.scalar(
+            select(ReviewCard.id).where(
+                ReviewCard.user_id == user_id, ReviewCard.kind == KIND_CHECK, ReviewCard.ref == str(check.id)
+            )
+        )
+        if has_card is None:
+            card = ReviewCard(user_id=user_id, kind=KIND_CHECK, ref=str(check.id), box=1, due_on=today + timedelta(days=1))
+            scheduler.schedule(card, scheduler.rating_for_answer(correct, payload.confidence), today=today, now=_now())
+            card.reviews = 0
+            card.last_reviewed_on = None
+            db.add(card)
+    if state.checked >= state.total and row.status != LearningProgressStatus.COMPLETED.value:
         now = _now()
         row.status = LearningProgressStatus.COMPLETED.value
         row.progress_percent = 100
@@ -527,10 +568,11 @@ def answer_check(db: Session, user_id: UUID, lesson_id: UUID, check_id: UUID, pa
             ).all()
         }
         for item in checks:
-            if str(item.id) in existing:
-                continue
             first = firsts.get(item.id)
-            rating = scheduler.rating_for_answer(bool(first and first.correct), first.confidence if first else "unsure")
+            # Only questions the learner has met get a card; the rest of the pool joins as it is answered.
+            if str(item.id) in existing or first is None:
+                continue
+            rating = scheduler.rating_for_answer(bool(first.correct), first.confidence)
             card = ReviewCard(user_id=user_id, kind=KIND_CHECK, ref=str(item.id), box=1, due_on=today + timedelta(days=1))
             scheduler.schedule(card, rating, today=today, now=now)
             card.reviews = 0
