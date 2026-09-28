@@ -21,6 +21,7 @@ section (see ``microsoft_list``).
 
 from __future__ import annotations
 
+from database.seeds.clear_descriptions import LEADS, describe
 from database.seeds.fang_extra import EXTRA_TAGS as FANG_TAGS
 from database.seeds.fang_extra import PROBLEMS as FANG_PROBLEMS
 from database.seeds.looptracker import PROBLEMS as LOOPTRACKER_PROBLEMS
@@ -39,6 +40,8 @@ def _build() -> list[dict]:
         if leetcode_id in seen:
             continue
         seen.add(leetcode_id)
+        spec = dict(spec)
+        spec["description"] = describe(leetcode_id, spec["description"])
         ordered.append(spec)
     return ordered
 
@@ -51,6 +54,12 @@ def validate_catalog() -> None:
     slugs = [spec["slug"] for spec in PROBLEMS]
     if len(slugs) != len(set(slugs)):
         raise RuntimeError("Catalog has duplicate slugs")
+
+    ids = {spec["leetcode_id"] for spec in PROBLEMS}
+    if set(LEADS) != ids:
+        missing = sorted(ids - set(LEADS))
+        extra = sorted(set(LEADS) - ids)
+        raise RuntimeError(f"Clear descriptions missing {missing} extra {extra}")
 
     tag_slugs = {slug for _, slug in TAGS}
     for spec in PROBLEMS:

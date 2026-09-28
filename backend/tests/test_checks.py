@@ -84,7 +84,7 @@ def test_questions_are_served_without_answers(lesson):
         assert "answer" not in check and "explanation" not in check and "answer_index" not in check
     assert lesson["checks"][0]["model_answer"] is None
     assert lesson["checks"][2]["model_answer"] == "Clarify, estimate, design, deep dive."
-    assert lesson["check_state"] == {"total": 3, "checked": 0, "correct_ids": [], "attempted_ids": []}
+    assert lesson["check_state"] == {"total": 3, "checked": 0, "pool": 3, "correct_ids": [], "attempted_ids": []}
     assert lesson["review"] is None
 
 
@@ -323,15 +323,58 @@ def test_progress_lists_every_lesson_with_first_try_and_sure_but_wrong(auth_clie
     assert set(body) == {"groups", "sure_but_wrong"}
 
 
-def test_questions_added_later_join_review_for_checked_lessons(auth_client, db, lesson):
+def test_questions_added_later_join_review_once_answered(auth_client, db, lesson):
     user, cards = _earn_checked(auth_client, db, lesson)
     assert len(cards) == 3
     extra = {SLUG: QUESTIONS[SLUG] + [dict(QUESTIONS[SLUG][0], key="q-later", prompt="A later question?")]}
     seed_checks(db, extra)
     db.commit()
 
+    # Unanswered pool questions stay out of review until the learner meets them.
     quiz = service.review_queue(db, user.id, TODAY, scope=f"lesson:{SLUG}")
-    assert len(quiz.cards) == 4
-    new_card = next(card for card in quiz.cards if card.prompt == "A later question?")
-    assert new_card.box == 1 and new_card.due_on is not None  # fresh card, never rated
-    assert len(db.scalars(select(ReviewCard).where(ReviewCard.user_id == user.id, ReviewCard.kind == "CHECK")).all()) == 4
+    assert len(quiz.cards) == 3
+    later = db.scalar(select(LessonCheck).where(LessonCheck.key == "q-later"))
+    shown = auth_client.get(f"/api/v1/learn/lessons/{SLUG}").json()
+    assert shown["check_state"] == {
+        "total": 4,
+        "checked": 3,
+        "pool": 4,
+        "correct_ids": shown["check_state"]["correct_ids"],
+        "attempted_ids": shown["check_state"]["attempted_ids"],
+    }
+    assert str(later.id) in [check["id"] for check in shown["checks"]]
+
+    # Answering it in the lesson gives it a card at once, rated from that try.
+    out = _answer(auth_client, lesson, {"id": str(later.id)}, choice=1, confidence="sure")
+    assert out["correct"] is False
+    card = db.scalar(select(ReviewCard).where(ReviewCard.user_id == user.id, ReviewCard.ref == str(later.id)))
+    assert card is not None and card.lapses == 1 and card.reviews == 0
+    assert len(service.review_queue(db, user.id, TODAY, scope=f"lesson:{SLUG}").cards) == 4
+
+
+def test_big_pools_serve_eight_at_a_time_unseen_first(auth_client, db):
+    _seed_lessons(db)
+    pool = [
+        dict(QUESTIONS[SLUG][0], key=f"q-{i}", prompt=f"Question {i}?", concept=f"c.{i}") for i in range(12)
+    ]
+    seed_checks(db, {SLUG: pool})
+    db.commit()
+
+    first = auth_client.get(f"/api/v1/learn/lessons/{SLUG}").json()
+    assert len(first["checks"]) == 8
+    assert first["check_state"] == {"total": 8, "checked": 0, "pool": 12, "correct_ids": [], "attempted_ids": []}
+
+    for check in first["checks"]:
+        out = _answer(auth_client, first, check, choice=0, confidence="sure")
+    assert out["checked"] == 8 and out["total"] == 8 and out["just_checked"] is True
+
+    user = _user(db, auth_client)
+    cards = db.scalars(select(ReviewCard).where(ReviewCard.user_id == user.id, ReviewCard.kind == "CHECK")).all()
+    assert len(cards) == 8  # only the questions that were met
+
+    # The next round leads with the four questions never answered right.
+    again = auth_client.get(f"/api/v1/learn/lessons/{SLUG}").json()
+    served = {check["id"] for check in again["checks"]}
+    seen = {check["id"] for check in first["checks"]}
+    assert len(served) == 8 and len(served - seen) == 4
+    assert again["check_state"]["checked"] == 8 and again["learn_state"] == "checked"

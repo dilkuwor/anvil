@@ -1,7 +1,9 @@
-"""Knowledge-check questions, keyed by lesson slug. Pilot: four system design lessons.
+"""Knowledge-check questions, keyed by lesson slug.
 
-Each lesson has 3 to 8 questions; a full quiz covers every area of the lesson. A question is answered in the lesson to earn "Checked",
-then returns through spaced review. Kinds:
+Each lesson has a pool of 3 to 24 questions. A lesson round serves 8 of them at random, unseen ones first,
+so the same lesson asks different questions each time; answering 8 distinct questions correctly earns
+"Checked", and answered questions return through spaced review. The pool should cover every section and
+the decisions the lesson teaches (which database, which algorithm, A vs B, capacity numbers). Kinds:
 
 - ``choice``        one correct option
 - ``spot_mistake``  a realistic wrong claim or design; pick what is wrong with it
@@ -16,13 +18,14 @@ from __future__ import annotations
 
 KINDS = {"choice", "spot_mistake", "short_answer"}
 MIN_PER_LESSON = 3
-MAX_PER_LESSON = 8
+MAX_PER_LESSON = 24
 
 CHECKS: dict[str, list[dict]] = {}
 
 
 def _load_modules() -> None:
-    """Merge every ``database.seeds.checks.*`` module's CHECKS. A lesson may appear in one module only."""
+    """Merge every ``database.seeds.checks.*`` module's CHECKS. Modules may add to the same lesson's pool;
+    keys must stay unique within a lesson, which ``validate_checks`` enforces."""
     import importlib
     import pkgutil
 
@@ -31,9 +34,7 @@ def _load_modules() -> None:
     for info in sorted(pkgutil.iter_modules(package.__path__), key=lambda item: item.name):
         module = importlib.import_module(f"database.seeds.checks.{info.name}")
         for slug, items in getattr(module, "CHECKS", {}).items():
-            if slug in CHECKS:
-                raise RuntimeError(f"checks for {slug!r} defined in more than one module")
-            CHECKS[slug] = items
+            CHECKS.setdefault(slug, []).extend(items)
 
 
 _load_modules()

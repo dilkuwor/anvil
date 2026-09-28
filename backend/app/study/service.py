@@ -333,8 +333,16 @@ def sync_cards(db: Session, facts: Facts) -> None:
         done_on_by_lesson = {
             lesson_id: (completed_at or datetime.now(timezone.utc)).date() for lesson_id, completed_at in checked_rows
         }
+        # Only questions the learner has actually answered somewhere; the rest of a lesson's pool waits its turn.
+        answered = set(
+            db.scalars(
+                select(CheckAttempt.check_id).where(
+                    CheckAttempt.user_id == facts.user_id, CheckAttempt.lesson_id.in_(lesson_ids)
+                )
+            ).all()
+        )
         for check in db.scalars(select(LessonCheck).where(LessonCheck.lesson_id.in_(lesson_ids))).all():
-            if (KIND_CHECK, str(check.id)) not in facts.cards:
+            if check.id in answered and (KIND_CHECK, str(check.id)) not in facts.cards:
                 new_cards.append(_new_card(facts.user_id, KIND_CHECK, str(check.id), done_on_by_lesson[check.lesson_id]))
     if not new_cards:
         return

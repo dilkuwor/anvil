@@ -77,10 +77,11 @@ describe("LessonCheck", () => {
     expect(screen.getByText("All 2 checked")).toBeInTheDocument();
   });
 
-  it("shows the checked panel and lets the learner practise again", () => {
+  it("shows the checked panel and lets the learner practise again", async () => {
     renderCheck({ ...lesson, learn_state: "checked", check_state: { total: 2, checked: 2, correct_ids: ["q1", "q2"], attempted_ids: ["q1", "q2"] }, review: { cards: 2, reviews: 0, next_due_on: "2099-01-01", last_reviewed_on: null, mastered_at: null } } as LearningLessonDetail);
     expect(screen.getByText("Lesson checked")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Practice again/ }));
-    expect(screen.getByText("Question 1 of 2")).toBeInTheDocument();
+    // A new round is drawn from the pool after the lesson refetches.
+    expect(await screen.findByText("Question 1 of 2")).toBeInTheDocument();
   });
 });

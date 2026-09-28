@@ -15,8 +15,10 @@ export type LessonCheck = {
 };
 
 export type LessonCheckState = {
+  /** A round asks `total` questions drawn from a pool of `pool`. */
   total: number;
   checked: number;
+  pool?: number;
   correct_ids: string[];
   attempted_ids: string[];
 };

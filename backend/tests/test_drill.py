@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 
@@ -121,7 +121,7 @@ def test_pattern_cards_come_back_in_review_and_today(auth_client, db):
     family = patterns.family_for(solution.pattern)
     auth_client.post(f"/api/v1/study/drill/patterns/{item['problem_id']}/answer", json={"choice": 0, "confidence": "unsure"})
     card = db.scalar(select(ReviewCard).where(ReviewCard.kind == "PATTERN", ReviewCard.ref == target.slug))
-    card.due_on = date.today()
+    card.due_on = date.today() - timedelta(days=3)  # due in every timezone, whatever the hour
     db.commit()
 
     queue = auth_client.get("/api/v1/study/reviews").json()

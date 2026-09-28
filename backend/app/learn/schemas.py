@@ -86,8 +86,10 @@ class LessonCheckOut(BaseModel):
 
 
 class LessonCheckStateOut(BaseModel):
+    # A round asks `total` questions drawn from a pool of `pool`; "Checked" needs `total` distinct right answers.
     total: int
     checked: int
+    pool: int = 0
     correct_ids: list[UUID]
     attempted_ids: list[UUID]
 
