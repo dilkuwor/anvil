@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-64"],
+    "pattern": "2-D DP",
+    "trigger": "the smallest total of a walk through a grid, moving only right or down",
+    "insight": "A toll road. Each square holds the cheapest total to reach it. You can only arrive from above or from the left, so a square pays its own toll plus the cheaper of those two.",
+    "metaphor": "The toll road",
+    "trap": "The Cheap Step Trap",
+    "trap_rule": "A cheap next square can lead into an expensive area. Give every square its best total, from the cheaper of above and left.",
+    "time": "O(m · n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-309"],
+    "pattern": "State machine DP",
+    "trigger": "buy and sell as often as you like, but after a sale you must wait a day",
+    "insight": "Three rooms per day: holding, just sold, and free. Keep the best profit for each room. You may buy only from the free room, so the day after a sale is always a rest.",
+    "metaphor": "The three rooms",
+    "trap": "The No-Rest Trap",
+    "trap_rule": "After a sale the next day is rest. Buy only from the free room, never straight from yesterday's sale.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-518"],
+    "pattern": "Unbounded knapsack count",
+    "trigger": "how many combinations make an amount, coins may be reused, and order does not matter",
+    "insight": "Coins join the bridge one kind at a time. On a coin's pass, each stone adds the ways of the stone one coin behind it. Coins on the outside count each group once.",
+    "metaphor": "One coin per pass",
+    "trap": "The Double Count Trap",
+    "trap_rule": "Put the coins on the outside. Each coin is only added after the smaller ones, so every group is counted once.",
+    "time": "O(amount × coins)",
+    "space": "O(amount)"
+  },
+  {
+    "slugs": ["lc-377"],
+    "pattern": "1-D DP, count orders",
+    "trigger": "how many lists add up to a target, numbers may be reused, and different orders count as different",
+    "insight": "The last hop. Every list ends with one number, so a stone's ways are the ways of each stone one hop behind it, added up. Totals on the outside count every order.",
+    "metaphor": "The last hop",
+    "trap": "The Lost Order Trap",
+    "trap_rule": "Order matters here. Put the totals on the outside, so every number is tried as the last step of every total.",
+    "time": "O(target × nums)",
+    "space": "O(target)"
+  }
+]

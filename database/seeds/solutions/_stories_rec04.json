@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-876"],
+    "pattern": "Fast and slow pointers",
+    "trigger": "“return the middle node of a linked list”, in one walk, when the length is not given",
+    "insight": "A tortoise and a hare start at the head. The hare jumps two nodes for every one the tortoise walks, so when the hare runs out of track the tortoise stands in the middle.",
+    "metaphor": "The tortoise and the hare",
+    "trap": "The First Middle Trap",
+    "trap_rule": "Keep going while fast != null && fast.next != null. Stopping one jump early, when fast.next.next is null, leaves the tortoise on the first of two middles.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-92"],
+    "pattern": "Linked list: turn one span round",
+    "trigger": "“reverse the nodes from position left to position right”, and leave the rest of the list alone",
+    "insight": "Park a spare engine in front of the train. Stand on the car before the span, turn the span's couplings round one by one, then hook that car onto the span's new first car.",
+    "metaphor": "The spare engine",
+    "trap": "The Missing Engine Trap",
+    "trap_rule": "Always put a spare engine (a dummy) before the head and return dummy.next. When left is 1 the front car changes, and returning the old head loses the new front cars.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-142"],
+    "pattern": "Fast and slow pointers",
+    "trigger": "“return the node where the cycle begins”, with no extra memory",
+    "insight": "The tortoise and the hare meet somewhere on the loop. A friend then starts at the head. Walking one node each, the friend and the tortoise meet exactly at the loop's entrance.",
+    "metaphor": "The tortoise, the hare and a friend",
+    "trap": "The Meeting Point Trap",
+    "trap_rule": "Where the tortoise and the hare meet is inside the loop, not its start. Send a friend from the head and walk both one node at a time until they meet.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-202"],
+    "pattern": "Fast and slow pointers",
+    "trigger": "“repeat this step on a number until it reaches 1, or loops forever”",
+    "insight": "Each number points to the next one, like a linked list. A tortoise and a hare run along the numbers: either the hare reaches 1, or it comes round the loop and lands on the tortoise.",
+    "metaphor": "The number track",
+    "trap": "The Endless Loop Trap",
+    "trap_rule": "A number that is not happy never reaches 1. Stop when the hare reaches 1 or lands on the tortoise, never on 1 alone.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  }
+]

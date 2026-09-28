@@ -17,7 +17,11 @@ if str(ROOT) not in sys.path:
 
 from database.seeds.solutions import SOLUTIONS  # noqa: E402
 
-STORIES = json.loads((ROOT / "database/seeds/solutions/_stories.json").read_text())
+STORIES = [
+    story
+    for path in sorted((ROOT / "database/seeds/solutions").glob("_stories*.json"))
+    for story in json.loads(path.read_text())
+]
 STORY_BY_SLUG = {slug: story for story in STORIES for slug in story["slugs"]}
 
 # Words that talk over the reader's head. Text inside `backticks` is exempt.

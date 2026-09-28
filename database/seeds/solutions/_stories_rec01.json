@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-643"],
+    "pattern": "Fixed-size sliding window",
+    "trigger": "“every block of exactly k numbers in a row” and the best sum or average",
+    "insight": "A frame of k boxes slides one step at a time. One box enters on the right, one box leaves on the left, and the sum changes by just those two.",
+    "metaphor": "The sliding frame",
+    "trap": "The Wrong Leaver Trap",
+    "trap_rule": "When box i enters, box i - k leaves. Box i - k + 1 is still inside the frame.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-977"],
+    "pattern": "Two pointers",
+    "trigger": "a sorted array with negative numbers, and the squares must come out sorted",
+    "insight": "The biggest square is always at one of the two ends. Two scouts walk inward, and the bigger square fills the answer from the back.",
+    "metaphor": "The two scouts",
+    "trap": "The Front Fill Trap",
+    "trap_rule": "The ends hold the biggest squares, never the smallest. Fill the answer from the back slot forward.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-75"],
+    "pattern": "Three pointers (Dutch flag)",
+    "trigger": "only three different values, sort them in place in one pass",
+    "insight": "Keep three zones: 0s at the front, 2s at the back, the unknown in the middle. The scanner sends each unknown number to its zone.",
+    "metaphor": "The three zones",
+    "trap": "The Unseen Swap Trap",
+    "trap_rule": "After a swap with high, the scanner stays: the number that came back has not been looked at yet.",
+    "time": "O(n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-303"],
+    "pattern": "Prefix sums",
+    "trigger": "many “sum from left to right” questions on a list that never changes",
+    "insight": "Put a mile marker before every box that holds the total so far. Any stretch of road is one marker minus another.",
+    "metaphor": "The mile markers",
+    "trap": "The Off-by-One Marker Trap",
+    "trap_rule": "Marker i is the total before box i. The range from left to right is marker right + 1 minus marker left.",
+    "time": "O(1) per query",
+    "space": "O(n)"
+  }
+]

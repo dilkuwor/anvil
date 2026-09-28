@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-252"],
+    "pattern": "Sort by start, then sweep",
+    "trigger": "meetings (start and end times) and the question “can one person attend them all?”",
+    "insight": "Sort the meetings by start time. Then a meeting can only clash with the one just before it: check whether it starts before that one ends.",
+    "metaphor": "The calendar",
+    "trap": "The Back-to-Back Trap",
+    "trap_rule": "A meeting that ends at 5 and one that starts at 5 do not clash. Test start < previous end, not start <= previous end.",
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-986"],
+    "pattern": "Two pointers",
+    "trigger": "two lists of time ranges, each already sorted, and the question “when are both busy?”",
+    "insight": "Put one finger on each list. The two ranges share the stretch from the later start to the earlier end. Then the finger on the range that ends first moves on.",
+    "metaphor": "Two fingers",
+    "trap": "The Wrong Finger Trap",
+    "trap_rule": "Move the finger whose range ends first. The other range may still reach into the next one, so it must stay.",
+    "time": "O(m + n)",
+    "space": "O(m + n)"
+  },
+  {
+    "slugs": ["lc-853"],
+    "pattern": "Monotonic stack",
+    "trigger": "cars on one road that cannot pass each other, and the question “how many groups reach the end?”",
+    "insight": "Look at the cars from the finish backwards and work out when each would arrive. A car that would arrive no later than the fleet in front is stuck behind it and joins it. Only a later arrival starts a new fleet.",
+    "metaphor": "The one-lane road",
+    "trap": "The Stuck Car Trap",
+    "trap_rule": "A car that joined a fleet no longer arrives at its own time. Compare with the fleet's arrival time on top of the stack, not with the car just ahead.",
+    "time": "O(n log n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-703"],
+    "pattern": "Heap / top K",
+    "trigger": "numbers keep arriving, and after each one you must report “the kth largest so far”",
+    "insight": "A sorting pile with only k seats, smallest on top. Each new number drops in; when there is one too many, the top is thrown out. The top is always the kth largest so far.",
+    "metaphor": "The sorting pile",
+    "trap": "The Overfull Start Trap",
+    "trap_rule": "The starting numbers can be more than k. Trim the pile down to k seats when it is built, or the top shows a number that is too small.",
+    "time": "O(log k) per add",
+    "space": "O(k)"
+  }
+]
