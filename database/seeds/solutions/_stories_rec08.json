@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-232"],
+    "pattern": "Design: two stacks",
+    "trigger": "a first-in, first-out line, but the only tool is a pile where the last item in comes out first",
+    "insight": "Two plate piles. New plates go on the in pile. Pouring it onto the empty out pile turns it upside down, so the oldest plate lands on top.",
+    "metaphor": "The two plate piles",
+    "trap": "The Early Pour Trap",
+    "trap_rule": "Pour only when the out pile is empty. Pouring onto plates that are still waiting buries the front of the line under newer plates.",
+    "time": "O(1) average",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-460"],
+    "pattern": "Design: count buckets",
+    "trigger": "a store of limited size that throws out the key used the fewest times, with ties going to the key used longest ago",
+    "insight": "Shelves numbered by use count. A use moves a key up one shelf, to the back of that shelf. To make room, the front key of the lowest shelf leaves.",
+    "metaphor": "The use-count shelves",
+    "trap": "The Tie Trap",
+    "trap_rule": "Two keys with the same smallest count: the one used longest ago leaves. Keep each shelf in order of use, so the oldest sits at the front.",
+    "time": "O(1)",
+    "space": "O(capacity)"
+  },
+  {
+    "slugs": ["lc-135"],
+    "pattern": "Greedy: two passes",
+    "trigger": "each item must beat its neighbours on both sides by some rule, and you want the smallest total",
+    "insight": "Two walks down the line. The walk right settles every left-hand rule, the walk back settles every right-hand rule, and each child keeps the larger amount.",
+    "metaphor": "Two walks down the line",
+    "trap": "The Overwrite Trap",
+    "trap_rule": "On the walk back, keep the larger of the two amounts. Overwriting throws away what the first walk earned.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-371"],
+    "pattern": "Bits: XOR plus carry",
+    "trigger": "add or combine two numbers when plus and minus are not allowed",
+    "insight": "A writer and a carrier. The writer (XOR) writes every column's digit at once but forgets carries. The carrier (AND, one step left) brings them back for the next round.",
+    "metaphor": "The writer and the carrier",
+    "trap": "The Order Trap",
+    "trap_rule": "Work out the carry from the old a before a changes. Compute (a & b) << 1 first, then a = a ^ b.",
+    "time": "O(w)",
+    "space": "O(1)"
+  }
+]

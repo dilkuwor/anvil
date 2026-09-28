@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-144"],
+    "pattern": "Tree DFS",
+    "trigger": "a tree whose nodes must be listed “the node first, then its left side, then its right side”",
+    "insight": "Take the top of the pile and write it at once. Then put its right child on the pile, then its left child, so the left side comes off first.",
+    "metaphor": "The to-do pile: me, left side, right side",
+    "trap": "The Right-First Trap",
+    "trap_rule": "A pile gives back the last thing put on it. Put the right child on first and the left child second, so the left side is written first.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": ["lc-701"],
+    "pattern": "Binary search tree walk",
+    "trigger": "add one value to a search tree and give back its top",
+    "insight": "Search for the new value as if it were already there: smaller goes left, bigger goes right. The search ends at an empty seat. The new node sits there, and nothing else moves.",
+    "metaphor": "The empty seat at the bottom",
+    "trap": "The Lost Link Trap",
+    "trap_rule": "Making the new node is not enough. Hook it to its parent by setting the parent's left or right child, then return the old top.",
+    "time": "O(h)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-337"],
+    "pattern": "Tree DP",
+    "trigger": "the largest total from houses joined like a tree, where a parent and its child may never both be robbed",
+    "insight": "Every house hands its parent two envelopes: the best total from its part of the tree if it is robbed, and if it is walked past. Robbed uses the children's walked-past envelopes. Walked past takes the larger envelope of each child.",
+    "metaphor": "Two envelopes",
+    "trap": "The Every-Other-Level Trap",
+    "trap_rule": "Robbing whole levels, every other one, is not always best. Each house decides for itself: compare both envelopes of every child.",
+    "time": "O(n)",
+    "space": "O(h)"
+  },
+  {
+    "slugs": ["lc-437"],
+    "pattern": "Prefix sum on a tree",
+    "trigger": "count the downward paths in a tree that add up to a target, where a path may start and end at any node",
+    "insight": "Carry a running total down from the top. A path ending here hits the target when running minus target is a note written above you. Erase your note on the way back up.",
+    "metaphor": "The running notebook, carried down",
+    "trap": "The Leftover Note Trap",
+    "trap_rule": "Erase a node's note when you leave it. A leftover note belongs to another branch, not to the nodes above you, so matching it counts a path that does not exist.",
+    "time": "O(n)",
+    "space": "O(h)"
+  }
+]

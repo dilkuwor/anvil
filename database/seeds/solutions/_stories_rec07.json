@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-785"],
+    "pattern": "Two-colouring with BFS",
+    "trigger": "split the nodes into two groups so that every edge joins the two groups",
+    "insight": "Two tables at a party. Seat one guest, and everyone who argues with them is forced to the other table. A pair that argues at the same table means it cannot be done.",
+    "metaphor": "The two tables",
+    "trap": "The Single Start Trap",
+    "trap_rule": "The guests can form separate groups. Loop over every guest and start seating again at each one who has no table yet.",
+    "time": "O(V + E)",
+    "space": "O(V)"
+  },
+  {
+    "slugs": ["lc-1584"],
+    "pattern": "Minimum spanning tree (Prim)",
+    "trigger": "connect all points with the smallest total cost, where any two points can be joined",
+    "insight": "Grow one cable network house by house. Every outside house wears a price tag: its cheapest cable to any house already in. Connect the cheapest tag, then lower tags using only the new house.",
+    "metaphor": "The price tags",
+    "trap": "The Newest House Trap",
+    "trap_rule": "The next cable may start at any house already in the network, not only the newest one. A price tag only ever goes down.",
+    "time": "O(n²)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-1631"],
+    "pattern": "Dijkstra on a grid",
+    "trigger": "the cost of a route is its largest single step, and you want the cheapest route between two cells",
+    "insight": "A hiker only cares about the steepest step on the trail. Always extend the trail whose steepest step is smallest; moving on costs the bigger of the steepest step so far and the new step.",
+    "metaphor": "The hiker's steepest step",
+    "trap": "The Sum Trap",
+    "trap_rule": "Do not add the steps. The new effort is max(effort so far, this step), never effort + step.",
+    "time": "O(m·n·log(m·n))",
+    "space": "O(m·n)"
+  },
+  {
+    "slugs": ["lc-240"],
+    "pattern": "Staircase search",
+    "trigger": "a grid where every row and every column is sorted, and you must find one value",
+    "insight": "Walk down a staircase from the top-right corner. Too big: the whole column below is too big, step left. Too small: the whole row to the left is too small, step down.",
+    "metaphor": "The staircase",
+    "trap": "The Wrong Corner Trap",
+    "trap_rule": "At the top-left both moves make the value bigger, so nothing can be ruled out. Start at the top-right or bottom-left.",
+    "time": "O(m + n)",
+    "space": "O(1)"
+  }
+]

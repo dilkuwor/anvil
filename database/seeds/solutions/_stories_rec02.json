@@ -1,0 +1,46 @@
+[
+  {
+    "slugs": ["lc-35"],
+    "pattern": "Binary search",
+    "trigger": "a sorted list, and “where would this value go?”",
+    "insight": "Run an ordinary binary search. When the posts cross without a match, the left post already stands in the gap where the value belongs.",
+    "metaphor": "The bookshelf gap",
+    "trap": "The Minus-One Trap",
+    "trap_rule": "A missing value is not a failure here. Return the left post, never -1.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-540"],
+    "pattern": "Binary search on pairs",
+    "trigger": "a sorted list where every value comes in twos except one",
+    "insight": "Before the lone dancer, every couple starts on an even spot. Check the couple at an even middle spot: if it matches, the lone dancer is to the right.",
+    "metaphor": "The dance couples",
+    "trap": "The Odd Middle Trap",
+    "trap_rule": "If the middle lands on an odd spot, step it back one, so you always check a couple from its first dancer.",
+    "time": "O(log n)",
+    "space": "O(1)"
+  },
+  {
+    "slugs": ["lc-946"],
+    "pattern": "Stack simulation",
+    "trigger": "a push order and a pop order, and “could this really happen?”",
+    "insight": "Act it out with a real pile. Push in order, and every time the top plate is the one the pop list wants next, take it off.",
+    "metaphor": "The plate pile",
+    "trap": "The One-Pop Trap",
+    "trap_rule": "After a push, keep popping while the top matches. One pop and then a push can miss a chain of wanted plates.",
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  {
+    "slugs": ["lc-735"],
+    "pattern": "Stack",
+    "trigger": "things moving in a row that meet and destroy each other",
+    "insight": "Keep the survivors in a stack. Only a left-mover arriving after a right-mover on top can crash, and it keeps crashing into the new top until one side is gone.",
+    "metaphor": "The crash lane",
+    "trap": "The Passing Ships Trap",
+    "trap_rule": "Opposite signs are not enough. A crash needs the top to move right and the new one to move left.",
+    "time": "O(n)",
+    "space": "O(n)"
+  }
+]

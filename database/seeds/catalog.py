@@ -32,10 +32,34 @@ from database.seeds.microsoft_interview import PROBLEMS as MICROSOFT_PROBLEMS
 TAGS: list[tuple[str, str]] = list(dict.fromkeys([*LOOPTRACKER_TAGS, *FANG_TAGS]))
 
 
+def _recommended_modules() -> list:
+    """Every ``database.seeds.recommended_*`` module: the problems Grok's review asked for, one file per author."""
+    import importlib
+    import pkgutil
+
+    from database import seeds as package
+
+    modules = []
+    for info in sorted(pkgutil.iter_modules(package.__path__), key=lambda item: item.name):
+        if info.name.startswith("recommended_"):
+            modules.append(importlib.import_module(f"database.seeds.{info.name}"))
+    return modules
+
+
+def _recommended_problems() -> list[dict]:
+    specs: list[dict] = []
+    for module in _recommended_modules():
+        for spec in module.PROBLEMS:
+            # These statements were written plainly from the start: their first paragraph is the opening.
+            LEADS.setdefault(spec["leetcode_id"], spec["description"].strip().split("\n\n")[0])
+            specs.append(spec)
+    return specs
+
+
 def _build() -> list[dict]:
     ordered: list[dict] = []
     seen: set[int] = set()
-    for spec in [*LOOPTRACKER_PROBLEMS, *MICROSOFT_PROBLEMS, *FANG_PROBLEMS, *MICROSOFT_EXTRA_PROBLEMS]:
+    for spec in [*LOOPTRACKER_PROBLEMS, *MICROSOFT_PROBLEMS, *FANG_PROBLEMS, *MICROSOFT_EXTRA_PROBLEMS, *_recommended_problems()]:
         leetcode_id = spec["leetcode_id"]
         if leetcode_id in seen:
             continue
