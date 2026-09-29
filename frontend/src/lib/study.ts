@@ -84,9 +84,26 @@ export type ProgressItem = {
   next_due_on: string | null;
   quiz_scope: string | null;
 };
-export type ProgressGroup = { category: string; slug: string; items: ProgressItem[]; checked: number; total: number; quiz_scope: string | null };
-export type SureButWrong = { kind: string; prompt: string; item_title: string; href: string; when: string; times: number };
-export type Progress = { groups: ProgressGroup[]; sure_but_wrong: SureButWrong[] };
+export type ProgressGroup = {
+  category: string;
+  slug: string;
+  items: ProgressItem[];
+  checked: number;
+  total: number;
+  quiz_scope: string | null;
+};
+export type SureButWrong = {
+  kind: string;
+  prompt: string;
+  item_title: string;
+  href: string;
+  when: string;
+  times: number;
+};
+export type Progress = {
+  groups: ProgressGroup[];
+  sure_but_wrong: SureButWrong[];
+};
 
 export type RateResult = {
   card: ReviewCard;
@@ -117,10 +134,25 @@ export type MemoryLesson = {
   next_due_on: string | null;
   last_reviewed_on: string | null;
 };
-export type WeakSpot = { concept: string; misses: number; lesson_title: string; href: string };
-export type Memory = { week: MemoryDay[]; lessons: MemoryLesson[]; weak: WeakSpot[]; due_today: number };
+export type WeakSpot = {
+  concept: string;
+  misses: number;
+  lesson_title: string;
+  href: string;
+};
+export type Memory = {
+  week: MemoryDay[];
+  lessons: MemoryLesson[];
+  weak: WeakSpot[];
+  due_today: number;
+};
 
-export type ReadinessPoint = { day: string; readiness: number; coverage: number; retention: number | null };
+export type ReadinessPoint = {
+  day: string;
+  readiness: number;
+  coverage: number;
+  retention: number | null;
+};
 export type Readiness = {
   readiness: number;
   coverage: number;
@@ -136,8 +168,20 @@ export type Readiness = {
   history: ReadinessPoint[];
 };
 
-export type PathProblem = { slug: string; title: string; difficulty: string; solved: boolean; box: number | null };
-export type PathLesson = { slug: string; title: string; minutes: number; href: string; done: boolean };
+export type PathProblem = {
+  slug: string;
+  title: string;
+  difficulty: string;
+  solved: boolean;
+  box: number | null;
+};
+export type PathLesson = {
+  slug: string;
+  title: string;
+  minutes: number;
+  href: string;
+  done: boolean;
+};
 export type PathDesign = {
   slug: string;
   title: string;
@@ -180,7 +224,9 @@ export type StudySettings = {
   email_configured: boolean;
 };
 
-export type StudySettingsUpdate = Partial<Omit<StudySettings, "email_configured">> & {
+export type StudySettingsUpdate = Partial<
+  Omit<StudySettings, "email_configured">
+> & {
   clear_interview_date?: boolean;
 };
 
@@ -203,7 +249,12 @@ export type ReminderStatus = {
   timezone: string;
   reminder_time: string;
   next_at: string | null;
-  service: { last_run_at: string | null; last_status: string | null; interval_minutes: number; healthy: boolean };
+  service: {
+    last_run_at: string | null;
+    last_status: string | null;
+    interval_minutes: number;
+    healthy: boolean;
+  };
   history: ReminderDelivery[];
 };
 
@@ -230,7 +281,11 @@ export type DrillItem = {
   due: boolean;
 };
 
-export type Drill = { items: DrillItem[]; drilled_today: number; families: string[] };
+export type Drill = {
+  items: DrillItem[];
+  drilled_today: number;
+  families: string[];
+};
 
 export type DrillAnswer = {
   correct: boolean;
@@ -260,7 +315,13 @@ export const studyKeys = {
   outline: (slug: string) => ["study", "outline", slug] as const,
 };
 
-export const BOX_LABELS: Record<number, string> = { 1: "1 day", 2: "3 days", 3: "7 days", 4: "21 days", 5: "Long term" };
+export const BOX_LABELS: Record<number, string> = {
+  1: "1 day",
+  2: "3 days",
+  3: "7 days",
+  4: "21 days",
+  5: "Long term",
+};
 
 export function browserTimezone(): string {
   try {
@@ -273,16 +334,52 @@ export function browserTimezone(): string {
 export function useToday(enabled = true) {
   return useQuery({
     queryKey: studyKeys.today,
-    queryFn: () => api.get<TodayPlan>(`/api/v1/study/today?tz=${encodeURIComponent(browserTimezone())}`),
+    queryFn: () =>
+      api.get<TodayPlan>(
+        `/api/v1/study/today?tz=${encodeURIComponent(browserTimezone())}`,
+      ),
     enabled,
     staleTime: 30_000,
   });
 }
 
+/** The plan as it will look once `taskId` flips, so the page can change before the server answers. */
+export function toggledPlan(plan: TodayPlan, taskId: string): TodayPlan {
+  const tasks = plan.tasks.map((task) =>
+    task.id === taskId
+      ? { ...task, done: !task.done, manual: !task.done }
+      : task,
+  );
+  const required = tasks.filter((task) => !task.optional);
+  const done_count = required.filter((task) => task.done).length;
+  return {
+    ...plan,
+    tasks,
+    done_count,
+    total: required.length,
+    all_done: required.length > 0 && done_count === required.length,
+  };
+}
+
 export function useToggleTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (taskId: string) => api.post<TodayPlan>(`/api/v1/study/today/tasks/${encodeURIComponent(taskId)}/toggle`),
+    mutationFn: (taskId: string) =>
+      api.post<TodayPlan>(
+        `/api/v1/study/today/tasks/${encodeURIComponent(taskId)}/toggle`,
+      ),
+    // The database can be far away; the tap must show at once and the server catches up.
+    onMutate: async (taskId) => {
+      await queryClient.cancelQueries({ queryKey: studyKeys.today });
+      const before = queryClient.getQueryData<TodayPlan>(studyKeys.today);
+      if (before)
+        queryClient.setQueryData(studyKeys.today, toggledPlan(before, taskId));
+      return { before };
+    },
+    onError: (_error, _taskId, context) => {
+      if (context?.before)
+        queryClient.setQueryData(studyKeys.today, context.before);
+    },
     onSuccess: (plan) => {
       queryClient.setQueryData(studyKeys.today, plan);
       queryClient.invalidateQueries({ queryKey: studyKeys.path });
@@ -294,7 +391,12 @@ export function useToggleTask() {
 export function useReviewQueue(scope?: string | null) {
   return useQuery({
     queryKey: scope ? studyKeys.quiz(scope) : studyKeys.reviews,
-    queryFn: () => api.get<ReviewQueue>(scope ? `/api/v1/study/reviews?scope=${encodeURIComponent(scope)}` : "/api/v1/study/reviews"),
+    queryFn: () =>
+      api.get<ReviewQueue>(
+        scope
+          ? `/api/v1/study/reviews?scope=${encodeURIComponent(scope)}`
+          : "/api/v1/study/reviews",
+      ),
     staleTime: 0,
   });
 }
@@ -325,8 +427,22 @@ export function useMemory(enabled = true) {
 export function useAnswerCard() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ cardId, choice, confidence, timeMs }: { cardId: string; choice: number; confidence: Confidence; timeMs?: number }) =>
-      api.post<AnswerCardResult>(`/api/v1/study/reviews/${cardId}/answer`, { choice, confidence, time_ms: timeMs }),
+    mutationFn: ({
+      cardId,
+      choice,
+      confidence,
+      timeMs,
+    }: {
+      cardId: string;
+      choice: number;
+      confidence: Confidence;
+      timeMs?: number;
+    }) =>
+      api.post<AnswerCardResult>(`/api/v1/study/reviews/${cardId}/answer`, {
+        choice,
+        confidence,
+        time_ms: timeMs,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: studyKeys.today });
       queryClient.invalidateQueries({ queryKey: studyKeys.readiness });
@@ -369,7 +485,9 @@ export function useTogglePathItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (itemKey: string) =>
-      api.post<{ item_key: string; done: boolean }>(`/api/v1/study/path/items/${encodeURIComponent(itemKey)}/toggle`),
+      api.post<{ item_key: string; done: boolean }>(
+        `/api/v1/study/path/items/${encodeURIComponent(itemKey)}/toggle`,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: studyKeys.path });
       queryClient.invalidateQueries({ queryKey: studyKeys.today });
@@ -395,7 +513,8 @@ export function useReminderStatus() {
 export function useSaveStudySettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (update: StudySettingsUpdate) => api.put<StudySettings>("/api/v1/study/settings", update),
+    mutationFn: (update: StudySettingsUpdate) =>
+      api.put<StudySettings>("/api/v1/study/settings", update),
     onSuccess: (settings) => {
       queryClient.setQueryData(studyKeys.settings, settings);
       queryClient.invalidateQueries({ queryKey: studyKeys.path });
@@ -408,7 +527,10 @@ export function useSaveStudySettings() {
 export function useOutline(slug: string) {
   return useQuery({
     queryKey: studyKeys.outline(slug),
-    queryFn: () => api.get<DesignOutline>(`/api/v1/study/outline/${encodeURIComponent(slug)}`),
+    queryFn: () =>
+      api.get<DesignOutline>(
+        `/api/v1/study/outline/${encodeURIComponent(slug)}`,
+      ),
     enabled: Boolean(slug),
   });
 }
@@ -417,7 +539,10 @@ export function useSaveOutline(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: { outline: string; done?: boolean }) =>
-      api.put<DesignOutline>(`/api/v1/study/outline/${encodeURIComponent(slug)}`, payload),
+      api.put<DesignOutline>(
+        `/api/v1/study/outline/${encodeURIComponent(slug)}`,
+        payload,
+      ),
     onSuccess: (outline) => {
       queryClient.setQueryData(studyKeys.outline(slug), outline);
       queryClient.invalidateQueries({ queryKey: studyKeys.path });
@@ -429,7 +554,11 @@ export function useSaveOutline(slug: string) {
 
 export function formatDay(iso: string): string {
   const date = new Date(`${iso}T12:00:00`);
-  return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function nextDueLabel(iso: string, from: string): string {
@@ -439,7 +568,10 @@ export function nextDueLabel(iso: string, from: string): string {
   if (days <= 0) return "today";
   if (days === 1) return "tomorrow";
   if (days < 14) return `in ${days} days`;
-  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function useDrill() {
@@ -454,8 +586,21 @@ export function useDrill() {
 export function useAnswerDrill() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ problemId, choice, confidence, timeMs }: { problemId: string; choice: number; confidence: Confidence; timeMs?: number }) =>
-      api.post<DrillAnswer>(`/api/v1/study/drill/patterns/${problemId}/answer`, { choice, confidence, time_ms: timeMs }),
+    mutationFn: ({
+      problemId,
+      choice,
+      confidence,
+      timeMs,
+    }: {
+      problemId: string;
+      choice: number;
+      confidence: Confidence;
+      timeMs?: number;
+    }) =>
+      api.post<DrillAnswer>(
+        `/api/v1/study/drill/patterns/${problemId}/answer`,
+        { choice, confidence, time_ms: timeMs },
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: studyKeys.today });
       queryClient.invalidateQueries({ queryKey: studyKeys.memory });
