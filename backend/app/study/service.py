@@ -695,6 +695,31 @@ def _first_example(problem: Problem) -> tuple[str, str]:
     return "", ""
 
 
+_DRILL_POOL_SIZE: dict[str, object] = {"count": None, "at": 0.0}
+
+
+def _reset_drill_pool_cache() -> None:
+    _DRILL_POOL_SIZE["count"] = None
+    _DRILL_POOL_SIZE["at"] = 0.0
+
+
+def _drill_pool_size(db: Session) -> int:
+    """How many problems the drill can draw from. Cached for ten minutes: it only changes on a seed."""
+    import time
+
+    now = time.monotonic()
+    if _DRILL_POOL_SIZE["count"] is None or now - float(_DRILL_POOL_SIZE["at"]) > 600:
+        count = db.scalar(
+            select(func.count())
+            .select_from(Problem)
+            .join(ProblemSolution, ProblemSolution.problem_id == Problem.id)
+            .where(Problem.is_active.is_(True), ProblemSolution.pattern != "")
+        )
+        _DRILL_POOL_SIZE["count"] = int(count or 0)
+        _DRILL_POOL_SIZE["at"] = now
+    return int(_DRILL_POOL_SIZE["count"])  # type: ignore[arg-type]
+
+
 def _drill_pool(db: Session) -> list[tuple[Problem, ProblemSolution]]:
     rows = db.execute(
         select(Problem, ProblemSolution)
@@ -1186,7 +1211,7 @@ def _get_or_plan_day(db: Session, facts: Facts) -> StudyDay:
         if "review" not in plan and due_cards(facts):
             # Cards became due after the plan was made (a problem solved yesterday, say).
             plan = ["review", *plan]
-        if "drill" not in plan and len(_drill_pool(db)) >= DRILL_SIZE:
+        if "drill" not in plan and _drill_pool_size(db) >= DRILL_SIZE:
             # Plans made before the drill existed pick it up right after review.
             at = 1 if plan and plan[0] == "review" else 0
             plan.insert(at, "drill")
@@ -1202,7 +1227,7 @@ def _plan_tasks(facts: Facts) -> list[str]:
     plan: list[str] = []
     if due_cards(facts):
         plan.append("review")
-    if len(_drill_pool(facts.db)) >= DRILL_SIZE:
+    if _drill_pool_size(facts.db) >= DRILL_SIZE:
         plan.append("drill")
     unit = facts.current_unit()
 

@@ -59,7 +59,10 @@ TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=Fals
 
 @pytest.fixture(autouse=True)
 def _create_schema() -> Generator[None, None, None]:
+    from app.study.service import _reset_drill_pool_cache
+
     Base.metadata.create_all(bind=engine)
+    _reset_drill_pool_cache()  # the cached catalog size must not leak between tests
     yield
     Base.metadata.drop_all(bind=engine)
 
