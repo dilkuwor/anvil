@@ -1195,6 +1195,180 @@ Users → Active Users → Actions/User → Requests/Day → QPS → Peak QPS �
 # ---------------------------------------------------------------------------
 
 
+def _when_to_scale_lesson() -> dict:
+    return SD(
+        "sd-when-to-scale",
+        "When to Scale: The Concrete Thresholds",
+        "The numbers at which each technology stops being comfortable, and the exact move to make next.",
+        16,
+        "Estimation gives you a number. This lesson gives you the other half: what one node of each technology comfortably handles, and the trigger at which you add a cache, a replica, a shard, or a different store. With both halves you can say \"20,000 writes per second is past a single primary, so I shard\" instead of \"we might need to scale the database\".",
+        [
+            (
+                "Why It Matters",
+                """Interviewers do not score the components you draw; they score whether the numbers forced them. A cache in front of a database doing 400 reads per second is a mistake in the other direction, and a senior interviewer will ask why it is there.
+
+Knowing the limits also answers the follow-up that decides most senior loops: "what breaks first when traffic grows 10x?" If you know that one primary tops out near 3,000 to 5,000 writes per second and one Redis core near 100,000 operations per second, you can answer in one sentence and name the next move.
+
+Every number below is an order of magnitude, not a benchmark. Hardware, query shape, and payload size move them by 2x or 3x. That is fine: the decision only changes at 10x.""",
+            ),
+            (
+                "Mental Model",
+                """Ask four questions in order. Each one has a threshold and a move, and you stop at the first threshold you do not cross.
+
+1. Are writes above 3,000 to 5,000 per second? Then the single primary is the problem: shard by key, move the write path to a wide-column store, or buffer bursts through a log.
+2. Are reads above 5,000 to 10,000 per second? If not, one relational node is comfortable and you are done.
+3. Is the read traffic cacheable, meaning the hit rate would be above about 75%? Then put a cache in front, which usually absorbs 80 to 95% of reads. If not, add read replicas and pool connections.
+4. Would the cache itself see more than about 100,000 operations per second? Then you need a cache cluster, or an in-process cache for the hottest keys.
+
+Walk the sequence with your own numbers below. Change the writes, reads, and hit rate and watch which branch lights up.
+
+:::viz scaling-decision {"writes": 1500, "reads": 40000, "hitRate": 0.85}""",
+            ),
+            (
+                "How It Works",
+                """Comfort zones and triggers for one node of each technology. "Comfort" means you would not mention scaling it in an interview; "trigger" is the number at which you must.
+
+**Relational primary (PostgreSQL, MySQL)**
+
+| Comfort zone | Bottleneck | Trigger | Next move |
+| --- | --- | --- | --- |
+| 5,000–15,000 indexed reads/s | Single primary takes every write; WAL and lock contention | Reads above 5,000/s | Cache in front, then read replicas |
+| 1,000–3,000 writes/s | Write-ahead log sync, disk | Writes above 3,000–5,000/s | Shard by key, or a wide-column store, or buffer through a log |
+| ~500 direct connections | 5–10 MB per backend process | Connections above 500–1,000 | PgBouncer or ProxySQL pooling |
+| Under 1–2 TB per node | Backups and vacuum slow down | Data above 2 TB | Partition, archive, or shard |
+
+**Read replicas**
+
+| Comfort zone | Bottleneck | Trigger | Next move |
+| --- | --- | --- | --- |
+| 10,000–20,000 reads/s per replica, scaling to 5–10 replicas | Replication lag and stale reads; the primary's replication bandwidth | Lag above your SLA (about 1 s), or reads outgrow replicas | Cache-aside; route reads that must be fresh to the primary; pin a session to one replica |
+
+**In-memory cache (Redis, Memcached)**
+
+| Comfort zone | Bottleneck | Trigger | Next move |
+| --- | --- | --- | --- |
+| 80,000–120,000 ops/s per core | Single-threaded event loop; RAM; a 10 Gbps card is ~1 GB/s | Above 100,000 ops/s, or data larger than RAM | Redis Cluster (16,384 hash slots) or read replicas |
+| Any one key under ~30,000 reads/s | A hot key lands on one core no matter how many shards | One key above 30,000/s | In-process cache on the app servers with a one-second TTL |
+
+**Wide-column and key-value stores (Cassandra, ScyllaDB, DynamoDB, Bigtable)**
+
+| Comfort zone | Bottleneck | Trigger | Next move |
+| --- | --- | --- | --- |
+| 20,000–50,000 writes/s per Cassandra node | Partitions above ~100 MB; compaction storms; tombstones | Writes above 10,000–20,000/s, or append-heavy event data | Add nodes; tune the partition key |
+| 1,000 writes/s and 3,000 reads/s per DynamoDB partition | Hot partition throttling; 400 KB item limit | One partition above 1,000 writes/s | Salt the key (`key_0` … `key_N`); DAX for reads; tier cold data to S3 |
+| 5,000–15,000 ops/s per MongoDB shard | 16 MB document limit; working set must fit in RAM | Collection above 1 TB or writes above 5,000–10,000/s | Shard on a high-cardinality key |
+
+**Queues and logs**
+
+| Comfort zone | Bottleneck | Trigger | Next move |
+| --- | --- | --- | --- |
+| Kafka: 100–250 MB/s per broker (50,000–150,000 msg/s); 10,000–20,000 msg/s per partition | Consumer parallelism is capped by partition count; messages above 1 MB | Consumer lag growing with idle CPU; payloads above 1 MB | Add partitions and consumers; add brokers; claim-check pattern (payload in object storage, pointer in the message) |
+| RabbitMQ: 10,000–40,000 msg/s per queue; SQS FIFO: 300–3,000 msg/s | Queue depth eats memory; no replay after ack | Fan-out above 50,000 msg/s, or you need replay and several consumer groups | Move from a queue to a log (Kafka, Kinesis) |
+
+**Search, object storage, servers, sockets**
+
+| Technology | Comfort zone | Trigger | Next move |
+| --- | --- | --- | --- |
+| Elasticsearch / OpenSearch | 3,000–8,000 searches/s; 1,000–3,000 docs/s indexed; 31 GB heap ceiling | Search latency above 200 ms; `LIKE '%x%'` crushing SQL; logs above 50 GB/day | Time-based indices with lifecycle rules; dedicated coordinator and ingest nodes; feed asynchronously from the primary |
+| Object storage (S3, GCS, R2) | 3,500 writes/s and 5,500 reads/s per prefix; 20–80 ms first byte | Blobs above 500 KB–1 MB in the database; a prefix at its limit; egress cost | Store the URL in the database, hash the prefixes, put a CDN in front |
+| Stateless app servers | Go/Java 10,000–30,000 RPS; Node 3,000–8,000; Python 1,000–3,000 per node | CPU above 70%; p99 climbing | Load balancer, horizontal autoscaling, state moved out |
+| WebSocket gateway | 100,000–500,000 idle sockets per large node at 4–20 KB each | Sockets above 100,000; broadcast fan-out saturating CPU | Dedicated socket tier with a Redis Pub/Sub or Kafka backplane; consistent-hash routing on client id |""",
+            ),
+            (
+                "Example",
+                """Prompt: a social feed with 50,000 read requests per second at peak and 20,000 writes per second.
+
+"Writes first. 20,000 per second is far past a single primary, which is comfortable near 3,000. So the write path cannot be one Postgres: I shard by user id, or put posts into a wide-column store built for appends. Reads next. 50,000 per second is ten times one node. Feed reads repeat heavily, so I expect a hit rate above 80%; a cache in front absorbs about 45,000 of those, and the remaining 5,000 are exactly what one primary or a couple of replicas handle. The cache itself sees 45,000 operations per second, which is under one Redis node's ceiling of about 100,000, so no cluster yet. If one celebrity profile spikes past 30,000 reads per second on a single key, sharding the cache would not help; I would add an in-process cache with a one-second TTL on the app servers."
+
+Four sentences, four thresholds, and every box on the whiteboard now has a number attached to it.""",
+            ),
+            (
+                "Design Decisions",
+                """Four rules cover most interviews.
+
+**The 5,000 / 1,000 rule (relational).** One modern node handles roughly 5,000–10,000 indexed reads and 1,000–3,000 writes per second. Under 5,000 reads you do not need a cache or replicas, and proposing them without numbers hurts you. At 50,000 reads add a cache (which cuts the database to about 5,000) or three to five replicas. At 20,000 writes a single primary fails: buffer through a log, shard, or use a wide-column store.
+
+**The 100,000 rule (cache).** One Redis node handles about 100,000 operations per second. At 500,000 you need a cluster of five or six primaries or replicas. A single key at 50,000 per second defeats sharding; only an in-process cache on the servers fixes a hot key.
+
+**The 100 MB/s and 1 MB rule (Kafka).** A broker sustains 100–250 MB/s and a partition 10,000–20,000 messages per second. If consumers fall behind while their CPU is low, partition count is the limit, because partitions equal maximum consumer parallelism. Messages above 1 MB do not belong in the log: upload to object storage and send the pointer.
+
+**The 1,000 connections rule (pooling).** Each PostgreSQL connection costs 5–10 MB and a process. Past about 1,000 direct connections memory runs out and context switching wrecks throughput, so put PgBouncer or ProxySQL between the servers and the database and pool 10,000 client connections into 50–100 real ones.""",
+            ),
+            (
+                "Common Use Cases",
+                """- Justifying each component after the capacity estimate, box by box.
+- Answering "what breaks first at 10x?" with a specific component and its trigger.
+- Reviewing a colleague's design: is there a cache or a queue with no number behind it?
+- Choosing between a cache and replicas when reads outgrow one node.
+- Deciding whether a hot key needs a cluster or an in-process cache.""",
+            ),
+            (
+                "Trade-offs",
+                """- **Cache versus replicas.** A cache absorbs far more reads per dollar and shields the database from bursts, but the first read after a write misses and invalidation can be wrong. Replicas serve any query but lag, and every replica re-reads the primary's write stream.
+- **Shard versus wide-column store.** Sharding keeps SQL and your schema but you own the routing, rebalancing, and cross-shard queries. A wide-column store scales writes by adding nodes but gives up joins and multi-row transactions.
+- **Buffer through a log versus scale the store.** A log smooths bursts and decouples producers, at the cost of eventual consistency and a second system to run.
+- **Pooling versus more connections.** A pooler adds a hop and can queue requests under load, but it turns thousands of idle connections into a bounded, cheap set.""",
+            ),
+            (
+                "Common Failure Modes",
+                """- Adding a cache when the read rate never threatened one node, then paying for invalidation bugs forever.
+- Scaling reads with replicas when writes were the real bottleneck; the primary still dies.
+- A hot key on one Redis core saturating at 30,000 reads per second while the rest of the cluster idles.
+- Adding consumers to a lagging Kafka topic without adding partitions, so the new consumers sit idle.
+- Exhausting database memory with 2,000 idle connections from an autoscaled fleet, because nobody added a pooler.
+- Storing images as rows, then hitting the 2 TB point where backups and vacuum take all night.""",
+            ),
+            (
+                "Interviewer Follow-ups",
+                """- "What breaks first if traffic grows 10x?" — Name the component nearest its trigger and the move: "the primary, at about 3,000 writes per second, so the write path shards first."
+- "Why a cache and not read replicas?" — "The reads repeat, so a hit rate above 75% is realistic; a cache absorbs 90% of them, replicas would only spread them."
+- "How many Redis nodes?" — Divide the cache operations per second by about 100,000 and round up, then say a hot key changes the answer.
+- "Why not put the files in the database?" — "Blobs above about 1 MB belong in object storage; the database keeps the URL. Past 2 TB the database itself becomes hard to back up."
+- "Your consumers are behind and idle. Why?" — "Partition count caps parallelism. Add partitions, then consumers."
+- "Where do these numbers come from?" — "Order-of-magnitude comfort zones for one modern node; I would benchmark before committing, but the decision only moves at 10x."
+""",
+            ),
+            (
+                "Common Mistakes",
+                """- Quoting a threshold without the move it forces.
+- Treating the comfort numbers as exact; they are order-of-magnitude anchors.
+- Scaling the layer that is easy to scale instead of the one that is failing.
+- Forgetting that a cache outage sends its full load to the database, so the database must survive the miss storm or be shielded by request collapsing.
+- Ignoring connections, item sizes, and message sizes, which break systems well below their throughput limits.""",
+            ),
+            (
+                "Mini Design Exercise",
+                """For each system, state which threshold is crossed and the single next move. One sentence each.
+
+1. A ticketing site: 800 writes per second normally, 40,000 writes per second for two minutes when sales open.
+2. A product catalogue: 12,000 reads per second, almost all for the same 5,000 items, 20 writes per second.
+3. An events pipeline: 120,000 messages per second, each 3 MB, into one Kafka topic with 6 partitions and 20 consumers.
+4. An API with 300 stateless servers, each opening 8 connections to one PostgreSQL primary.
+
+Answers to check yourself against: (1) buffer the burst through a log and drain at the primary's rate; (2) a cache, which takes the database to a few hundred reads per second; (3) the payload is too big for the log, so claim-check to object storage, and the 20 consumers are capped by 6 partitions; (4) 2,400 connections, so a pooler in front of the primary.""",
+            ),
+            (
+                "Interview Tip",
+                """Say the trigger and the move in one breath: "That is 20,000 writes per second, past a single primary's comfort of about 3,000, so the write path shards by user id." The number is the evidence, the threshold is the reasoning, and the move is the decision. Interviewers remember candidates who put all three in one sentence.""",
+            ),
+        ],
+        [
+            "One relational node is comfortable near 5,000–15,000 indexed reads/s and 1,000–3,000 writes/s; reads scale with a cache then replicas, writes only with sharding, a wide-column store, or a buffering log.",
+            "One Redis node handles about 100,000 ops/s; a single hot key above ~30,000/s needs an in-process cache, not more shards.",
+            "Kafka moves 100–250 MB/s per broker and 10,000–20,000 msg/s per partition; partitions cap consumer parallelism, and messages above 1 MB go to object storage with a pointer.",
+            "Past about 1,000 direct database connections add a pooler; past 2 TB on one node plan to partition or shard.",
+            "Walk the sequence in order: writes, then reads, then cacheability, then cache size. Stop at the first threshold you do not cross.",
+        ],
+        [
+            "Reads are 50,000 per second and writes 20,000 per second. What do you change, and in which order?",
+            "When do you choose read replicas over a cache, and what is the number that decides it?",
+            "A single key is read 50,000 times per second. Why does sharding the cache not help, and what does?",
+            "Your Kafka consumers are lagging with low CPU. What is the limit and what is the fix?",
+            "At what point do database connections become the bottleneck, and what do you add?",
+        ],
+    )
+
+
 def _requirements_topic() -> dict:
     return _sd_topic(
         "requirements-gathering",
@@ -1586,6 +1760,7 @@ For (2), notice that the view bandwidth number is so large it dominates the enti
                 ],
             ),
             _back_of_envelope_lesson(),
+            _when_to_scale_lesson(),
         ],
     )
 

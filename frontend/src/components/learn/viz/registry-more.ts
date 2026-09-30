@@ -14,6 +14,7 @@ import { btreeLookupViz } from "./btree-lookup";
 import { raftElectionViz } from "./raft-election";
 import { twoPhaseVsSagaViz } from "./two-phase-vs-saga";
 import { regionFailoverViz } from "./region-failover";
+import { scalingDecisionViz } from "./scaling-decision";
 
 /** Visualizers added after the first set. Each one replaces its own slot line; never touch another slot. */
 export const MORE_VIZ: AnyVizDefinition[] = [
@@ -31,4 +32,5 @@ export const MORE_VIZ: AnyVizDefinition[] = [
   raftElectionViz,
   twoPhaseVsSagaViz,
   regionFailoverViz,
+  scalingDecisionViz,
 ];

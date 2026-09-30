@@ -30,7 +30,7 @@ def test_cheatsheet_catalog_and_detail(auth_client, db):
     cards = listing.json()
     assert [item["slug"] for item in cards] == SHEET_SLUGS
     system = next(item for item in cards if item["slug"] == "system-design")
-    assert system["section_count"] == 12
+    assert system["section_count"] == 13
     assert system["href"] == "/cheatsheets/system-design"
     assert "progress" not in system
 

@@ -122,6 +122,7 @@ const VIZ_TAGS: Record<string, string[]> = {
   "raft-election": ["Consensus", "Leader Election", "Terms"],
   "two-phase-vs-saga": ["Transactions", "2PC", "Saga"],
   "region-failover": ["Multi-Region", "Failover", "RPO / RTO"],
+  "scaling-decision": ["Capacity", "Scaling Triggers", "Cache vs Replicas"],
 };
 
 export function getVizCategory(id: string): VizCategory {

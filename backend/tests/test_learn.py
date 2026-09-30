@@ -156,7 +156,7 @@ def test_learn_seed_is_idempotent(db):
     )
     assert first == second
     assert first[0] == 7
-    assert first[2] == 342
+    assert first[2] == 343
 
 
 def test_system_design_problems_topic(auth_client, db):
@@ -175,7 +175,7 @@ def test_system_design_problems_topic(auth_client, db):
     assert template["interview_questions"]
 
     capacity = auth_client.get("/api/v1/learn/topics/capacity-estimation").json()
-    assert capacity["lesson_count"] == 2
+    assert capacity["lesson_count"] == 3
     capacity_titles = {lesson["title"] for lesson in capacity["lessons"]}
     assert "Capacity Estimation" in capacity_titles
     assert "Back-of-the-Envelope Estimation" in capacity_titles
@@ -368,7 +368,7 @@ def test_system_design_curriculum_depth(auth_client, db):
     _seed_catalog(db)
 
     category = auth_client.get("/api/v1/learn/categories/system-design").json()
-    assert category["lesson_count"] == 70
+    assert category["lesson_count"] == 71
     slugs = [topic["slug"] for topic in category["topics"]]
 
     # Progression: method, foundations, building blocks, distributed systems,
