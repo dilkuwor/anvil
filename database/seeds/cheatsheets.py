@@ -942,6 +942,51 @@ SYSTEM_DESIGN_SHEET = {
             T("Say the conclusion, not just the number: \"that's ~6,000 peak QPS, which is more than one database should serve, so I'll cache the read path.\" The number alone scores nothing."),
         ),
         section(
+            "scaling-triggers",
+            "Technology Limits & Scaling Triggers",
+            TB(
+                ["Technology", "One node is comfortable at", "Trigger to move", "Next move"],
+                [
+                    ["PostgreSQL / MySQL primary", "5k–15k indexed reads/s; 1k–3k writes/s; ~500 connections; <2 TB", "Reads > 5k/s · writes > 3k–5k/s · connections > 500–1k · data > 2 TB", "Cache, then read replicas; PgBouncer/ProxySQL; shard by key or wide-column store"],
+                    ["Read replicas", "10k–20k reads/s each, up to 5–10 replicas", "Lag > ~1 s, or reads outgrow the replicas", "Cache-aside; fresh reads to the primary; pin a session to one replica"],
+                    ["Redis / Memcached", "80k–120k ops/s per core; data fits RAM", "> 100k ops/s · data > RAM · one key > 30k/s", "Redis Cluster or replicas; in-process cache (1 s TTL) for the hot key"],
+                    ["Cassandra / ScyllaDB", "20k–50k writes/s per node; partitions < 100 MB", "Writes > 10k–20k/s; append-heavy or time-series data", "Add nodes; tune the partition key"],
+                    ["DynamoDB / Bigtable", "1k writes/s and 3k reads/s per partition; items < 400 KB", "One partition > 1k writes/s (hot key)", "Salt the key; DAX for reads; cold data to S3"],
+                    ["MongoDB", "5k–15k ops/s per shard; docs < 16 MB; working set in RAM", "Collection > 1 TB · writes > 5k–10k/s", "Shard on a high-cardinality key"],
+                    ["Kafka", "100–250 MB/s per broker (50k–150k msg/s); 10k–20k msg/s per partition", "Consumer lag with idle CPU · payloads > 1 MB", "Add partitions then consumers; add brokers; claim-check big payloads to object storage"],
+                    ["RabbitMQ / SQS", "10k–40k msg/s per queue; SQS FIFO 300–3k msg/s", "Fan-out > 50k msg/s · need replay or many consumer groups", "Move to a log (Kafka, Kinesis)"],
+                    ["Elasticsearch / OpenSearch", "3k–8k searches/s; 1k–3k docs/s indexed; 31 GB heap", "Search p99 > 200 ms · LIKE '%x%' on SQL · logs > 50 GB/day", "Time-based indices; dedicated coordinator/ingest nodes; feed asynchronously"],
+                    ["Object storage (S3, GCS)", "3,500 writes/s and 5,500 reads/s per prefix; 20–80 ms first byte", "Blobs > 500 KB–1 MB in the DB · a prefix at its limit · egress cost", "URL in the DB, blob in storage; hashed prefixes; CDN in front"],
+                    ["Stateless servers", "Go/Java 10k–30k RPS; Node 3k–8k; Python 1k–3k per node", "CPU > 70% · p99 climbing", "Load balancer; autoscale; keep state out"],
+                    ["WebSocket gateway", "100k–500k idle sockets per large node (4–20 KB each)", "Sockets > 100k · broadcast fan-out saturating CPU", "Dedicated socket tier; Redis Pub/Sub or Kafka backplane; consistent-hash routing"],
+                ],
+                "Limits and triggers",
+            ),
+            S(
+                [
+                    "**Writes > 3k–5k/s?** Yes → shard, wide-column store, or buffer bursts through a log. No → next.",
+                    "**Reads > 5k–10k/s?** No → one relational node is comfortable, stop here. Yes → next.",
+                    "**Cacheable (hit rate > 75%)?** Yes → cache in front, absorbs 80–95% of reads. No → read replicas plus a connection pooler.",
+                    "**Cache > 100k ops/s?** Yes → Redis Cluster, or an in-process cache for the hottest keys.",
+                ],
+                "Decision sequence: writes, reads, cacheability, cache size",
+            ),
+            B(
+                [
+                    "**5,000 / 1,000 rule** — one relational node: ~5k–10k reads/s, ~1k–3k writes/s. Under 5k reads, no cache and no replicas.",
+                    "**100,000 rule** — one Redis node: ~100k ops/s. A single key at 50k/s beats sharding; only an in-process cache fixes it.",
+                    "**100 MB/s and 1 MB rule** — one Kafka broker: 100–250 MB/s; one partition: 10k–20k msg/s; partitions = max consumer parallelism; messages > 1 MB go to object storage with a pointer.",
+                    "**1,000 connections rule** — 5–10 MB per PostgreSQL connection; past ~1,000 add PgBouncer/ProxySQL to pool thousands of clients into 50–100 real connections.",
+                ],
+                "The four threshold rules",
+            ),
+            T(
+                "Every number is an order of magnitude for one modern node; the decision only moves at 10x. Say the trigger and "
+                "the move together: \"20,000 writes/s is past one primary, so the write path shards.\" For \"what breaks first at 10x?\" "
+                "name the component nearest its trigger and the single move that follows. Lesson: Capacity Estimation → When to Scale."
+            ),
+        ),
+        section(
             "component-picker",
             "Component Picker",
             TB(
